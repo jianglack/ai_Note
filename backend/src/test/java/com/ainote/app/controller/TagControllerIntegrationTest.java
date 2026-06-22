@@ -89,4 +89,14 @@ class TagControllerIntegrationTest {
                 .content("{\"noteId\": \"note-123\", \"tagIds\": [\"tag-1\", \"tag-2\"]}"))
                 .andExpect(status().isNoContent());
     }
+
+    @Test
+    @DisplayName("POST /api/tags/assign 缺少 noteId 应返回 400")
+    @WithMockUser(username = "test", roles = {"USER"})
+    void shouldRejectAssignWithoutNoteId() throws Exception {
+        mockMvc.perform(post("/api/tags/assign")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tagIds\": [\"tag-1\"]}"))
+                .andExpect(status().isBadRequest());
+    }
 }

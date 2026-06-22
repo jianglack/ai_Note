@@ -1,9 +1,12 @@
 package com.ainote.app.model;
 
+import jakarta.validation.constraints.NotBlank;
+
 import java.util.ArrayList;
 import java.util.List;
 
 public class TagAssignRequest {
+    @NotBlank
     private String noteId;
     private List<String> tagIds = new ArrayList<>();
 

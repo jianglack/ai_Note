@@ -4,6 +4,7 @@ import com.ainote.app.entity.Note;
 import com.ainote.app.entity.Tag;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.repository.TagRepository;
+import com.ainote.app.security.SecurityUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -20,12 +21,15 @@ public class TagService {
     private final TagRepository tagRepository;
     private final NoteRepository noteRepository;
     private final KnowledgeGraphService knowledgeGraphService;
+    private final SecurityUtils securityUtils;
     
     public TagService(TagRepository tagRepository, NoteRepository noteRepository,
-                      KnowledgeGraphService knowledgeGraphService) {
+                      KnowledgeGraphService knowledgeGraphService,
+                      SecurityUtils securityUtils) {
         this.tagRepository = tagRepository;
         this.noteRepository = noteRepository;
         this.knowledgeGraphService = knowledgeGraphService;
+        this.securityUtils = securityUtils;
     }
     
     public com.ainote.app.model.Tag create(String name) {
@@ -57,7 +61,8 @@ public class TagService {
     }
     
     public void assign(String noteId, List<String> tagIds) {
-        noteRepository.findById(noteId).ifPresent(note -> {
+        String currentUserId = securityUtils.getCurrentUserId();
+        noteRepository.findByIdAndUserIdAndDeletedAtIsNull(noteId, currentUserId).ifPresent(note -> {
             List<Tag> tags = (tagIds != null) ? tagIds.stream()
                     .map(tagId -> tagRepository.findById(tagId).orElse(null))
                     .filter(tag -> tag != null)

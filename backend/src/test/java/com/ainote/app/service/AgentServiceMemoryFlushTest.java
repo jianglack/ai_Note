@@ -90,6 +90,7 @@ class AgentServiceMemoryFlushTest {
         lenient().when(spanBuilder.startSpan()).thenReturn(span);
 
         lenient().when(reliableChatMemoryStore.getMessages(anyString())).thenReturn(List.of());
+        lenient().when(inputGuardrail.scanUntrustedContent(anyString())).thenReturn(GuardrailResult.ok());
     }
 
     @AfterEach

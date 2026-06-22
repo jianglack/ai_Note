@@ -284,7 +284,23 @@ public class AgentService {
             log.error("Error building context: {}", e.getMessage(), e);
             agentSpan.setStatus(StatusCode.ERROR, "context assembly failed");
             agentSpan.end();
+            toolLoopDetector.reset();
+            ToolAuditLogger.resetTranscript();
+            tokenBudget.reset();
+            GracefulDegradation.reset();
+            concurrencyGuard.release(actorUserId);
             return new AiChatResponse("抱歉，构建上下文时出错：" + e.getMessage(), new HashMap<>(), (String) null);
+        }
+        GuardrailResult contextCheck = inputGuardrail.scanUntrustedContent(noteContext);
+        if (!contextCheck.passed()) {
+            agentSpan.setStatus(StatusCode.ERROR, "untrusted context blocked");
+            agentSpan.end();
+            toolLoopDetector.reset();
+            ToolAuditLogger.resetTranscript();
+            tokenBudget.reset();
+            GracefulDegradation.reset();
+            concurrencyGuard.release(actorUserId);
+            return new AiChatResponse(contextCheck.reason(), new HashMap<>(), (String) null);
         }
 
         // 时间上下文
@@ -556,6 +572,11 @@ public class AgentService {
 
             callback.onProgress("searching", "正在检索笔记上下文...");
             String noteContext = contextAssembler.assemble(query, noteIds, actorUserId);
+            GuardrailResult contextCheck = inputGuardrail.scanUntrustedContent(noteContext);
+            if (!contextCheck.passed()) {
+                callback.onError(contextCheck.reason());
+                return;
+            }
 
             String currentTime = LocalDateTime.now().format(TIME_FORMATTER);
             String dayOfWeek = LocalDateTime.now().getDayOfWeek()

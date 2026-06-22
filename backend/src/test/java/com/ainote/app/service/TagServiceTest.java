@@ -4,6 +4,7 @@ import com.ainote.app.entity.Note;
 import com.ainote.app.entity.Tag;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.repository.TagRepository;
+import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -31,12 +32,14 @@ class TagServiceTest {
     private NoteRepository noteRepository;
     @Mock
     private KnowledgeGraphService knowledgeGraphService;
+    @Mock
+    private SecurityUtils securityUtils;
 
     private TagService tagService;
 
     @BeforeEach
     void setUp() {
-        tagService = new TagService(tagRepository, noteRepository, knowledgeGraphService);
+        tagService = new TagService(tagRepository, noteRepository, knowledgeGraphService, securityUtils);
     }
 
     @Test
@@ -111,7 +114,7 @@ class TagServiceTest {
         tag2.setId("tag-2");
         tag2.setName("Important");
 
-        when(noteRepository.findById("note-123")).thenReturn(Optional.of(note));
+        mockCurrentUserNote("note-123", note);
         when(tagRepository.findById("tag-1")).thenReturn(Optional.of(tag1));
         when(tagRepository.findById("tag-2")).thenReturn(Optional.of(tag2));
 
@@ -120,6 +123,28 @@ class TagServiceTest {
         ArgumentCaptor<Note> captor = ArgumentCaptor.forClass(Note.class);
         verify(noteRepository).save(captor.capture());
         assertThat(captor.getValue().getTags()).hasSize(2);
+    }
+
+    @Test
+    @DisplayName("assign 不应修改当前用户无权访问的笔记")
+    void shouldNotAssignTagsToNoteOwnedByAnotherUser() {
+        Note otherUserNote = new Note();
+        otherUserNote.setId("note-other-user");
+        otherUserNote.setTags(new HashSet<>());
+
+        Tag tag = new Tag();
+        tag.setId("tag-1");
+        tag.setName("Work");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("note-other-user", "user-1"))
+                .thenReturn(Optional.empty());
+
+        tagService.assign("note-other-user", List.of("tag-1"));
+
+        verify(noteRepository, never()).save(any());
+        verify(tagRepository, never()).findById(any());
+        assertThat(otherUserNote.getTags()).isEmpty();
     }
 
     @Test
@@ -133,7 +158,7 @@ class TagServiceTest {
         tag1.setId("tag-1");
         tag1.setName("Work");
 
-        when(noteRepository.findById("note-123")).thenReturn(Optional.of(note));
+        mockCurrentUserNote("note-123", note);
         when(tagRepository.findById("tag-1")).thenReturn(Optional.of(tag1));
         when(tagRepository.findById("tag-nonexistent")).thenReturn(Optional.empty());
 
@@ -147,7 +172,9 @@ class TagServiceTest {
     @Test
     @DisplayName("assign 笔记不存在时不执行操作")
     void shouldNotAssignWhenNoteNotFound() {
-        when(noteRepository.findById("nonexistent")).thenReturn(Optional.empty());
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("nonexistent", "user-1"))
+                .thenReturn(Optional.empty());
 
         tagService.assign("nonexistent", List.of("tag-1"));
 
@@ -169,7 +196,7 @@ class TagServiceTest {
         newTag.setId("new-tag");
         newTag.setName("New");
 
-        when(noteRepository.findById("note-123")).thenReturn(Optional.of(note));
+        mockCurrentUserNote("note-123", note);
         when(tagRepository.findById("new-tag")).thenReturn(Optional.of(newTag));
 
         tagService.assign("note-123", List.of("new-tag"));
@@ -217,7 +244,7 @@ class TagServiceTest {
         note.setId("note-123");
         note.setTags(new HashSet<>());
 
-        when(noteRepository.findById("note-123")).thenReturn(Optional.of(note));
+        mockCurrentUserNote("note-123", note);
 
         tagService.assign("note-123", List.of());
 
@@ -233,12 +260,18 @@ class TagServiceTest {
         note.setId("note-123");
         note.setTags(new HashSet<>());
 
-        when(noteRepository.findById("note-123")).thenReturn(Optional.of(note));
+        mockCurrentUserNote("note-123", note);
 
         tagService.assign("note-123", null);
 
         ArgumentCaptor<Note> captor = ArgumentCaptor.forClass(Note.class);
         verify(noteRepository).save(captor.capture());
         assertThat(captor.getValue().getTags()).isEmpty();
+    }
+
+    private void mockCurrentUserNote(String noteId, Note note) {
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull(noteId, "user-1"))
+                .thenReturn(Optional.of(note));
     }
 }

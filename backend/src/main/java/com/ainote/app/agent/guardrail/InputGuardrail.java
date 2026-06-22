@@ -36,13 +36,18 @@ public class InputGuardrail {
             Pattern.compile("(?i)\\[INST\\]"),
             Pattern.compile("(?i)<\\|im_start\\|>"),
             // 中文注入
-            Pattern.compile("忽略(之前|上面|所有|以上)(的)?(指令|提示|规则|要求|限制)"),
-            Pattern.compile("无视(之前|上面|所有|以上)(的)?(指令|提示|规则)"),
+            Pattern.compile("忽略(之前|上面|上述|所有|以上)(的)?(指令|提示|规则|要求|限制)?"),
+            Pattern.compile("无视(之前|上面|上述|所有|以上)(的)?(指令|提示|规则)?"),
             Pattern.compile("你现在是"),
             Pattern.compile("假装你是"),
             Pattern.compile("从现在开始你(的|是)"),
             Pattern.compile("请?扮演"),
             Pattern.compile("进入.*模式")
+    );
+
+    private static final List<Pattern> UNTRUSTED_MUTATION_PATTERNS = List.of(
+            Pattern.compile("(?i)\\b(confirmDelete|confirmPermanentDelete|confirmEmptyTrash)\\b"),
+            Pattern.compile("(调用|执行|触发).*(confirmDelete|confirmPermanentDelete|confirmEmptyTrash)")
     );
 
     /**
@@ -69,6 +74,30 @@ public class InputGuardrail {
                 log.warn("Input guardrail: prompt injection detected, pattern={}, query={}",
                         pattern.pattern(), query.substring(0, Math.min(100, query.length())));
                 return GuardrailResult.blocked("检测到不安全的输入，请重新描述您的需求");
+            }
+        }
+
+        return GuardrailResult.ok();
+    }
+
+    public GuardrailResult scanUntrustedContent(String content) {
+        if (content == null || content.isBlank()) {
+            return GuardrailResult.ok();
+        }
+
+        for (Pattern pattern : INJECTION_PATTERNS) {
+            if (pattern.matcher(content).find()) {
+                log.warn("Input guardrail: prompt injection detected in untrusted content, pattern={}",
+                        pattern.pattern());
+                return GuardrailResult.blocked("不可信内容包含潜在提示注入，已阻止本次 Agent 调用");
+            }
+        }
+
+        for (Pattern pattern : UNTRUSTED_MUTATION_PATTERNS) {
+            if (pattern.matcher(content).find()) {
+                log.warn("Input guardrail: mutating tool instruction detected in untrusted content, pattern={}",
+                        pattern.pattern());
+                return GuardrailResult.blocked("不可信内容包含潜在破坏性工具指令，已阻止本次 Agent 调用");
             }
         }
 

@@ -40,7 +40,7 @@ public class TagController {
     }
 
     @PostMapping("/assign")
-    public ResponseEntity<Void> assign(@RequestBody TagAssignRequest request) {
+    public ResponseEntity<Void> assign(@Valid @RequestBody TagAssignRequest request) {
         tagService.assign(request.getNoteId(), request.getTagIds());
         return ResponseEntity.noContent().build();
     }
