@@ -1,0 +1,115 @@
+.schedule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.schedule-card:hover {
+  background: #fef3c7;
+}
+
+.schedule-completed {
+  opacity: 0.6;
+  border-left-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.schedule-completed:hover {
+  background: #f3f4f6;
+}
+
+.schedule-expired {
+  border-left-color: #ef4444;
+  background: #fef2f2;
+}
+
+.schedule-expired:hover {
+  background: #fee2e2;
+}
+
+.schedule-in_progress {
+  border-left-color: #3b82f6;
+  background: #eff6ff;
+}
+
+.schedule-in_progress:hover {
+  background: #dbeafe;
+}
+
+.schedule-checkbox {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f59e0b;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #f59e0b;
+  flex-shrink: 0;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.schedule-checkbox:hover {
+  background: #fef3c7;
+}
+
+.schedule-completed .schedule-checkbox {
+  border-color: #22c55e;
+  background: #22c55e;
+  color: white;
+}
+
+.schedule-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.schedule-title {
+  font-weight: 500;
+  color: #1f2937;
+  margin-bottom: 4px;
+}
+
+.schedule-completed .schedule-title {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+.schedule-meta {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.schedule-repeat {
+  color: #7c3aed;
+  background: #f3e8ff;
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.schedule-status {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.status-pending { background: #e0e7ff; color: #4338ca; }
+.status-in_progress { background: #dbeafe; color: #1d4ed8; }
+.status-completed { background: #dcfce7; color: #166534; }
+.status-expired { background: #fee2e2; color: #dc2626; }
+
+.schedule-notes-count {
+  color: #3b82f6;
+}

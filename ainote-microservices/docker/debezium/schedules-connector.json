@@ -1,0 +1,21 @@
+{
+  "name": "ainote-schedules-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "ainote",
+    "database.password": "${file:/run/secrets/db_password}",
+    "database.dbname": "ainote_schedules",
+    "database.server.name": "pg-schedules",
+    "plugin.name": "pgoutput",
+    "table.include.list": "public.schedules",
+    "topic.prefix": "pg-schedules",
+    "slot.name": "ainote_schedules_slot",
+    "publication.name": "ainote_schedules_pub",
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.drop.tombstones": "false",
+    "transforms.unwrap.delete.handling.mode": "rewrite"
+  }
+}

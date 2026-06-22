@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════
+   AI 内联建议卡片 — 温暖纸感
+   ═══════════════════════════════════════════════════════════════ */
+
+.ai-inline-suggestion {
+  padding: 10px 14px;
+  margin: 16px 0;
+  background: rgba(184, 69, 46, 0.06);
+  border-left: 3px solid var(--color-accent, #b8452e);
+  border-radius: 0 8px 8px 0;
+  font-size: 13px;
+  color: var(--color-text, #2b2620);
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ai-inline-icon {
+  width: 16px;
+  height: 16px;
+  color: var(--color-accent, #b8452e);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ai-inline-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.ai-inline-label {
+  font-size: 11px;
+  color: var(--color-accent, #b8452e);
+  margin-bottom: 3px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.ai-inline-text {
+  line-height: 1.6;
+  color: var(--color-text-secondary, #7a6b58);
+}
+
+.ai-inline-link {
+  color: var(--color-accent, #b8452e);
+  cursor: pointer;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.ai-inline-link:hover {
+  text-decoration: underline;
+}
+
+.ai-inline-actions {
+  margin-top: 8px;
+  display: flex;
+  gap: 8px;
+}
+
+.ai-inline-btn {
+  font-size: 11px;
+  padding: 3px 10px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  background: transparent;
+  color: var(--color-text-secondary, #9a8b73);
+  border-radius: 4px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.ai-inline-btn:hover {
+  background: var(--color-paper-2, #ede5d1);
+}
+
+.ai-inline-btn.primary {
+  border-color: var(--color-accent, #b8452e);
+  background: var(--color-accent, #b8452e);
+  color: var(--color-paper-0, #fbf7ee);
+}
+
+.ai-inline-btn.primary:hover {
+  background: var(--color-accent-hover, #a03a24);
+}

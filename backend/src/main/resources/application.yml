@@ -1,0 +1,211 @@
+server:
+  port: 8081
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  profiles:
+    active: dev
+
+# SpringDoc OpenAPI 配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+  show-actuator: false
+
+# Spring Boot Actuator + Micrometer
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+  metrics:
+    tags:
+      application: ainote-backend
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:5173,http://127.0.0.1:5173}
+  versions:
+    max: 20
+  neo4j:
+    enabled: ${NEO4J_ENABLED:true}
+    uri: ${NEO4J_URI:bolt://localhost:7687}
+    username: ${NEO4J_USERNAME:neo4j}
+    password: ${NEO4J_PASSWORD:ainote_neo4j_password}
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration: ${JWT_EXPIRATION:86400000}
+    issuer: ${JWT_ISSUER:ainote}
+  chat:
+    top-k: 5
+    max-context-chars: 2000
+    max-memory-tokens: 32000
+  embedding:
+    max-retry: 3
+    dimension: 1024
+    query-timeout: 30000
+  context:
+    intent:
+      llm-fallback: true   # 正则匹配不到时是否用 LLM 兜底分类
+    note-max-chars: 800
+    snippet-max-chars: 300
+    total-budget-tokens: 16000
+    rag-min-score: 0.7
+    budget:
+      semantic-memory: 800
+      episodic-memory: 600
+      user-overview: 400
+      selected-notes: 8000
+      rag-context: 5000
+  # Cohere API (for reranking)
+  cohere:
+    api-key: ${COHERE_API_KEY:}
+    model: rerank-v3.5
+  # RAG 配置
+  rag:
+    use-langchain4j: true
+    auto-migrate: false
+    query-rewriting:
+      enabled: true
+      strategy: expand
+    reranking:
+      enabled: true
+      use-cohere: false
+  # RAGAS 评估微服务配置
+  ragas:
+    url: ${RAGAS_URL:http://localhost:8090}
+    enabled: true
+  # DeepSeek 配置（对话 + Agent 统一使用）
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+    embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:${DEEPSEEK_MODEL:deepseek-chat}}
+    embedding-base-url: ${DEEPSEEK_EMBEDDING_BASE_URL:${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}}
+    temperature: 0.2
+    max-tokens: 16000
+  # Web Search 配置
+  web-search:
+    api-key: ${SEARCH_API_KEY:}
+    provider: serpapi
+  # OCR 配置
+  ocr:
+    tessdata-path: ${TESSDATA_PATH:}
+    language: chi_sim+eng
+  # 记忆系统配置
+  memory:
+    max-per-user: 50                 # 每用户最大语义记忆条数
+    similarity-threshold: 0.85       # 语义去重阈值（cosine similarity）
+    decay-half-life-days: 30         # 衰减半衰期（天）
+  # Agent 配置（LangChain4j AiServices）
+  agent:
+    enabled: true
+    max-tool-invocations: 30
+    timeout-seconds: 300
+    tool-loop-max-repeated: 5
+    max-tokens-per-request: 50000
+    warn-tokens-threshold: 40000
+    cost-alert-yuan: 0.5
+    retry:
+      max-attempts: 3
+      initial-delay-ms: 2000
+    dynamic-tools:
+      enabled: true
+      default-category: search
+  admin:
+    user-ids: ${ADMIN_USER_IDS:}
+  # 成本追踪配置（元/千tokens）
+  cost:
+    prices:
+      deepseek-chat:
+        input: 0.001
+        output: 0.002
+      deepseek-reasoner:
+        input: 0.004
+        output: 0.016
+      deepseek-embedding:
+        input: 0.0005
+        output: 0
+      rerank-v3.5:
+        input: 0.002
+        output: 0
+  # 可观测性配置
+  observability:
+    enabled: ${OBSERVABILITY_ENABLED:true}  # 是否启用 Agent 调用追踪
+  # LangFuse 配置（可选，用于远程追踪）
+  langfuse:
+    enabled: ${LANGFUSE_ENABLED:false}
+    public-key: ${LANGFUSE_PUBLIC_KEY:}
+    secret-key: ${LANGFUSE_SECRET_KEY:}
+    host: ${LANGFUSE_HOST:https://cloud.langfuse.com}
+
+# Resilience4j 弹性配置
+resilience4j:
+  retry:
+    configs:
+      llm-default:
+        max-attempts: 3
+        wait-duration: 2s
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - java.io.IOException
+          - java.net.SocketException
+          - java.net.SocketTimeoutException
+          - javax.net.ssl.SSLException
+    instances:
+      agent-model:
+        base-config: llm-default
+      agent-chat:
+        base-config: llm-default
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 80
+      chat-model:
+        base-config: llm-default
+  circuitbreaker:
+    configs:
+      llm-default:
+        failure-rate-threshold: 50
+        sliding-window-size: 10
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 2
+        slow-call-duration-threshold: 30s
+        slow-call-rate-threshold: 80
+        sliding-window-type: COUNT_BASED
+    instances:
+      agent-model:
+        base-config: llm-default
+      chat-model:
+        base-config: llm-default
+      embedding-model:
+        base-config: llm-default
+        wait-duration-in-open-state: 60s
+      rerank-model:
+        base-config: llm-default
+        wait-duration-in-open-state: 60s
+      memory-extract:
+        base-config: llm-default
+        failure-rate-threshold: 70
+
+logging:
+  level:
+    root: INFO
+    com.ainote.app: INFO
+    # 关键模块保留 INFO，需要时手动调至 DEBUG
+    com.ainote.app.service.AgentService: INFO
+    com.ainote.app.service.ContextAssembler: INFO
+    com.ainote.app.observability.AgentTraceListener: INFO
+    com.ainote.app.memory.ReliableChatMemoryStore: INFO

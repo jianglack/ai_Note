@@ -1,0 +1,12 @@
+分析以下笔记并返回分类建议。
+
+## 现有文件夹
+%s
+
+## 笔记列表
+%s
+
+## 重要：只返回 JSON，不要任何其他文字！
+
+返回格式：
+{"suggestions":[{"noteId":"ID","noteTitle":"标题","suggestedFolderId":null,"suggestedFolderName":"文件夹名","reason":"原因","isNewFolder":true}],"newFolders":["新文件夹名"],"summary":"总结"}

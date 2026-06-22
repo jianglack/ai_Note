@@ -1,0 +1,19 @@
+分析以下用户的笔记列表，提供有价值的洞察。返回 JSON 对象：
+
+{
+  "topicClusters": [
+    {"topic": "主题名", "noteCount": 3, "notes": ["笔记标题1", "笔记标题2"]}
+  ],
+  "patterns": [
+    {"type": "frequency|gap|connection", "description": "发现的模式描述"}
+  ],
+  "suggestions": [
+    {"type": "merge|organize|review|expand", "description": "建议描述", "relatedNotes": ["笔记标题"]}
+  ]
+}
+
+规则：
+1. topicClusters: 按主题将笔记分成 3-7 个组，每组至少 2 条笔记
+2. patterns: 发现用户的写作/学习模式（如"频繁写技术笔记但缺少总结"）
+3. suggestions: 给出 2-5 条可操作的建议
+4. 仅返回 JSON，不要包含其他文字

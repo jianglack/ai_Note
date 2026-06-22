@@ -1,0 +1,127 @@
+/* ═══════════════════════════════════════════════════════════════
+   斜杠命令菜单 — 温暖纸感
+   ═══════════════════════════════════════════════════════════════ */
+
+.slash-menu {
+  width: 320px;
+  background: var(--color-paper-0, #fbf7ee);
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(74, 64, 50, 0.18), 0 4px 12px rgba(74, 64, 50, 0.08);
+  padding: 8px;
+  max-height: 420px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Input hint bar */
+.slash-hint {
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--color-border, #e0d4b8);
+  font-size: 11px;
+  color: var(--color-text-secondary, #9a8b73);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slash-hint-tag {
+  padding: 1px 6px;
+  background: var(--color-paper-2, #ede5d1);
+  border-radius: 3px;
+  font-family: monospace;
+  color: var(--color-accent, #b8452e);
+}
+
+/* Group label */
+.slash-group-label {
+  padding: 8px 10px 4px;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--color-text-secondary, #9a8b73);
+  text-transform: uppercase;
+}
+
+/* Item row */
+.slash-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.slash-item:hover,
+.slash-item.selected {
+  background: var(--color-paper-2, #ede5d1);
+}
+
+.slash-item.accent.selected,
+.slash-item.accent:hover {
+  background: rgba(184, 69, 46, 0.1);
+}
+
+/* Icon */
+.slash-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: var(--color-paper-2, #ede5d1);
+  color: var(--color-text, #2b2620);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.slash-icon.accent {
+  background: linear-gradient(135deg, var(--color-highlight, #f5d76e), var(--color-accent, #b8452e));
+  color: var(--color-paper-0, #fbf7ee);
+  box-shadow: 0 2px 6px rgba(184, 69, 46, 0.3);
+}
+
+/* Text */
+.slash-item-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.slash-item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text, #2b2620);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.slash-item-desc {
+  font-size: 11px;
+  color: var(--color-text-secondary, #9a8b73);
+}
+
+/* HOT badge */
+.slash-hot-badge {
+  font-size: 9px;
+  padding: 1px 5px;
+  background: var(--color-accent, #b8452e);
+  color: var(--color-paper-0, #fbf7ee);
+  border-radius: 3px;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+/* Shortcut key */
+.slash-shortcut {
+  font-size: 10px;
+  padding: 2px 6px;
+  background: var(--color-paper-2, #ede5d1);
+  border-radius: 3px;
+  font-family: monospace;
+  color: var(--color-text-secondary, #9a8b73);
+}

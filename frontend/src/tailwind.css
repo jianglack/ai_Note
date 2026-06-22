@@ -1,0 +1,493 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=LXGW+WenKai+TC&family=Ma+Shan+Zheng&family=Playfair+Display:ital,wght@0,500;0,700;1,500&display=swap');
+
+@import "tailwindcss";
+
+/*
+ * 智记 · Smart Notes — 温暖纸感设计系统
+ * 严格复制自 ai_/handoff/styles.css
+ */
+
+@theme {
+  /* 米色纸张系 — 来自设计稿 :root */
+  --color-paper-0: #fbf7ee;
+  --color-paper-1: #f5efe0;
+  --color-paper-2: #ede5d1;
+  --color-paper-3: #e0d4b8;
+  --color-paper-4: #c9b893;
+
+  /* 墨水色 */
+  --color-ink-900: #2b2620;
+  --color-ink-700: #4a4032;
+  --color-ink-500: #7a6b58;
+  --color-ink-400: #9a8b73;
+  --color-ink-300: #b8ab92;
+
+  /* 强调色 · 朱砂红 */
+  --color-accent: #b8452e;
+  --color-accent-soft: #d96b52;
+  --color-accent-ink: #8b2f1e;
+
+  /* 辅助色 */
+  --color-highlight: #f5d76e;
+  --color-highlight-soft: #f7e4a3;
+  --color-sage: #6b7a5a;
+  --color-sage-soft: #a8b393;
+
+  /* 语义别名 — 供 Tailwind 工具类使用 */
+  --color-bg: #fbf7ee;
+  --color-sidebar: #ede5d1;
+  --color-surface: #fbf7ee;
+  --color-border: rgba(74, 64, 50, 0.12);
+  --color-text: #2b2620;
+  --color-text-secondary: #7a6b58;
+  --color-tag-bg: #f5efe0;
+  --color-tag-text: #4a4032;
+  --color-ai: #b8452e;
+  --color-ai-hover: #d96b52;
+  --color-danger: #b8452e;
+  --color-danger-hover: #d96b52;
+  --color-warning: #c9a959;
+  --color-warning-hover: #b89a45;
+  --color-accent-hover: #d96b52;
+
+  /* 圆角 — 来自设计稿 */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 9999px;
+
+  /* 字体 — 来自设计稿 */
+  --font-serif: 'Noto Serif SC', 'Songti SC', 'STSong', serif;
+  --font-hand: 'LXGW WenKai TC', 'Ma Shan Zheng', 'Kaiti SC', 'STKaiti', cursive;
+  --font-display: 'Playfair Display', 'Noto Serif SC', serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', 'Monaco', monospace;
+
+  --text-xs: 11px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-2xl: 24px;
+  --text-3xl: 32px;
+
+  /* 阴影 — 来自设计稿（柔和纸张） */
+  --shadow-sm: 0 1px 2px rgba(74,64,50,0.06), 0 2px 8px rgba(74,64,50,0.04);
+  --shadow-md: 0 4px 12px rgba(74,64,50,0.08), 0 12px 28px rgba(74,64,50,0.06);
+  --shadow-lg: 0 10px 30px rgba(74,64,50,0.12), 0 30px 60px rgba(74,64,50,0.08);
+
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  --spacing-2xl: 32px;
+
+  /* Layout */
+  --sidebar-width: 280px;
+
+  /* ── 工作流系统 tokens ── */
+  /* 工作流卡片 */
+  --color-workflow-card-bg: #fff;
+  --color-workflow-progress-bg: #ede5d1;
+  --color-workflow-shadow: 0 4px 12px rgba(74,64,50,0.08);
+  --color-workflow-shadow-strong: 0 8px 24px rgba(74,64,50,0.12);
+
+  /* 状态色 */
+  --color-status-waiting: #a09888;
+  --color-status-executing: #b8452e;
+  --color-status-success: #6b7a5a;
+  --color-status-success-light: rgba(107,122,90,0.1);
+  --color-status-failed: #b8452e;
+  --color-status-failed-light: rgba(184,69,46,0.08);
+  --color-status-warning: #c9a959;
+  --color-status-warning-light: rgba(201,169,89,0.1);
+
+  /* 聊天气泡 */
+  --color-chat-bubble-user: #f5efe0;
+  --color-chat-bubble-ai: transparent;
+
+  /* 表面悬停 */
+  --color-surface-hover: #efe8d6;
+  --color-border-strong: rgba(74,64,50,0.22);
+  --color-text-tertiary: #a09888;
+  --color-accent-light: rgba(184,69,46,0.08);
+  --color-accent-medium: rgba(184,69,46,0.15);
+}
+
+/*
+ * Dark theme
+ */
+[data-theme="dark"] {
+  --color-paper-0: #1e1c1a;
+  --color-paper-1: #252320;
+  --color-paper-2: #2e2b27;
+  --color-paper-3: #3a362f;
+  --color-paper-4: #4a4538;
+  --color-bg: #1e1c1a;
+  --color-sidebar: #252320;
+  --color-surface: #2e2b27;
+  --color-border: rgba(200, 190, 170, 0.12);
+  --color-text: #e8e0d4;
+  --color-text-secondary: #a09585;
+  --color-accent: #d96b52;
+  --color-accent-hover: #e8836c;
+  --color-tag-bg: #3a332c;
+  --color-tag-text: #c0b8a8;
+
+  /* 工作流系统 dark tokens */
+  --color-workflow-card-bg: #2a2725;
+  --color-workflow-progress-bg: #2e2b27;
+  --color-workflow-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  --color-workflow-shadow-strong: 0 8px 24px rgba(0,0,0,0.3);
+  --color-status-waiting: #6b6058;
+  --color-status-executing: #d96b52;
+  --color-status-success: #8a9e70;
+  --color-status-success-light: rgba(138,158,112,0.12);
+  --color-status-failed: #d96b52;
+  --color-status-failed-light: rgba(217,107,82,0.1);
+  --color-status-warning: #c9a959;
+  --color-status-warning-light: rgba(201,169,89,0.12);
+  --color-chat-bubble-user: #2e2b27;
+  --color-chat-bubble-ai: transparent;
+  --color-surface-hover: #2e2b27;
+  --color-border-strong: rgba(232,224,212,0.18);
+  --color-text-tertiary: #6b6058;
+  --color-accent-light: rgba(217,107,82,0.1);
+  --color-accent-medium: rgba(217,107,82,0.18);
+}
+
+/*
+ * Base layer
+ */
+@layer base {
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: var(--font-sans);
+    color: var(--color-ink-900);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 240px 300px 1fr;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+/*
+ * 组件层 — 严格复制自设计稿 styles.css 的工具类
+ */
+@layer components {
+  /* ── 纸张纹理底图（SVG噪点）── 来自设计稿 */
+  .paper-texture {
+    background-color: var(--color-paper-1);
+    background-image:
+      url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.3  0 0 0 0 0.25  0 0 0 0 0.18  0 0 0 0.06 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>"),
+      radial-gradient(ellipse 80% 60% at 20% 10%, #faf4e5 0%, transparent 60%),
+      radial-gradient(ellipse 70% 50% at 90% 90%, #efe5cd 0%, transparent 60%);
+  }
+
+  /* ── 横线纸 ── */
+  .paper-lined {
+    background-image:
+      repeating-linear-gradient(to bottom, transparent 0, transparent 31px, rgba(74,64,50,0.08) 31px, rgba(74,64,50,0.08) 32px);
+  }
+
+  /* ── 网格纸 ── */
+  .paper-grid {
+    background-image:
+      linear-gradient(rgba(74,64,50,0.06) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(74,64,50,0.06) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  /* ── 手写感链接/按钮 ── */
+  .ink-link {
+    color: var(--color-accent-ink);
+    border-bottom: 1px dashed var(--color-accent-soft);
+    text-decoration: none;
+    padding-bottom: 1px;
+    transition: all .15s;
+  }
+  .ink-link:hover {
+    background: var(--color-highlight-soft);
+    border-bottom-color: var(--color-accent);
+  }
+
+  /* ── 印章样式 ── */
+  .stamp {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-serif);
+    font-weight: 700;
+    color: var(--color-accent);
+    border: 2px solid var(--color-accent);
+    padding: 4px 10px;
+    border-radius: 4px;
+    transform: rotate(-4deg);
+    letter-spacing: 0.15em;
+    opacity: 0.88;
+    box-shadow: inset 0 0 0 3px var(--color-paper-1);
+  }
+
+  /* ── 微光标 ── */
+  @keyframes caretBlink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+  .caret::after {
+    content: '';
+    display: inline-block;
+    width: 2px;
+    height: 1em;
+    background: var(--color-accent);
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: caretBlink 1s steps(1) infinite;
+  }
+
+  /* ── 墨水波纹 ── */
+  @keyframes inkRise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .ink-rise { animation: inkRise .6s cubic-bezier(.2,.7,.3,1) both; }
+
+  /* ── 滚动条 ── */
+  .quiet-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+  .quiet-scroll::-webkit-scrollbar-thumb { background: var(--color-paper-4); border-radius: 3px; }
+  .quiet-scroll::-webkit-scrollbar-track { background: transparent; }
+
+  /* ── SVG装饰 - 下划波浪 ── */
+  .wavy-underline {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 6' width='60' height='6'><path d='M0 3 Q 10 0, 20 3 T 40 3 T 60 3' fill='none' stroke='%23b8452e' stroke-width='1.4' stroke-linecap='round'/></svg>");
+    background-repeat: repeat-x;
+    background-position: 0 100%;
+    background-size: 60px 6px;
+    padding-bottom: 6px;
+  }
+
+  /* ── 笔记本螺旋装订 ── */
+  .spiral-binding {
+    background-image: radial-gradient(circle at center, var(--color-paper-1) 4px, transparent 4.5px),
+                      radial-gradient(circle at center, rgba(74,64,50,0.25) 3.5px, transparent 4px);
+    background-size: 20px 24px;
+    background-position: center 0;
+    background-repeat: repeat-y;
+  }
+
+  /* ── 对话框组件 ── */
+  .dialog-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(43, 38, 32, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: dialog-fade-in 0.2s ease-out;
+  }
+
+  .dialog-panel {
+    background: var(--color-paper-0);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    animation: dialog-slide-up 0.3s ease-out;
+  }
+
+  .dialog-header {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .dialog-header h3 {
+    margin: 0;
+    font-family: var(--font-serif);
+    font-size: var(--text-lg);
+    font-weight: 600;
+    color: var(--color-ink-900);
+  }
+
+  .dialog-close {
+    background: none;
+    border: none;
+    color: var(--color-ink-400);
+    cursor: pointer;
+    padding: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    transition: all 0.2s;
+  }
+
+  .dialog-close:hover {
+    background: var(--color-paper-2);
+    color: var(--color-ink-900);
+  }
+
+  .dialog-body {
+    padding: var(--spacing-xl);
+    overflow-y: auto;
+    flex: 1;
+  }
+
+  .dialog-footer {
+    padding: var(--spacing-lg) var(--spacing-xl);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: flex-end;
+  }
+
+  .dialog-btn {
+    padding: 10px 20px;
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+  }
+
+  .dialog-btn-cancel {
+    background: var(--color-paper-3);
+    color: var(--color-ink-900);
+  }
+
+  .dialog-btn-cancel:hover {
+    opacity: 0.8;
+  }
+
+  .dialog-btn-confirm {
+    background: var(--color-ink-900);
+    color: var(--color-paper-0);
+  }
+
+  .dialog-btn-confirm:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  .dialog-btn-confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .dialog-btn-danger {
+    background: #b42318;
+    color: var(--color-paper-0);
+  }
+
+  .dialog-btn-danger:hover:not(:disabled) {
+    background: #912018;
+  }
+
+  .dialog-select-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .dialog-select-btn {
+    padding: 5px 12px;
+    border: 1px solid var(--color-border);
+    background: var(--color-paper-0);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    transition: all 0.2s;
+  }
+
+  .dialog-select-btn:hover {
+    background: var(--color-paper-2);
+    border-color: var(--color-accent);
+  }
+
+  .dialog-select-count {
+    margin-left: auto;
+    font-size: var(--text-xs);
+    color: var(--color-ink-500);
+  }
+
+  .dialog-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .dialog-list-item:hover {
+    background: rgba(74, 64, 50, 0.04);
+  }
+
+  .dialog-list-item.selected {
+    background: rgba(184, 69, 46, 0.06);
+  }
+
+  .dialog-list-item input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: var(--color-accent);
+  }
+
+  /* ── 工作流动画 ── */
+  @keyframes wf-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .wf-pulse { animation: wf-pulse 1.5s ease-in-out infinite; }
+
+  @keyframes wf-spin {
+    to { transform: rotate(360deg); }
+  }
+  .wf-spin { animation: wf-spin 1s linear infinite; }
+
+  @keyframes wf-slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes wf-slide-out {
+    from { transform: translateX(0); opacity: 1; }
+    to { transform: translateX(100%); opacity: 0; }
+  }
+  .wf-slide-in { animation: wf-slide-in 0.3s ease-out forwards; }
+  .wf-slide-out { animation: wf-slide-out 0.3s ease-in forwards; }
+
+  @keyframes wf-progress-fill {
+    from { width: 0%; }
+  }
+  .wf-progress-fill { animation: wf-progress-fill 0.4s ease-out; }
+
+  @keyframes wf-fade-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .wf-fade-in { animation: wf-fade-in 0.3s ease-out forwards; }
+
+  @keyframes dialog-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes dialog-slide-up {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+}

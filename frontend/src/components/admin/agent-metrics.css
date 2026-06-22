@@ -1,0 +1,288 @@
+/* Agent Metrics Dashboard — warm paper theme */
+
+.amd-root {
+  flex: 1; min-width: 0; height: 100%; overflow: auto;
+  background: var(--color-paper-0, #fbf7ee);
+  font-family: -apple-system, 'PingFang SC', 'Noto Sans SC', 'Helvetica Neue', sans-serif;
+}
+
+/* ── Utilities ── */
+.amd-mono {
+  font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
+  color: var(--color-text-tertiary, #9a8770);
+}
+
+/* ── Page header ── */
+.amd-page-header {
+  padding: 22px 36px 18px;
+  border-bottom: 1px solid rgba(43,38,32,0.08);
+  display: flex; align-items: flex-end; gap: 16px;
+}
+.amd-breadcrumb {
+  display: flex; align-items: center; gap: 5px;
+  color: var(--color-text-tertiary, #9a8770); font-size: 12px;
+}
+.amd-crumb-sep { font-size: 14px; opacity: 0.5; }
+.amd-title {
+  margin: 6px 0 0;
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 28px; font-weight: 700;
+  color: var(--color-text, #2b2620); line-height: 1.2;
+  display: inline-block; position: relative;
+}
+.amd-title-underline {
+  position: absolute; left: 0; right: 0; bottom: -5px; height: 5px;
+  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 5' preserveAspectRatio='none'><path d='M1 3 Q 20 1 40 2.5 T 80 2.5 T 119 2' stroke='%23b8452e' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>") no-repeat center / 100% 100%;
+  opacity: 0.85;
+}
+.amd-subtitle {
+  font-size: 13px; color: var(--color-text-secondary, #6b5848); margin-top: 10px;
+}
+
+.amd-hbtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; font-size: 13px; font-weight: 500;
+  background: var(--color-paper-0, #fbf7ee);
+  border: 1px solid rgba(43,38,32,0.14); border-radius: 7px;
+  color: var(--color-text-secondary, #6b5848); cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.amd-hbtn:hover { background: rgba(43,38,32,0.04); }
+.amd-hbtn:disabled { opacity: 0.6; cursor: default; }
+
+.amd-close-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; font-size: 13px; font-weight: 500;
+  background: rgba(43,38,32,0.06);
+  border: 1px solid rgba(43,38,32,0.14); border-radius: 7px;
+  color: var(--color-text-secondary, #6b5848); cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+.amd-close-btn:hover { background: rgba(43,38,32,0.10); }
+
+/* ── Content ── */
+.amd-content {
+  padding: 24px 36px 36px;
+  display: flex; flex-direction: column; gap: 20px;
+}
+
+/* ── Index cards ── */
+.amd-cards-row {
+  display: flex; gap: 16px;
+}
+.amd-index-card {
+  padding: 14px 16px 12px;
+  border-radius: 10px; position: relative;
+  flex: 1; min-width: 0;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 2px 8px rgba(60,30,15,0.04);
+}
+.amd-index-card.sage {
+  border: 1px solid rgba(107,122,90,0.32);
+  background: linear-gradient(180deg, rgba(107,122,90,0.10) 0%, var(--color-paper-0, #fbf7ee) 70%);
+  color: var(--color-sage, #6b7a5a);
+}
+.amd-index-card.gold {
+  border: 1px solid rgba(201,169,89,0.45);
+  background: linear-gradient(180deg, rgba(201,169,89,0.14) 0%, var(--color-paper-0, #fbf7ee) 70%);
+  color: #8c7333;
+}
+.amd-index-card.bluegray {
+  border: 1px solid rgba(68,85,102,0.25);
+  background: linear-gradient(180deg, rgba(68,85,102,0.08) 0%, var(--color-paper-0, #fbf7ee) 70%);
+  color: #445566;
+}
+.amd-index-card.rust {
+  border: 1px solid rgba(184,69,46,0.32);
+  background: linear-gradient(180deg, rgba(184,69,46,0.10) 0%, var(--color-paper-0, #fbf7ee) 70%);
+  color: var(--color-accent, #b8452e);
+}
+
+.amd-ic-head {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+}
+.amd-ic-icon {
+  width: 22px; height: 22px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.amd-ic-icon.sage { background: rgba(107,122,90,0.10); border: 1px solid rgba(107,122,90,0.32); }
+.amd-ic-icon.gold { background: rgba(201,169,89,0.14); border: 1px solid rgba(201,169,89,0.45); }
+.amd-ic-icon.bluegray { background: rgba(68,85,102,0.08); border: 1px solid rgba(68,85,102,0.25); }
+.amd-ic-icon.rust { background: rgba(184,69,46,0.10); border: 1px solid rgba(184,69,46,0.32); }
+
+.amd-ic-label {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 10.5px; letter-spacing: 0.10em;
+  color: var(--color-text-secondary, #6b5848);
+  text-transform: uppercase; font-weight: 600;
+}
+.amd-ic-status {
+  margin-left: auto;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 9px; padding: 1px 5px; border-radius: 3px;
+  letter-spacing: 0.08em; text-transform: uppercase;
+}
+.amd-ic-status.sage { background: rgba(107,122,90,0.10); border: 1px solid rgba(107,122,90,0.32); }
+.amd-ic-status.gold { background: rgba(201,169,89,0.14); border: 1px solid rgba(201,169,89,0.45); }
+.amd-ic-status.bluegray { background: rgba(68,85,102,0.08); border: 1px solid rgba(68,85,102,0.25); }
+.amd-ic-status.rust { background: rgba(184,69,46,0.10); border: 1px solid rgba(184,69,46,0.32); }
+
+.amd-ic-value-row {
+  display: flex; align-items: baseline; gap: 3px; margin-bottom: 4px;
+}
+.amd-ic-value {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 36px; font-weight: 700; line-height: 1;
+}
+.amd-ic-unit { font-size: 15px; font-weight: 600; }
+.amd-ic-sub { font-size: 12px; color: var(--color-text-secondary, #6b5848); margin-bottom: 7px; }
+
+.amd-sparkline { width: 100%; height: 22px; display: block; }
+
+/* ── Tools table ── */
+.amd-table {
+  border-radius: 10px;
+  border: 1px solid rgba(43,38,32,0.10);
+  background: var(--color-paper-0, #fbf7ee);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+}
+.amd-table-header {
+  padding: 13px 18px 11px;
+  border-bottom: 1px dashed rgba(43,38,32,0.14);
+  display: flex; align-items: center; gap: 10px;
+}
+.amd-table-title {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 15.5px; font-weight: 600;
+  color: var(--color-text, #2b2620);
+}
+.amd-table-count {
+  font-size: 11px; padding: 2px 7px; border-radius: 999px;
+  background: rgba(43,38,32,0.04); color: var(--color-text-secondary, #6b5848);
+  border: 1px solid rgba(43,38,32,0.10);
+}
+
+.amd-table-cols {
+  display: grid;
+  grid-template-columns: 1.7fr 0.9fr 0.95fr 1.0fr 1.0fr;
+  padding: 10px 18px 8px;
+  border-bottom: 1px solid rgba(43,38,32,0.10);
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 10.5px; letter-spacing: 0.10em;
+  color: var(--color-text-tertiary, #9a8770); text-transform: uppercase;
+}
+
+.amd-table-row {
+  display: grid;
+  grid-template-columns: 1.7fr 0.9fr 0.95fr 1.0fr 1.0fr;
+  padding: 12px 18px; align-items: center; position: relative;
+}
+.amd-table-row.alert { background: rgba(184,69,46,0.04); }
+.amd-row-bar {
+  position: absolute; left: 0; top: 4px; bottom: 4px; width: 2.5px;
+  background: var(--color-accent, #b8452e);
+}
+
+.amd-tool-name {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-weight: 600; font-size: 13.5px; color: var(--color-text, #2b2620);
+}
+.amd-tool-desc { font-size: 11.5px; color: var(--color-text-tertiary, #9a8770); }
+.amd-tool-calls {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 17px; font-weight: 600;
+}
+.amd-tool-calls-unit { color: var(--color-text-tertiary, #9a8770); font-size: 11px; margin-left: 2px; }
+
+/* Rate pill */
+.amd-rate-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 999px;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 11px; font-weight: 600;
+}
+.amd-rate-pill.high { background: rgba(184,69,46,0.16); color: var(--color-accent, #b8452e); }
+.amd-rate-pill.mid { background: rgba(201,169,89,0.22); color: #8c7333; }
+.amd-rate-pill.low { background: rgba(107,122,90,0.16); color: var(--color-sage, #6b7a5a); }
+
+/* Latency bar */
+.amd-latency-track {
+  height: 3px; width: 70px; margin-left: auto; margin-top: 3px;
+  background: rgba(43,38,32,0.06); border-radius: 999px; overflow: hidden;
+}
+.amd-latency-fill { height: 100%; border-radius: 999px; }
+.amd-latency-fill.high { background: var(--color-accent, #b8452e); }
+.amd-latency-fill.mid { background: var(--color-gold, #c9a959); }
+.amd-latency-fill.low { background: var(--color-sage, #6b7a5a); }
+
+/* ── Detail sections ── */
+.amd-detail-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.amd-detail-section {
+  border-radius: 10px;
+  border: 1px solid rgba(43,38,32,0.10);
+  background: var(--color-paper-0, #fbf7ee);
+  overflow: hidden;
+}
+.amd-detail-head {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  padding: 11px 16px; display: flex; align-items: center; gap: 10px;
+  cursor: pointer; border-bottom: 1px dashed rgba(43,38,32,0.12);
+}
+.amd-detail-title {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 14px; font-weight: 600;
+}
+.amd-detail-chevron {
+  font-size: 12px; color: var(--color-text-tertiary, #9a8770);
+}
+.amd-detail-body {
+  padding: 12px 16px; display: grid; gap: 0;
+}
+.amd-detail-cell { padding: 4px 14px; }
+.amd-detail-cell-label {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 9.5px; letter-spacing: 0.10em;
+  color: var(--color-text-tertiary, #9a8770); text-transform: uppercase;
+}
+.amd-detail-cell-value {
+  display: flex; align-items: baseline; gap: 3px; margin-top: 3px;
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 22px; font-weight: 700;
+  color: var(--color-text, #2b2620);
+}
+.amd-detail-cell-unit { font-size: 12px; color: var(--color-text-secondary, #6b5848); }
+.amd-detail-cell-sub { font-size: 11px; color: var(--color-text-tertiary, #9a8770); margin-top: 2px; }
+
+/* ── Alert ── */
+.amd-alert {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px;
+  background: rgba(184,69,46,0.05);
+  border: 1px solid rgba(184,69,46,0.20);
+  border-radius: 9px;
+  font-size: 12.5px; color: var(--color-text-secondary, #6b5848);
+}
+.amd-alert b { color: var(--color-text, #2b2620); }
+
+/* ── Footer ── */
+.amd-footer-text {
+  text-align: center;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 10.5px; color: var(--color-text-tertiary, #9a8770);
+  margin-top: 4px;
+}
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .amd-cards-row { flex-wrap: wrap; }
+  .amd-index-card { min-width: 45%; }
+  .amd-detail-grid { grid-template-columns: 1fr; }
+  .amd-content { padding: 16px 20px 24px; }
+  .amd-page-header { padding: 16px 20px 12px; flex-direction: column; align-items: flex-start; gap: 12px; }
+}

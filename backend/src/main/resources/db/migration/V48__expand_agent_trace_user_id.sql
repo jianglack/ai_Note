@@ -1,0 +1,2 @@
+ALTER TABLE agent_traces
+    ALTER COLUMN user_id TYPE VARCHAR(128);

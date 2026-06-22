@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ainote_test
+    username: postgres
+    password: 123456
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  flyway:
+    enabled: false
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+app:
+  jwt:
+    secret: test-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
+    expiration: 86400000
+    issuer: ainote-test
+  embedding:
+    dimension: 1024
+  cohere:
+    api-key: ""
+  deepseek:
+    api-key: test-deepseek-key
+    model: deepseek-chat
+    base-url: https://api.deepseek.com/v1
+    embedding-model: deepseek-chat
+    embedding-base-url: https://api.deepseek.com/v1
+  rag:
+    use-langchain4j: true
+    auto-migrate: false
+    query-rewriting:
+      enabled: false
+  chat:
+    max-memory-messages: 20
+  observability:
+    enabled: false
+  admin:
+    user-ids: test-admin-user-id
+
+logging:
+  level:
+    root: WARN
+    com.ainote: INFO

@@ -1,0 +1,910 @@
+.tiptap-container {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+}
+
+.tiptap-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  border-bottom: 1px solid #e0e0e0;
+  background: #f9f9f9;
+  flex-wrap: wrap;
+}
+
+.tiptap-toolbar button {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.2s;
+}
+
+.tiptap-toolbar button:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.tiptap-toolbar button.is-active {
+  background: #4a90e2;
+  color: #fff;
+  border-color: #4a90e2;
+}
+
+.toolbar-divider {
+  width: 1px;
+  background: #ddd;
+  margin: 0 4px;
+}
+
+/* 颜色选择器 */
+.toolbar-color-picker {
+  width: 30px;
+  height: 30px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+  background: #fff;
+}
+
+.toolbar-color-reset {
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  background: #fff;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: bold;
+  color: #333;
+  transition: all 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.toolbar-color-reset:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.tiptap-editor {
+  padding: 16px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+/* Tiptap 编辑器内容样式 */
+.tiptap-editor h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor p {
+  margin: 0.5em 0;
+}
+
+.tiptap-editor ul,
+.tiptap-editor ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor li {
+  margin: 0.25em 0;
+}
+
+.tiptap-editor code {
+  background: #f4f4f4;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.9em;
+}
+
+.tiptap-editor pre {
+  background: #2d2d2d;
+  color: #f8f8f2;
+  padding: 12px;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.5em 0;
+}
+
+.tiptap-editor pre code {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.tiptap-editor blockquote {
+  border-left: 4px solid #4a90e2;
+  padding-left: 16px;
+  margin: 0.5em 0;
+  color: #666;
+  font-style: italic;
+}
+
+.tiptap-editor hr {
+  border: none;
+  border-top: 2px solid #e0e0e0;
+  margin: 1em 0;
+}
+
+.tiptap-editor strong {
+  font-weight: bold;
+}
+
+.tiptap-editor em {
+  font-style: italic;
+}
+
+.tiptap-editor s {
+  text-decoration: line-through;
+}
+
+/* 新增样式 */
+.tiptap-editor u {
+  text-decoration: underline;
+}
+
+.tiptap-editor mark {
+  background-color: #fef08a;
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+.tiptap-editor a {
+  color: #3b82f6;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tiptap-editor a:hover {
+  color: #2563eb;
+}
+
+.tiptap-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  margin: 8px 0;
+}
+
+.tiptap-editor table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 16px 0;
+  overflow: hidden;
+}
+
+.tiptap-editor th,
+.tiptap-editor td {
+  border: 1px solid #e5e7eb;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.tiptap-editor th {
+  background: #f3f4f6;
+  font-weight: 600;
+}
+
+.tiptap-editor tr:hover {
+  background: #f9fafb;
+}
+
+.tiptap-editor ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0;
+}
+
+.tiptap-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  user-select: none;
+}
+
+.tiptap-editor ul[data-type="taskList"] li > div {
+  flex: 1;
+}
+
+.tiptap-editor ul[data-type="taskList"] input[type="checkbox"] {
+  cursor: pointer;
+}
+
+.tiptap-editor sup {
+  vertical-align: super;
+  font-size: 0.75em;
+}
+
+.tiptap-editor sub {
+  vertical-align: sub;
+  font-size: 0.75em;
+}
+
+/* Placeholder */
+.tiptap-editor p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
+}
+
+/* AI 气泡菜单 */
+.bubble-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--color-ink-900, #2b2620);
+  border-radius: 10px;
+  padding: 4px;
+  box-shadow: 0 8px 24px rgba(43, 38, 32, 0.35);
+  position: relative;
+}
+
+.bubble-menu::after {
+  content: '';
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  margin-left: -6px;
+  width: 12px;
+  height: 12px;
+  background: var(--color-ink-900, #2b2620);
+  transform: rotate(45deg);
+  z-index: -1;
+}
+
+.bubble-fmt {
+  width: 28px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  color: var(--color-paper-0, #fbf7ee);
+  cursor: pointer;
+  border-radius: 5px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s;
+}
+
+.bubble-fmt:hover {
+  background: rgba(251, 247, 238, 0.15);
+}
+
+.bubble-divider {
+  width: 1px;
+  height: 16px;
+  background: rgba(251, 247, 238, 0.2);
+  margin: 0 2px;
+  flex-shrink: 0;
+}
+
+.bubble-highlight {
+  width: auto;
+  padding: 0 6px;
+  gap: 4px;
+}
+
+.highlight-dot {
+  width: 10px;
+  height: 10px;
+  background: var(--color-highlight, #f5d76e);
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.bubble-ai-group {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #f5d76e 0%, #b8452e 100%);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.bubble-ai-group button {
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--color-paper-0, #fbf7ee);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+
+.bubble-ai-group button:hover {
+  background: rgba(251, 247, 238, 0.2);
+}
+
+/* 代码块语法高亮 */
+.tiptap-editor .code-block-lowlight {
+  background: #282c34;
+  color: #abb2bf;
+  padding: 16px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 12px 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.tiptap-editor .code-block-lowlight code {
+  background: none;
+  padding: 0;
+  color: inherit;
+  font-family: inherit;
+}
+
+/* Syntax highlighting tokens */
+.tiptap-editor .hljs-comment,
+.tiptap-editor .hljs-quote {
+  color: #5c6370;
+  font-style: italic;
+}
+
+.tiptap-editor .hljs-keyword,
+.tiptap-editor .hljs-selector-tag,
+.tiptap-editor .hljs-type {
+  color: #c678dd;
+}
+
+.tiptap-editor .hljs-string,
+.tiptap-editor .hljs-attr {
+  color: #98c379;
+}
+
+.tiptap-editor .hljs-number,
+.tiptap-editor .hljs-literal,
+.tiptap-editor .hljs-built_in {
+  color: #d19a66;
+}
+
+.tiptap-editor .hljs-function,
+.tiptap-editor .hljs-title {
+  color: #61afef;
+}
+
+.tiptap-editor .hljs-variable,
+.tiptap-editor .hljs-name {
+  color: #e06c75;
+}
+
+.tiptap-editor .hljs-tag,
+.tiptap-editor .hljs-selector-id,
+.tiptap-editor .hljs-selector-class {
+  color: #e06c75;
+}
+
+.tiptap-editor .hljs-regexp,
+.tiptap-editor .hljs-link {
+  color: #56b6c2;
+}
+
+.tiptap-editor .hljs-meta {
+  color: #61afef;
+}
+
+.tiptap-editor .hljs-emphasis {
+  font-style: italic;
+}
+
+.tiptap-editor .hljs-strong {
+  font-weight: bold;
+}
+
+/* 数学公式样式 */
+.tiptap-editor .mathematics {
+  display: inline-block;
+  padding: 4px 8px;
+  margin: 0 2px;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  font-family: 'KaTeX_Main', 'Times New Roman', serif;
+}
+
+.tiptap-editor .mathematics-display {
+  display: block;
+  padding: 12px;
+  margin: 16px 0;
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  overflow-x: auto;
+  text-align: center;
+}
+
+.tiptap-editor .katex {
+  font-size: 1.1em;
+}
+
+.tiptap-editor .katex-display {
+  margin: 0;
+}
+
+/* 双向链接样式 */
+.tiptap-editor .wiki-link {
+  color: #7c3aed;
+  background: #ede9fe;
+  padding: 1px 4px;
+  border-radius: 4px;
+  font-size: 0.95em;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.tiptap-editor .wiki-link:hover {
+  background: #ddd6fe;
+  color: #5b21b6;
+}
+
+/* 双向链接建议弹窗 */
+.wiki-link-wrapper {
+  position: relative;
+}
+
+.wiki-suggest-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  width: 220px;
+  z-index: 1000;
+}
+
+.wiki-suggest-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid #e5e7eb;
+  border-radius: 8px 8px 0 0;
+  font-size: 13px;
+  outline: none;
+}
+
+.wiki-suggest-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.wiki-suggest-empty {
+  padding: 12px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+}
+
+.wiki-suggest-item {
+  padding: 8px 12px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.15s;
+}
+
+.wiki-suggest-item:hover {
+  background: var(--color-paper-2, #ede5d1);
+  color: var(--color-accent, #b8452e);
+}
+
+
+/* 注释标记样式 — 荧光笔效果 */
+.annotation-mark {
+  background: linear-gradient(180deg, transparent 60%, var(--color-highlight, #f5d76e) 60%);
+  cursor: pointer;
+  position: relative;
+  border-radius: 1px;
+  transition: background 0.2s;
+}
+
+.annotation-mark:hover {
+  background: linear-gradient(180deg, transparent 40%, var(--color-highlight-soft, #f5d76e66) 40%);
+}
+
+/* 注释对话框遮罩 */
+.annotation-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(43, 38, 32, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* 注释对话框 */
+.annotation-dialog {
+  background: var(--color-paper-0, #fbf7ee);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(43, 38, 32, 0.15);
+  border: 1px solid var(--color-border, #e0d4b8);
+}
+
+.annotation-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border, #e0d4b8);
+}
+
+.annotation-dialog-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--color-text, #2b2620);
+}
+
+.annotation-dialog-header .close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: var(--color-text-secondary, #7a6b58);
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.annotation-dialog-header .close-btn:hover {
+  background-color: var(--color-paper-2, #ede5d1);
+}
+
+.annotation-dialog-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.annotation-selected-text {
+  margin-bottom: 16px;
+  padding: 12px;
+  background-color: var(--color-paper-1, #f5efe0);
+  border-radius: 4px;
+  border-left: 3px solid var(--color-highlight, #f5d76e);
+}
+
+.annotation-selected-text strong {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--color-text, #2b2620);
+  font-size: 14px;
+}
+
+.annotation-selected-text p {
+  margin: 0;
+  color: var(--color-text-secondary, #7a6b58);
+  line-height: 1.5;
+}
+
+.annotation-comment-input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  margin-bottom: 16px;
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-text, #2b2620);
+}
+
+.annotation-comment-input:focus {
+  outline: none;
+  border-color: var(--color-accent, #b8452e);
+}
+
+.annotation-tags-section {
+  margin-top: 16px;
+}
+
+.annotation-tags-section label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text, #2b2620);
+}
+
+.annotation-tag-input-wrapper {
+  margin-bottom: 12px;
+}
+
+.annotation-tag-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 4px;
+  font-size: 14px;
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-text, #2b2620);
+}
+
+.annotation-tag-input:focus {
+  outline: none;
+  border-color: var(--color-accent, #b8452e);
+}
+
+.annotation-tag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.annotation-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background-color: var(--color-highlight-soft, rgba(245, 215, 110, 0.25));
+  color: var(--color-text, #2b2620);
+  border-radius: 16px;
+  font-size: 13px;
+  border: 1px solid var(--color-highlight, #f5d76e);
+}
+
+.annotation-tag button {
+  background: none;
+  border: none;
+  color: var(--color-text-secondary, #7a6b58);
+  cursor: pointer;
+  padding: 0;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.annotation-tag button:hover {
+  color: var(--color-accent, #b8452e);
+}
+
+.annotation-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border, #e0d4b8);
+}
+
+.annotation-cancel-btn,
+.annotation-save-btn {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.annotation-cancel-btn {
+  background-color: var(--color-paper-2, #ede5d1);
+  color: var(--color-text-secondary, #7a6b58);
+}
+
+.annotation-cancel-btn:hover {
+  background-color: var(--color-paper-3, #e0d4b8);
+}
+
+.annotation-save-btn {
+  background-color: var(--color-accent, #b8452e);
+  color: white;
+}
+
+.annotation-save-btn:hover {
+  background-color: var(--color-accent-hover, #d96b52);
+}
+
+/* 编辑器与侧边栏容器 */
+.tiptap-with-sidebar {
+  display: flex;
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.tiptap-container.with-sidebar {
+  flex: 1;
+  min-width: 0;
+  border-right: 1px solid var(--color-border, #e0d4b8);
+}
+
+/* 注释侧边栏 */
+.annotation-sidebar {
+  width: 280px;
+  min-width: 280px;
+  background: var(--color-paper-1, #f5efe0);
+  border-left: 1px solid var(--color-border, #e0d4b8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.annotation-sidebar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--color-border, #e0d4b8);
+  background: var(--color-paper-2, #ede5d1);
+}
+
+.annotation-sidebar-header h4 {
+  margin: 0;
+  font-size: 14px;
+  color: var(--color-text, #2b2620);
+}
+
+.annotation-sidebar-toggle {
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: var(--color-text-secondary, #7a6b58);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.annotation-sidebar-toggle:hover {
+  background: var(--color-paper-3, #e0d4b8);
+}
+
+.annotation-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.annotation-sidebar-item {
+  position: relative;
+  padding: 12px;
+  margin-bottom: 8px;
+  background: var(--color-paper-0, #fbf7ee);
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.annotation-sidebar-item:hover {
+  border-color: var(--color-accent, #b8452e);
+  box-shadow: 0 2px 8px rgba(184, 69, 46, 0.1);
+}
+
+.annotation-sidebar-item.active {
+  border-color: var(--color-accent, #b8452e);
+  background: var(--color-highlight-soft, rgba(245, 215, 110, 0.15));
+}
+
+.annotation-item-text {
+  font-size: 13px;
+  color: var(--color-text, #2b2620);
+  font-style: italic;
+  margin-bottom: 6px;
+  line-height: 1.4;
+  background: var(--color-highlight-soft, rgba(245, 215, 110, 0.25));
+  padding: 4px 8px;
+  border-radius: 4px;
+  border-left: 3px solid var(--color-highlight, #f5d76e);
+}
+
+.annotation-item-comment {
+  font-size: 12px;
+  color: var(--color-text-secondary, #7a6b58);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.annotation-item-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.annotation-item-tag {
+  font-size: 11px;
+  padding: 2px 8px;
+  background: var(--color-sage-soft, rgba(107, 122, 90, 0.15));
+  color: var(--color-sage, #6b7a5a);
+  border-radius: 10px;
+}
+
+.annotation-item-delete {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 12px;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 4px;
+}
+
+.annotation-sidebar-item:hover .annotation-item-delete {
+  opacity: 1;
+}
+
+.annotation-item-delete:hover {
+  background: #ffebee;
+}
+
+/* 收起时的展开按钮 */
+.annotation-sidebar-expand {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 8px 12px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+  font-size: 13px;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+}
+
+.annotation-sidebar-expand:hover {
+  background: #3a7bc8;
+}

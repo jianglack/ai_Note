@@ -1,0 +1,173 @@
+.mindmap-canvas-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mindmap-canvas-container {
+  width: 90vw;
+  height: 85vh;
+  background: var(--bg-primary, #fff);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  outline: none;
+}
+
+.mindmap-canvas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+  background: var(--bg-secondary, #f9fafb);
+}
+
+.mindmap-canvas-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mindmap-canvas-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+}
+
+.mindmap-canvas-info {
+  font-size: 12px;
+  color: var(--text-tertiary, #9ca3af);
+  background: var(--bg-tertiary, #f3f4f6);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.mindmap-canvas-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.mindmap-canvas-btn {
+  padding: 6px 14px;
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 6px;
+  background: var(--bg-primary, #fff);
+  color: var(--text-secondary, #374151);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.mindmap-canvas-btn:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+.mindmap-canvas-btn.close {
+  color: #ef4444;
+  border-color: #fecaca;
+}
+
+.mindmap-canvas-btn.close:hover {
+  background: #fef2f2;
+}
+
+/* ReactFlow area */
+.mindmap-canvas-container .react-flow {
+  flex: 1;
+}
+
+/* Custom Node */
+.mindmap-flow-node {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 2px solid;
+  min-width: 80px;
+  max-width: 200px;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.mindmap-flow-node:hover {
+  transform: scale(1.05);
+}
+
+.mindmap-flow-node.level-0 {
+  font-size: 15px;
+  font-weight: 700;
+  padding: 10px 20px;
+  border-radius: 20px;
+}
+
+.mindmap-flow-node.level-1 {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mindmap-flow-node.level-2,
+.mindmap-flow-node.level-3 {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.mindmap-node-label {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mindmap-node-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  width: 100%;
+  text-align: center;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+}
+
+/* Context Menu */
+.mindmap-context-menu {
+  position: fixed;
+  z-index: 1100;
+  background: var(--bg-primary, #fff);
+  border: 1px solid var(--border-color, #e5e7eb);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  padding: 4px;
+  min-width: 120px;
+}
+
+.mindmap-context-menu button {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 4px;
+  color: var(--text-primary, #111827);
+}
+
+.mindmap-context-menu button:hover {
+  background: var(--bg-hover, #f3f4f6);
+}
+
+/* Handle styles */
+.mindmap-flow-node .react-flow__handle {
+  width: 8px;
+  height: 8px;
+  border: 2px solid;
+  border-radius: 50%;
+}

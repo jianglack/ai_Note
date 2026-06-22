@@ -1,0 +1,13 @@
+spring:
+  kafka:
+    bootstrap-servers: kafka:9092
+app:
+  internal:
+    token: ${INTERNAL_TOKEN}
+  elasticsearch:
+    host: elasticsearch
+    port: 9200
+  milvus:
+    enabled: ${MILVUS_ENABLED:false}
+    host: milvus
+    port: 19530

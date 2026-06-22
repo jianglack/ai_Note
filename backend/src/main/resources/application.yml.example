@@ -1,0 +1,24 @@
+# Environment variable reference for API keys.
+# Set these as environment variables before starting the application.
+# The app will fail-fast on startup if required keys are missing.
+#
+# Required:
+#   DEEPSEEK_API_KEY  - DeepSeek chat and embedding provider
+#
+# Optional:
+#   DEEPSEEK_MODEL                - Defaults to deepseek-chat
+#   DEEPSEEK_BASE_URL             - Defaults to https://api.deepseek.com/v1
+#   DEEPSEEK_EMBEDDING_MODEL      - Defaults to DEEPSEEK_MODEL
+#   DEEPSEEK_EMBEDDING_BASE_URL   - Defaults to DEEPSEEK_BASE_URL
+#   COHERE_API_KEY                - Cohere reranking, disabled if absent
+
+app:
+  deepseek:
+    api-key: ${DEEPSEEK_API_KEY:}
+    model: ${DEEPSEEK_MODEL:deepseek-chat}
+    base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}
+    embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:${DEEPSEEK_MODEL:deepseek-chat}}
+    embedding-base-url: ${DEEPSEEK_EMBEDDING_BASE_URL:${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}}
+
+  cohere:
+    api-key: ${COHERE_API_KEY:}

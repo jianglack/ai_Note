@@ -1,0 +1,375 @@
+/* ═══════════════════════════════════════════════════════════════
+   智记 · 登录页面样式 — 温暖纸感设计
+   ═══════════════════════════════════════════════════════════════ */
+
+.auth-page {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.1fr 1fr;
+  font-family: var(--font-body, 'Noto Serif SC', serif);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ─── 左栏 ─────────────────────────────────── */
+.auth-left {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-paper-1, #f5efe0) 0%, var(--color-paper-2, #ede5d1) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 56px 64px;
+  border-right: 1px solid rgba(74, 64, 50, 0.1);
+}
+
+/* 品牌 */
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 2;
+}
+
+.auth-brand-icon {
+  width: 40px;
+  height: 40px;
+  background: var(--color-accent, #b8452e);
+  border-radius: var(--radius-sm, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-4deg);
+  box-shadow: 0 4px 12px rgba(184, 69, 46, 0.3);
+}
+
+.auth-brand-icon span {
+  font-family: var(--font-hand, 'LXGW WenKai TC', cursive);
+  color: var(--color-paper-0, #fbf7ee);
+  font-size: 22px;
+  font-weight: 700;
+}
+
+.auth-brand-name {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--color-ink-900, #2b2620);
+  letter-spacing: 0.1em;
+  display: block;
+}
+
+.auth-brand-tagline {
+  font-size: 11px;
+  color: var(--color-ink-500, #9a8b73);
+  letter-spacing: 0.2em;
+  display: block;
+}
+
+/* 插画 */
+.auth-illustration {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+/* 引言 */
+.auth-quote {
+  position: relative;
+  z-index: 2;
+}
+
+.auth-quote-text {
+  font-family: var(--font-hand, 'LXGW WenKai TC', cursive);
+  font-size: 26px;
+  color: var(--color-ink-900, #2b2620);
+  line-height: 1.6;
+  max-width: 420px;
+}
+
+.auth-quote-attr {
+  margin-top: 14px;
+  font-size: 12px;
+  color: var(--color-ink-500, #9a8b73);
+  letter-spacing: 0.15em;
+}
+
+/* ─── 右栏 ─────────────────────────────────── */
+.auth-right {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 56px 80px;
+  position: relative;
+}
+
+.auth-stamp {
+  position: absolute;
+  top: 40px;
+  right: 48px;
+}
+
+.auth-form-container {
+  width: 100%;
+  max-width: 380px;
+}
+
+/* 标题 */
+.auth-heading {
+  margin-bottom: 40px;
+}
+
+.auth-welcome-label {
+  font-size: 12px;
+  color: var(--color-accent, #b8452e);
+  letter-spacing: 0.3em;
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.auth-title {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-weight: 700;
+  font-size: 38px;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--color-ink-900, #2b2620);
+  letter-spacing: 0.02em;
+}
+
+.auth-accent-bar {
+  width: 48px;
+  height: 3px;
+  background: var(--color-accent, #b8452e);
+  margin-top: 20px;
+}
+
+/* Tab 切换 */
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 28px;
+  background: rgba(74, 64, 50, 0.06);
+  padding: 3px;
+  border-radius: var(--radius-md, 8px);
+  width: fit-content;
+}
+
+.auth-tab {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  font-size: 13px;
+  color: var(--color-ink-500, #9a8b73);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 6px);
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.auth-tab.active {
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-ink-900, #2b2620);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* InkField */
+.ink-field {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.ink-field-label {
+  font-size: 12px;
+  color: var(--color-ink-500, #9a8b73);
+  margin-bottom: 6px;
+  letter-spacing: 0.05em;
+}
+
+.ink-field-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 8px 2px;
+  font-size: 15px;
+  color: var(--color-ink-900, #2b2620);
+  font-family: inherit;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.ink-field-input::placeholder {
+  color: var(--color-ink-400, #9a8b73);
+  opacity: 0.6;
+}
+
+/* 选项行（记住我 + 忘记密码） */
+.auth-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: -8px;
+  margin-bottom: 24px;
+  font-size: 13px;
+}
+
+.auth-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--color-ink-500, #9a8b73);
+  user-select: none;
+}
+
+.auth-checkbox-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.auth-check-box {
+  width: 16px;
+  height: 16px;
+  border: 1.5px solid var(--color-paper-4, #c9b893);
+  border-radius: 3px;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+
+.auth-checkbox:focus-within .auth-check-box {
+  outline: 2px solid var(--color-accent, #b8452e);
+  outline-offset: 2px;
+}
+
+.auth-check-box.checked {
+  background: var(--color-accent, #b8452e);
+  border-color: var(--color-accent, #b8452e);
+}
+
+.auth-forgot {
+  color: var(--color-accent, #b8452e);
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(184, 69, 46, 0.5);
+  font-size: 13px;
+}
+
+.auth-forgot-hint {
+  color: var(--color-ink-500, #9a8b73);
+  font-size: 14px;
+  margin-top: 0;
+  margin-bottom: 20px;
+  line-height: 1.7;
+}
+
+.auth-back-link {
+  color: var(--color-accent, #b8452e);
+  font-size: 13px;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(184, 69, 46, 0.5);
+  display: inline-block;
+  margin-bottom: 16px;
+}
+
+/* 错误/成功 */
+.auth-error {
+  color: var(--color-accent, #b8452e);
+  font-size: 13px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: rgba(184, 69, 46, 0.08);
+  border-radius: 4px;
+}
+
+.auth-success {
+  color: var(--color-sage, #6b7a5a);
+  font-size: 13px;
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: rgba(107, 122, 90, 0.1);
+  border-radius: 4px;
+}
+
+/* 主按钮 */
+.auth-primary-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 14px 20px;
+  background: var(--color-ink-900, #2b2620);
+  color: var(--color-paper-0, #fbf7ee);
+  border: none;
+  border-radius: var(--radius-md, 8px);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(43, 38, 32, 0.25);
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.auth-primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(43, 38, 32, 0.3);
+}
+
+.auth-primary-btn:active {
+  transform: translateY(0);
+}
+
+.auth-primary-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* 条款 */
+.auth-terms {
+  margin-top: 28px;
+  font-size: 12px;
+  color: var(--color-ink-400, #9a8b73);
+  text-align: center;
+  line-height: 1.6;
+}
+
+.auth-terms a {
+  color: var(--color-ink-500, #9a8b73);
+  text-decoration: none;
+}
+
+.auth-terms a:hover {
+  color: var(--color-ink-900, #2b2620);
+}
+
+/* ─── 响应式 ─────────────────────────────────── */
+@media (max-width: 768px) {
+  .auth-page {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-left {
+    display: none;
+  }
+
+  .auth-right {
+    padding: 40px 24px;
+  }
+
+  .auth-title {
+    font-size: 28px;
+  }
+
+  .auth-stamp {
+    top: 20px;
+    right: 20px;
+  }
+}

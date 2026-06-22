@@ -1,0 +1,211 @@
+/* ═══════════════════════════════════════════════════════════════
+   笔记列表面板（第二栏） — 温暖纸感
+   ═══════════════════════════════════════════════════════════════ */
+
+.note-list-panel {
+  grid-row: 1 / 3;
+  background: var(--color-paper-1, #f5efe0);
+  border-right: 1px solid var(--color-border, #e0d4b8);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.note-list-header {
+  padding: 20px 20px 14px;
+  border-bottom: 1px solid var(--color-border, #e0d4b8);
+  flex-shrink: 0;
+}
+
+.note-list-header-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.note-list-title {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text, #2b2620);
+  letter-spacing: 0.02em;
+}
+
+.note-list-count {
+  font-size: 11px;
+  color: var(--color-text-secondary, #9a8b73);
+}
+
+.note-list-filters {
+  display: flex;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.note-list-filter {
+  padding: 3px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  background: transparent;
+  color: var(--color-text-secondary, #9a8b73);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  transition: all 0.12s;
+}
+
+.note-list-filter.active {
+  background: var(--color-text, #2b2620);
+  color: var(--color-paper-0, #fbf7ee);
+  border-color: var(--color-text, #2b2620);
+}
+
+.note-list-filter:not(.active):hover {
+  background: var(--color-paper-2, #ede5d1);
+}
+
+/* Body / list */
+.note-list-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.note-list-body::-webkit-scrollbar {
+  width: 4px;
+}
+.note-list-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.note-list-body::-webkit-scrollbar-thumb {
+  background: var(--color-paper-3, #c9b893);
+  border-radius: 4px;
+}
+.note-list-body::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary, #9a8b73);
+}
+
+.note-list-empty {
+  padding: 40px 20px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--color-text-secondary, #9a8b73);
+}
+
+/* Item */
+.note-list-item {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--color-border, #e0d4b8);
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.12s;
+}
+
+.note-list-item:hover {
+  background: rgba(74, 64, 50, 0.04);
+}
+
+.note-list-item.active {
+  background: var(--color-paper-0, #fbf7ee);
+  border-left-color: var(--color-accent, #b8452e);
+}
+
+.note-list-item.multi-selected {
+  background: rgba(184, 69, 46, 0.08);
+  border-left-color: var(--color-accent, #b8452e);
+}
+
+.note-list-item-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.note-list-item-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #2b2620);
+  line-height: 1.4;
+  flex: 1;
+  padding-right: 8px;
+}
+
+.note-list-pin {
+  color: var(--color-accent, #b8452e);
+  margin-right: 4px;
+}
+
+.note-list-item-date {
+  font-size: 10px;
+  color: var(--color-text-secondary, #9a8b73);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.note-list-item-preview {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--color-text-secondary, #9a8b73);
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.note-list-item-tags {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.note-list-tag {
+  font-size: 10px;
+  color: var(--color-text-secondary, #9a8b73);
+  background: rgba(74, 64, 50, 0.06);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.note-list-tag.active {
+  background: var(--color-paper-2, #ede5d1);
+}
+
+/* Footer */
+.note-list-footer {
+  padding: 14px;
+  border-top: 1px solid var(--color-border, #e0d4b8);
+  flex-shrink: 0;
+}
+
+.note-list-create-btn {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--color-text, #2b2620);
+  color: var(--color-paper-0, #fbf7ee);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.note-list-create-btn:hover {
+  background: var(--color-ink-700, #4a4032);
+}
+
+.note-list-create-hint {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.6;
+}
