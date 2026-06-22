@@ -47,6 +47,7 @@ import java.util.stream.Collectors;
 public class LangChain4jRagService {
 
     private static final Logger log = LoggerFactory.getLogger(LangChain4jRagService.class);
+    private static final int MAX_REWRITE_VARIANTS = 3;
 
     private final EmbeddingModel embeddingModel;
     private final EmbeddingStore<TextSegment> embeddingStore;
@@ -55,6 +56,9 @@ public class LangChain4jRagService {
     private final SecurityUtils securityUtils;
     private final int ragMaxResults;
     private final double ragMinScore;
+
+    @Value("${app.rag.reranking.max-candidates:20}")
+    private int rerankMaxCandidates = 20;
 
     // 可选的 Reranker（如果配置了 Cohere API Key）
     private final ScoringModel scoringModel;
@@ -113,6 +117,26 @@ public class LangChain4jRagService {
                 .minScore(ragMinScore)
                 .filter(RagFilterFactory.userFilter(userId))
                 .build();
+    }
+
+    private List<String> limitRewriteVariants(List<String> queries, String fallbackQuery) {
+        List<String> limited = queries == null ? new ArrayList<>() : queries.stream()
+                .filter(q -> q != null && !q.isBlank())
+                .map(String::trim)
+                .distinct()
+                .limit(MAX_REWRITE_VARIANTS)
+                .collect(Collectors.toList());
+        if (limited.isEmpty() && fallbackQuery != null && !fallbackQuery.isBlank()) {
+            limited.add(fallbackQuery);
+        }
+        return limited;
+    }
+
+    private List<Content> retrieveContents(ContentRetriever retriever, List<String> queries) {
+        return queries.parallelStream()
+                .map(query -> retriever.retrieve(Query.from(query)))
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
     }
 
     /**
@@ -256,16 +280,12 @@ public class LangChain4jRagService {
 
         try {
             // Query Rewriting: 改写查询以提升检索准确度
-            List<String> rewrittenQueries = queryRewritingService.rewriteQuery(query);
+            List<String> rewrittenQueries = limitRewriteVariants(queryRewritingService.rewriteQuery(query), query);
             log.info("Query rewritten into {} variants: {}", rewrittenQueries.size(), rewrittenQueries);
 
             // 对每个改写后的查询进行检索
             ContentRetriever userRetriever = buildContentRetriever(userId);
-            List<Content> allContents = new ArrayList<>();
-            for (String rewrittenQuery : rewrittenQueries) {
-                List<Content> contents = userRetriever.retrieve(Query.from(rewrittenQuery));
-                allContents.addAll(contents);
-            }
+            List<Content> allContents = retrieveContents(userRetriever, rewrittenQueries);
 
             // 去重（基于 textSegment 的文本内容）
             List<Content> uniqueContents = allContents.stream()
@@ -278,7 +298,11 @@ public class LangChain4jRagService {
             // 如果有 Reranker 且熔断器未开启，使用原始查询进行重排序
             if (resilientLlmService.isRerankAvailable() && !uniqueContents.isEmpty()) {
                 log.info("Applying reranking with ScoringModel (via CircuitBreaker)");
-                List<TextSegment> segments = uniqueContents.stream()
+                int candidateCount = Math.min(uniqueContents.size(), Math.max(1, rerankMaxCandidates));
+                List<Content> rerankCandidates = uniqueContents.stream()
+                        .limit(candidateCount)
+                        .collect(Collectors.toList());
+                List<TextSegment> segments = rerankCandidates.stream()
                         .map(Content::textSegment)
                         .collect(Collectors.toList());
 
@@ -290,19 +314,28 @@ public class LangChain4jRagService {
                     List<Double> scoreList = scores.content();
 
                     // 创建带分数的列表并排序
-                    List<ContentWithScore> scoredContents = new ArrayList<>();
-                    for (int i = 0; i < uniqueContents.size(); i++) {
-                        scoredContents.add(new ContentWithScore(uniqueContents.get(i), scoreList.get(i)));
+                    if (scoreList == null || scoreList.size() != rerankCandidates.size()) {
+                        log.warn("Rerank returned {} scores for {} candidates, skipping rerank",
+                                scoreList == null ? 0 : scoreList.size(), rerankCandidates.size());
+                    } else {
+                        List<ContentWithScore> scoredContents = new ArrayList<>();
+                        for (int i = 0; i < rerankCandidates.size(); i++) {
+                            scoredContents.add(new ContentWithScore(rerankCandidates.get(i), scoreList.get(i)));
+                        }
+                        scoredContents.sort(Comparator.comparingDouble(ContentWithScore::score).reversed());
+
+                        // 更新 contents 为重排序后的结果
+                        List<Content> reranked = scoredContents.stream()
+                                .map(ContentWithScore::content)
+                                .collect(Collectors.toList());
+                        reranked.addAll(uniqueContents.stream()
+                                .skip(rerankCandidates.size())
+                                .collect(Collectors.toList()));
+                        uniqueContents = reranked;
+
+                        log.info("Reranking completed, top score: {}",
+                                scoredContents.isEmpty() ? "N/A" : scoredContents.get(0).score());
                     }
-                    scoredContents.sort(Comparator.comparingDouble(ContentWithScore::score).reversed());
-
-                    // 更新 contents 为重排序后的结果
-                    uniqueContents = scoredContents.stream()
-                            .map(ContentWithScore::content)
-                            .collect(Collectors.toList());
-
-                    log.info("Reranking completed, top score: {}",
-                            scoredContents.isEmpty() ? "N/A" : scoredContents.get(0).score());
                 }
             }
 
@@ -403,16 +436,8 @@ public class LangChain4jRagService {
      */
     public List<String> getRelevantContext(String query, int maxSegments, String userId) {
         try {
-            // Query Rewriting
-            List<String> rewrittenQueries = queryRewritingService.rewriteQuery(query);
-
-            // 对每个改写后的查询进行检索
             ContentRetriever userRetriever = buildContentRetriever(userId);
-            List<Content> allContents = new ArrayList<>();
-            for (String rewrittenQuery : rewrittenQueries) {
-                List<Content> contents = userRetriever.retrieve(Query.from(rewrittenQuery));
-                allContents.addAll(contents);
-            }
+            List<Content> allContents = userRetriever.retrieve(Query.from(query));
 
             // 去重并返回文本
             return allContents.stream()

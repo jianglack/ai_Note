@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -92,7 +93,7 @@ class ContextAssemblerTest {
                 .thenReturn(List.of());
         when(episodicMemoryRepository.findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.any()))
                 .thenReturn(List.of());
-        when(noteRepository.findByUserIdAndDeletedAtIsNull("user-1")).thenReturn(List.of(selected));
+        when(noteRepository.countByUserIdAndDeletedAtIsNull("user-1")).thenReturn(1L);
         when(folderRepository.findByUserId("user-1")).thenReturn(List.of());
         when(noteRepository.findByIdAndUserIdWithTagsAndFolder("selected-note", "user-1"))
                 .thenReturn(Optional.of(selected));
@@ -111,5 +112,6 @@ class ContextAssemblerTest {
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyString());
+        verify(noteRepository, never()).findByUserIdAndDeletedAtIsNull("user-1");
     }
 }

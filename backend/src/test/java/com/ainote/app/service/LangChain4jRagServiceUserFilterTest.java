@@ -31,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -135,8 +136,6 @@ class LangChain4jRagServiceUserFilterTest {
     @Test
     @DisplayName("getRelevantContext: dynamic ContentRetriever EmbeddingSearchRequest includes userId filter")
     void getRelevantContext_includesUserIdFilterInRetrieverSearch() {
-        when(queryRewritingService.rewriteQuery(any()))
-                .thenReturn(List.of("rewritten"));
         when(embeddingModel.embed(anyString()))
                 .thenReturn(Response.from(FAKE_EMBEDDING));
         when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
@@ -152,19 +151,18 @@ class LangChain4jRagServiceUserFilterTest {
         assertThat(filter).isNotNull();
         assertThat(filter.test(Metadata.from("userId", USER_ID))).isTrue();
         assertThat(filter.test(Metadata.from("userId", OTHER_USER_ID))).isFalse();
+        verify(queryRewritingService, never()).rewriteQuery(anyString());
     }
 
     @Test
-    @DisplayName("getRelevantContext: new signature requires userId parameter")
-    void getRelevantContext_requiresUserId() {
-        when(queryRewritingService.rewriteQuery(any()))
-                .thenReturn(List.of("rewritten"));
+    @DisplayName("getRelevantContext: skips query rewriting")
+    void getRelevantContext_skipsQueryRewriting() {
         when(embeddingModel.embed(anyString()))
                 .thenReturn(Response.from(FAKE_EMBEDDING));
         when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
                 .thenReturn(new EmbeddingSearchResult<>(List.of()));
 
         ragService.getRelevantContext("test query", 5, USER_ID);
-        verify(queryRewritingService).rewriteQuery("test query");
+        verify(queryRewritingService, never()).rewriteQuery(anyString());
     }
 }

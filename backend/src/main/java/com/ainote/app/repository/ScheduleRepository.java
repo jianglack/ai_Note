@@ -11,6 +11,11 @@ public interface ScheduleRepository extends JpaRepository<Schedule, String> {
 
     List<Schedule> findByUserIdOrderByStartTimeDesc(String userId);
 
+    @Query("SELECT s FROM Schedule s JOIN FETCH s.user " +
+           "WHERE s.status = 'pending' AND s.startTime <= :soonThreshold " +
+           "ORDER BY s.startTime ASC")
+    List<Schedule> findPendingDueOrSoon(@Param("soonThreshold") LocalDateTime soonThreshold);
+
     @Query("SELECT s FROM Schedule s WHERE s.user.id = :userId " +
            "AND s.startTime >= :startDate AND s.startTime <= :endDate " +
            "ORDER BY s.startTime")

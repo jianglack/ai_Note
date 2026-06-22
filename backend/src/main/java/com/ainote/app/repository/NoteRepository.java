@@ -69,4 +69,25 @@ public interface NoteRepository extends JpaRepository<Note, String> {
     List<Note> findRecentByUserId(@Param("userId") String userId, Pageable pageable);
 
     long countByUserIdAndDeletedAtIsNull(String userId);
+
+    @Query("SELECT COALESCE(f.name, 'Uncategorized') AS folderName, COUNT(n) AS noteCount " +
+            "FROM Note n LEFT JOIN n.folder f " +
+            "WHERE n.user.id = :userId AND n.deletedAt IS NULL " +
+            "GROUP BY f.name")
+    List<FolderCount> countNotesByFolder(@Param("userId") String userId);
+
+    @Query("SELECT COUNT(n) FROM Note n " +
+            "WHERE n.user.id = :userId AND n.deletedAt IS NULL AND n.updatedAt > :since")
+    long countRecentlyActiveByUserId(@Param("userId") String userId, @Param("since") LocalDateTime since);
+
+    @Query("SELECT n.title FROM Note n " +
+            "WHERE n.user.id = :userId AND n.deletedAt IS NULL " +
+            "ORDER BY n.createdAt DESC")
+    List<String> findRecentTitlesByUserId(@Param("userId") String userId, Pageable pageable);
+
+    interface FolderCount {
+        String getFolderName();
+
+        Long getNoteCount();
+    }
 }

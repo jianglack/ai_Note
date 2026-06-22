@@ -170,12 +170,12 @@ public class ContextAssembler {
     private String buildUserOverview(String userId) {
         StringBuilder overview = new StringBuilder();
         try {
-            List<Note> allNotes = noteRepository.findByUserIdAndDeletedAtIsNull(userId);
+            long noteCount = noteRepository.countByUserIdAndDeletedAtIsNull(userId);
             List<Folder> folders = folderRepository.findByUserId(userId);
 
             overview.append("<user_overview>\n");
             overview.append("  <statistics>\n");
-            overview.append("    <total_notes>").append(allNotes.size()).append("</total_notes>\n");
+            overview.append("    <total_notes>").append(noteCount).append("</total_notes>\n");
             overview.append("    <total_folders>").append(folders.size()).append("</total_folders>\n");
             overview.append("  </statistics>\n");
 

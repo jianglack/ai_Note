@@ -20,8 +20,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -32,6 +34,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("LangChain4jRagService unit tests")
@@ -184,9 +187,6 @@ class LangChain4jRagServiceTest {
     @Test
     @DisplayName("getRelevantContext should return text segments")
     void shouldReturnRelevantContext() {
-        when(queryRewritingService.rewriteQuery(anyString()))
-                .thenReturn(List.of("test query"));
-
         Embedding fakeEmbedding = Embedding.from(new float[]{0.1f});
         when(embeddingModel.embed(anyString()))
                 .thenReturn(Response.from(fakeEmbedding));
@@ -204,14 +204,12 @@ class LangChain4jRagServiceTest {
         List<String> result = ragService.getRelevantContext("test", 5, "user-123");
 
         assertThat(result).containsExactly("related content 1", "related content 2");
+        verify(queryRewritingService, never()).rewriteQuery(anyString());
     }
 
     @Test
     @DisplayName("getRelevantContext should limit result count")
     void shouldLimitContextResults() {
-        when(queryRewritingService.rewriteQuery(anyString()))
-                .thenReturn(List.of("test"));
-
         Embedding fakeEmbedding = Embedding.from(new float[]{0.1f});
         when(embeddingModel.embed(anyString()))
                 .thenReturn(Response.from(fakeEmbedding));
@@ -232,6 +230,52 @@ class LangChain4jRagServiceTest {
         List<String> result = ragService.getRelevantContext("test", 2, "user-123");
 
         assertThat(result).hasSize(2);
+        verify(queryRewritingService, never()).rewriteQuery(anyString());
+    }
+
+    @Test
+    void searchSimilar_limitsRewriteVariantsToThree() {
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(queryRewritingService.rewriteQuery("test"))
+                .thenReturn(List.of("test", "expanded-a", "expanded-b", "expanded-c"));
+        when(embeddingModel.embed(anyString()))
+                .thenReturn(Response.from(Embedding.from(new float[]{0.1f})));
+        when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
+                .thenReturn(new EmbeddingSearchResult<>(List.of()));
+
+        ragService.searchSimilar("test", 10);
+
+        verify(embeddingStore, times(3)).search(any(EmbeddingSearchRequest.class));
+    }
+
+    @Test
+    void searchSimilar_reranksOnlyTopCandidates() {
+        ReflectionTestUtils.setField(ragService, "rerankMaxCandidates", 3);
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(queryRewritingService.rewriteQuery("test")).thenReturn(List.of("test"));
+        when(embeddingModel.embed(anyString()))
+                .thenReturn(Response.from(Embedding.from(new float[]{0.1f})));
+
+        List<EmbeddingMatch<TextSegment>> matches = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            TextSegment segment = TextSegment.from("content " + i,
+                    Metadata.from("noteId", "note-" + i).put("userId", "user-123"));
+            matches.add(new EmbeddingMatch<>(0.9 - (i * 0.01), "id-" + i,
+                    Embedding.from(new float[]{0.1f}), segment));
+        }
+        when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
+                .thenReturn(new EmbeddingSearchResult<>(matches));
+        when(resilientLlmService.isRerankAvailable()).thenReturn(true);
+        when(resilientLlmService.scoreAll(any(), anyString()))
+                .thenReturn(Response.from(List.of(0.9, 0.8, 0.7, 0.6, 0.5)));
+        when(noteRepository.findAllById(any())).thenReturn(List.of());
+
+        ragService.searchSimilar("test", 10);
+
+        org.mockito.ArgumentCaptor<List<TextSegment>> segments =
+                org.mockito.ArgumentCaptor.forClass(List.class);
+        verify(resilientLlmService).scoreAll(segments.capture(), org.mockito.ArgumentMatchers.eq("test"));
+        assertThat(segments.getValue()).hasSize(3);
     }
 
     @Test
