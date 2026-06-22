@@ -1,7 +1,0 @@
-app:
-  jwt:
-    secret: ${JWT_SECRET}
-  internal:
-    token: ${INTERNAL_TOKEN}
-  cors:
-    allowed-origins: ${CORS_ORIGINS:http://localhost:5173}

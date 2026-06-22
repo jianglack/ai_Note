@@ -1,8 +1,0 @@
-spring:
-  datasource:
-    url: jdbc:postgresql://postgres:5432/ainote_notes
-    username: ainote
-    password: ${DB_PASSWORD}
-app:
-  internal:
-    token: ${INTERNAL_TOKEN}
