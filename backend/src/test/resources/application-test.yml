@@ -1,22 +1,25 @@
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5432/ainote_test
-    username: postgres
-    password: 123456
+    url: jdbc:postgresql://localhost:5432/ainote_test?stringtype=unspecified
+    username: ainote
+    password: ainote
     driver-class-name: org.postgresql.Driver
   jpa:
     database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      ddl-auto: create-drop
+      ddl-auto: validate
     show-sql: false
   flyway:
-    enabled: false
+    enabled: true
+    locations: classpath:db/migration
   data:
     redis:
       host: localhost
       port: 6379
 
 app:
+  neo4j:
+    enabled: false
   jwt:
     secret: test-secret-key-must-be-at-least-256-bits-long-for-hs256-algorithm
     expiration: 86400000

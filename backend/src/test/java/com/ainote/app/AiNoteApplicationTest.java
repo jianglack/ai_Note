@@ -1,21 +1,44 @@
 package com.ainote.app;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.PostgreSQLContainer;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
 
-/**
- * 应用启动集成测试
- * 需要数据库连接，暂时禁用
- * 单元测试已覆盖核心功能
- */
-@Disabled("需要数据库连接，使用单元测试替代")
-@DisplayName("应用启动测试")
+@SpringBootTest
+@ActiveProfiles("test")
+@Testcontainers(disabledWithoutDocker = true)
+@DisplayName("Application startup")
 class AiNoteApplicationTest {
 
+    @Container
+    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16")
+            .withDatabaseName("ainote_boot")
+            .withUsername("ainote")
+            .withPassword("ainote");
+
+    @DynamicPropertySource
+    static void databaseProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", AiNoteApplicationTest::jdbcUrl);
+        registry.add("spring.datasource.username", postgres::getUsername);
+        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.flyway.enabled", () -> "true");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
+        registry.add("app.neo4j.enabled", () -> "false");
+    }
+
     @Test
-    @DisplayName("应用上下文应能正常加载")
+    @DisplayName("loads Spring context after Flyway migrations")
     void contextLoads() {
-        // 如果应用上下文能正常加载，测试就会通过
+    }
+
+    private static String jdbcUrl() {
+        String url = postgres.getJdbcUrl();
+        return url.contains("?") ? url + "&stringtype=unspecified" : url + "?stringtype=unspecified";
     }
 }
