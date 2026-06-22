@@ -24,6 +24,7 @@ import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -168,14 +169,12 @@ public class NoteActionTool {
         String title = params.path("title").asText("无标题");
         String content = params.path("content").asText("");
 
-        // 幂等保护：标题匹配 + 内容哈希双重检查，300s 窗口
+        // 幂等保护：标题匹配 + 内容精确匹配，300s 窗口
         String userId = securityUtils.getCurrentUserId();
         LocalDateTime cutoff = LocalDateTime.now().minusSeconds(DEDUP_WINDOW_SECONDS);
         List<com.ainote.app.entity.Note> recent = noteRepository.findRecentByUserIdAndTitle(userId, title, cutoff);
-        int contentHash = (title + "|" + content).hashCode();
         for (com.ainote.app.entity.Note existing : recent) {
-            int existingHash = (existing.getTitle() + "|" + existing.getContent()).hashCode();
-            if (existingHash == contentHash) {
+            if (Objects.equals(existing.getTitle(), title) && Objects.equals(existing.getContent(), content)) {
                 return String.format("该笔记已存在：「%s」（ID: %s），无需重复创建。", existing.getTitle(), existing.getId());
             }
         }

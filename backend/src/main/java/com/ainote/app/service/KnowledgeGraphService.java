@@ -147,7 +147,7 @@ public class KnowledgeGraphService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void syncNote(String noteId) {
         if (!isNeo4jEnabled()) {
             return;
@@ -199,7 +199,7 @@ public class KnowledgeGraphService {
         });
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void syncFolder(String folderId) {
         if (!isNeo4jEnabled()) {
             return;
@@ -225,7 +225,7 @@ public class KnowledgeGraphService {
         }));
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public void syncSchedule(String scheduleId) {
         if (!isNeo4jEnabled()) {
             return;

@@ -12,6 +12,8 @@ import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.security.SecurityUtils;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
+import dev.langchain4j.data.message.UserMessage;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
@@ -235,6 +237,38 @@ class AgentServiceGuardrailTest {
         verify(agentAssistant).chat(eq(memoryId), anyString(), anyString(), anyString());
         verify(toolCallAuditor).validate(anyString(), eq(memoryId), any(), anyInt());
         verify(outputGuardrail).sanitize(anyString(), eq(actorUserId));
+    }
+
+    @Test
+    @DisplayName("tool-call limit fallback only reads current-turn tool results")
+    void toolCallLimitFallback_ignoresPreviousTurns() {
+        when(reliableChatMemoryStore.getMessages("user-1")).thenReturn(List.of(
+                UserMessage.from("previous request"),
+                ToolExecutionResultMessage.from("old-call", "noteAction", "old result"),
+                UserMessage.from("current request"),
+                ToolExecutionResultMessage.from("new-call", "noteAction", "current result")
+        ));
+
+        String result = ReflectionTestUtils.invokeMethod(
+                agentService,
+                "extractLastToolResult",
+                "user-1",
+                2
+        );
+
+        assertThat(result).isEqualTo("current result");
+    }
+
+    @Test
+    @DisplayName("interactive-card markers are stripped from stream complete content")
+    void removeInteractiveCardMarkers_removesMarkerLine() {
+        String result = ReflectionTestUtils.invokeMethod(
+                agentService,
+                "removeInteractiveCardMarkers",
+                "正文\nINTERACTIVE_CARD:{\"type\":\"note\"}\n"
+        );
+
+        assertThat(result).isEqualTo("正文");
     }
 
     private void stubSuccessfulAgentResponse(String content) {

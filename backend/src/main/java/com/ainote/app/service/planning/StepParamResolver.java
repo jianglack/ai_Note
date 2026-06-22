@@ -48,24 +48,18 @@ public class StepParamResolver {
             String text = node.asText();
             Matcher matcher = REF_PATTERN.matcher(text);
             if (matcher.find()) {
-                int refOrder = Integer.parseInt(matcher.group(1));
-                String fieldPath = matcher.group(2);
-
-                TaskStep refStep = completedSteps.get(refOrder);
-                if (refStep == null || refStep.getOutputResult() == null) {
-                    throw new RuntimeException("Referenced step " + refOrder + " has no result");
-                }
-
-                JsonNode refResult = objectMapper.readTree(refStep.getOutputResult());
-
                 if (matcher.start() == 0 && matcher.end() == text.length()) {
-                    return fieldPath != null ? navigatePath(refResult, fieldPath) : refResult;
+                    return resolveReference(matcher, completedSteps);
                 }
 
-                String resolvedValue = fieldPath != null
-                        ? navigatePath(refResult, fieldPath).asText()
-                        : refResult.toString();
-                return new TextNode(text.substring(0, matcher.start()) + resolvedValue + text.substring(matcher.end()));
+                StringBuffer resolved = new StringBuffer();
+                do {
+                    JsonNode refNode = resolveReference(matcher, completedSteps);
+                    String replacement = refNode.isValueNode() ? refNode.asText() : refNode.toString();
+                    matcher.appendReplacement(resolved, Matcher.quoteReplacement(replacement));
+                } while (matcher.find());
+                matcher.appendTail(resolved);
+                return new TextNode(resolved.toString());
             }
             return node;
         }
@@ -89,6 +83,19 @@ public class StepParamResolver {
         }
 
         return node;
+    }
+
+    private JsonNode resolveReference(Matcher matcher, Map<Integer, TaskStep> completedSteps) throws Exception {
+        int refOrder = Integer.parseInt(matcher.group(1));
+        String fieldPath = matcher.group(2);
+
+        TaskStep refStep = completedSteps.get(refOrder);
+        if (refStep == null || refStep.getOutputResult() == null) {
+            throw new RuntimeException("Referenced step " + refOrder + " has no result");
+        }
+
+        JsonNode refResult = objectMapper.readTree(refStep.getOutputResult());
+        return fieldPath != null ? navigatePath(refResult, fieldPath) : refResult;
     }
 
     private JsonNode navigatePath(JsonNode root, String path) {

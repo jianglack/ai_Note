@@ -12,7 +12,6 @@ import com.ainote.app.agent.pending.PendingActionRegistry;
 import com.ainote.app.agent.pipeline.GracefulDegradation;
 import com.ainote.app.agent.pipeline.ToolAuditLogger;
 import com.ainote.app.agent.pipeline.ToolExecutionPipeline;
-import com.ainote.app.entity.UserMemory;
 import com.ainote.app.memory.DeferredMemoryState;
 import com.ainote.app.memory.ReliableChatMemoryStore;
 import com.ainote.app.model.AiChatResponse;
@@ -23,6 +22,8 @@ import com.ainote.app.security.SecurityUtils;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
@@ -330,7 +331,7 @@ public class AgentService {
                 String errMsg = extractRootMessage(e);
                 if (isToolCallLimitError(e, errMsg)) {
                     log.warn("Agent exceeded max tool invocations for query: {}", query);
-                    String lastToolResult = extractLastToolResult(memoryId);
+                    String lastToolResult = extractLastToolResult(memoryId, preCallMessageCount);
                     if (lastToolResult != null && !lastToolResult.isBlank()) {
                         return new AiChatResponse(lastToolResult, new HashMap<>(), (String) null);
                     }
@@ -371,7 +372,8 @@ public class AgentService {
             agentSpan.setAttribute("response.length", cleanResponse.length());
             agentSpan.setAttribute("pending_actions.count", pendingActions.size());
 
-            AiChatResponse response = new AiChatResponse(cleanResponse, sources, actionJson);
+            String completeContent = removeInteractiveCardMarkers(cleanResponse);
+            AiChatResponse response = new AiChatResponse(completeContent, sources, actionJson);
             // 附加工具执行审计记录（后续可通过配置控制是否返回前端）
             if (!transcript.isEmpty()) {
                 response.setTranscript(transcript);
@@ -571,6 +573,7 @@ public class AgentService {
         }
 
         ToolAuditLogger.resetTranscript();
+        int preCallMessageCount = 0;
 
         try {
             callback.onProgress("thinking", "正在分析您的请求...");
@@ -591,7 +594,7 @@ public class AgentService {
             callback.onProgress("calling_agent", "正在推理和执行...");
 
             // 记录调用前的消息数量
-            int preCallMessageCount = reliableChatMemoryStore.getMessages(memoryId).size();
+            preCallMessageCount = reliableChatMemoryStore.getMessages(memoryId).size();
 
             AgentInvocationResult invocation;
             Future<AgentInvocationResult> invocationFuture = null;
@@ -642,13 +645,13 @@ public class AgentService {
 
             Map<Integer, AiChatResponse.NoteSource> sources = buildNoteSources(noteIds, actorUserId);
 
-            // 流式发送时去掉 INTERACTIVE_CARD 标记行（保留在 complete 事件中供前端解析）
-            String streamContent = cleanResponse.replaceAll("INTERACTIVE_CARD:\\{[^\\n]*\\}\\n?", "").trim();
+            String streamContent = removeInteractiveCardMarkers(cleanResponse);
             for (int i = 0; i < streamContent.length(); i++) {
                 callback.onToken(String.valueOf(streamContent.charAt(i)));
             }
 
-            AiChatResponse response = new AiChatResponse(cleanResponse, sources, actionJson);
+            String completeContent = removeInteractiveCardMarkers(cleanResponse);
+            AiChatResponse response = new AiChatResponse(completeContent, sources, actionJson);
             // 附加工具执行审计记录
             if (!transcript.isEmpty()) {
                 response.setTranscript(transcript);
@@ -671,7 +674,7 @@ public class AgentService {
             String errMsg = extractRootMessage(e);
             if (isToolCallLimitError(e, errMsg)) {
                 log.warn("Agent stream exceeded max tool invocations for query: {}", query);
-                String lastToolResult = extractLastToolResult(memoryId);
+                String lastToolResult = extractLastToolResult(memoryId, preCallMessageCount);
                 String resp = (lastToolResult != null && !lastToolResult.isBlank())
                         ? lastToolResult
                         : "操作已完成，请刷新查看最新结果。";
@@ -872,20 +875,18 @@ public class AgentService {
     }
 
     /**
-     * 从用户记忆中提取最后一条成功的工具执行结果
-     * 用于在 Agent 超限时，把工具结果作为回复返回给用户
+     * 从本轮新增 chat memory 中提取最后一条成功的工具执行结果。
+     * 用于 Agent 超限时返回已完成的当前轮工具结果，避免串到历史轮次。
      */
-    private String extractLastToolResult(String userId) {
+    private String extractLastToolResult(String memoryId, int preCallMessageCount) {
         try {
-            List<UserMemory> memories = userMemoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId);
-            // 倒序找最后一条 TOOL_EXECUTION_RESULT（不限关键词，只要非空非错误即可）
-            for (int i = memories.size() - 1; i >= 0; i--) {
-                UserMemory mem = memories.get(i);
-                if ("TOOL_EXECUTION_RESULT".equals(mem.getMessageType())) {
-                    String result = mem.getToolResult();
-                    if (result != null && !result.isBlank()
-                            && !result.contains("操作失败") && !result.contains("未找到")
-                            && !result.contains("缺少") && !result.contains("检测到重复调用")) {
+            List<ChatMessage> messages = reliableChatMemoryStore.getMessages(memoryId);
+            int start = Math.max(0, Math.min(preCallMessageCount, messages.size()));
+            for (int i = messages.size() - 1; i >= start; i--) {
+                ChatMessage message = messages.get(i);
+                if (message instanceof ToolExecutionResultMessage toolMessage) {
+                    String result = toolMessage.text();
+                    if (isSuccessfulToolResult(result)) {
                         return result.trim();
                     }
                 }
@@ -894,5 +895,18 @@ public class AgentService {
             log.warn("Failed to extract last tool result: {}", e.getMessage());
         }
         return null;
+    }
+
+    private boolean isSuccessfulToolResult(String result) {
+        return result != null && !result.isBlank()
+                && !result.contains("操作失败") && !result.contains("未找到")
+                && !result.contains("缺少") && !result.contains("检测到重复调用");
+    }
+
+    private String removeInteractiveCardMarkers(String content) {
+        if (content == null) {
+            return null;
+        }
+        return content.replaceAll("INTERACTIVE_CARD:\\{[^\\n]*\\}\\n?", "").trim();
     }
 }
