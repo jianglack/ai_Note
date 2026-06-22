@@ -3,12 +3,20 @@ package com.ainote.app.config;
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.validation.BeanPropertyBindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -65,6 +73,45 @@ class GlobalExceptionHandlerTest {
         var fields = details.stream().map(d -> d.get("field")).toList();
         assertTrue(fields.contains("username"));
         assertTrue(fields.contains("password"));
+    }
+
+    @Test
+    void notFoundExceptions_return404() {
+        ResponseEntity<Map<String, String>> noSuchElement =
+                handler.handleNotFound(new NoSuchElementException("missing"));
+        ResponseEntity<Map<String, String>> entityNotFound =
+                handler.handleNotFound(new EntityNotFoundException("missing"));
+
+        assertEquals(404, noSuchElement.getStatusCode().value());
+        assertEquals(404, entityNotFound.getStatusCode().value());
+    }
+
+    @Test
+    void requestShapeExceptions_return400() throws Exception {
+        MethodParameter param = new MethodParameter(
+                GlobalExceptionHandlerTest.class.getDeclaredMethod("dummyMethod", String.class), 0);
+
+        List<Exception> exceptions = List.of(
+                new HttpMessageNotReadableException("bad json"),
+                new MethodArgumentTypeMismatchException("abc", Integer.class, "id", param, new NumberFormatException()),
+                new MissingServletRequestParameterException("q", "String"),
+                new ConstraintViolationException(Set.of())
+        );
+
+        for (Exception exception : exceptions) {
+            ResponseEntity<Map<String, String>> response = handler.handleBadRequest(exception);
+            assertEquals(400, response.getStatusCode().value());
+            assertNotNull(response.getBody());
+        }
+    }
+
+    @Test
+    void unsupportedMethod_returns405() {
+        ResponseEntity<Map<String, String>> response =
+                handler.handleMethodNotSupported(new HttpRequestMethodNotSupportedException("POST", List.of("GET")));
+
+        assertEquals(405, response.getStatusCode().value());
+        assertNotNull(response.getBody());
     }
 
     @SuppressWarnings("unused")

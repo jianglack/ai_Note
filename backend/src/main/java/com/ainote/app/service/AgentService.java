@@ -36,8 +36,8 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
@@ -259,10 +259,7 @@ public class AgentService {
             return new AiChatResponse("您有一个正在进行的请求，请等待完成后再试。", new HashMap<>(), (String) null);
         }
 
-        toolLoopDetector.reset();
         ToolAuditLogger.resetTranscript();
-        tokenBudget.reset();
-        GracefulDegradation.reset();
 
         Span agentSpan = tracer.spanBuilder("agent-chat")
                 .setAttribute("user.id", actorUserId)
@@ -284,10 +281,7 @@ public class AgentService {
             log.error("Error building context: {}", e.getMessage(), e);
             agentSpan.setStatus(StatusCode.ERROR, "context assembly failed");
             agentSpan.end();
-            toolLoopDetector.reset();
             ToolAuditLogger.resetTranscript();
-            tokenBudget.reset();
-            GracefulDegradation.reset();
             concurrencyGuard.release(actorUserId);
             return new AiChatResponse("抱歉，构建上下文时出错：" + e.getMessage(), new HashMap<>(), (String) null);
         }
@@ -295,10 +289,7 @@ public class AgentService {
         if (!contextCheck.passed()) {
             agentSpan.setStatus(StatusCode.ERROR, "untrusted context blocked");
             agentSpan.end();
-            toolLoopDetector.reset();
             ToolAuditLogger.resetTranscript();
-            tokenBudget.reset();
-            GracefulDegradation.reset();
             concurrencyGuard.release(actorUserId);
             return new AiChatResponse(contextCheck.reason(), new HashMap<>(), (String) null);
         }
@@ -314,22 +305,25 @@ public class AgentService {
             int preCallMessageCount = reliableChatMemoryStore.getMessages(memoryId).size();
 
             AgentInvocationResult invocation;
+            Future<AgentInvocationResult> invocationFuture = null;
+            CancellationToken cancelToken = null;
             String rawResponse;
             List<ToolAuditLogger.ToolAuditEntry> transcript = List.of();
             try {
                 final String currentUserId = actorUserId;
                 // 获取或创建取消令牌
-                CancellationToken cancelToken = cancelTokenRegistry.computeIfAbsent(
+                cancelToken = cancelTokenRegistry.computeIfAbsent(
                         currentUserId, k -> new CancellationToken());
 
-                invocation = CompletableFuture.supplyAsync(
-                        () -> invokeAgentWithContext(memoryId, actorUserId, query, timeContext, noteContext, cancelToken),
-                        securityExecutor
-                ).get(agentTimeoutSeconds, TimeUnit.SECONDS);
+                CancellationToken activeCancelToken = cancelToken;
+                invocationFuture = securityExecutor.submit(
+                        () -> invokeAgentWithContext(memoryId, actorUserId, query, timeContext, noteContext, activeCancelToken));
+                invocation = invocationFuture.get(agentTimeoutSeconds, TimeUnit.SECONDS);
                 rawResponse = invocation.rawResponse();
                 transcript = invocation.transcript();
             } catch (TimeoutException e) {
                 log.warn("Agent chat timed out after {}s for query: {}", agentTimeoutSeconds, query);
+                cancelInvocation(invocationFuture, cancelToken);
                 return new AiChatResponse("抱歉，处理时间过长，请稍后重试。", new HashMap<>(), (String) null);
             } catch (Exception e) {
                 // 检查是否是工具调用次数超限（Agent 循环保护）
@@ -342,7 +336,7 @@ public class AgentService {
                     }
                     return new AiChatResponse("操作已完成，请刷新查看最新结果。", new HashMap<>(), (String) null);
                 }
-                log.error("Error in CompletableFuture: {}", e.getMessage(), e);
+                log.error("Error in agent invocation future: {}", e.getMessage(), e);
                 return new AiChatResponse("抱歉，处理请求时出错：" + e.getMessage(), new HashMap<>(), (String) null);
             }
 
@@ -397,10 +391,7 @@ public class AgentService {
             agentSpan.setStatus(StatusCode.ERROR, e.getMessage());
             return new AiChatResponse("抱歉，处理请求时出错：" + e.getMessage(), new HashMap<>(), (String) null);
         } finally {
-            toolLoopDetector.reset();
             ToolAuditLogger.resetTranscript();
-            tokenBudget.reset();
-            GracefulDegradation.reset();
             removeCancelToken(actorUserId);
             concurrencyGuard.release(actorUserId);
             agentSpan.end();
@@ -428,6 +419,7 @@ public class AgentService {
             String noteContext,
             CancellationToken cancelToken
     ) {
+        resetAgentExecutionState();
         ToolAuditLogger.resetTranscript();
         AgentTraceListener.setCurrentUserId(actorUserId);
         com.ainote.app.config.AgentConfig.TOOL_CALL_COUNTER.get().set(0);
@@ -455,7 +447,23 @@ public class AgentService {
             ReliableChatMemoryStore.IN_AGENT_LOOP.remove();
             AgentTraceListener.clearCurrentUserId();
             com.ainote.app.config.AgentConfig.TOOL_CALL_COUNTER.remove();
+            resetAgentExecutionState();
             ToolAuditLogger.resetTranscript();
+        }
+    }
+
+    private void resetAgentExecutionState() {
+        toolLoopDetector.reset();
+        tokenBudget.reset();
+        GracefulDegradation.reset();
+    }
+
+    private void cancelInvocation(Future<?> invocationFuture, CancellationToken cancelToken) {
+        if (cancelToken != null) {
+            cancelToken.cancel();
+        }
+        if (invocationFuture != null) {
+            invocationFuture.cancel(true);
         }
     }
 
@@ -562,10 +570,7 @@ public class AgentService {
             return;
         }
 
-        toolLoopDetector.reset();
         ToolAuditLogger.resetTranscript();
-        tokenBudget.reset();
-        GracefulDegradation.reset();
 
         try {
             callback.onProgress("thinking", "正在分析您的请求...");
@@ -589,23 +594,26 @@ public class AgentService {
             int preCallMessageCount = reliableChatMemoryStore.getMessages(memoryId).size();
 
             AgentInvocationResult invocation;
+            Future<AgentInvocationResult> invocationFuture = null;
+            CancellationToken cancelToken = null;
             String rawResponse;
             List<ToolAuditLogger.ToolAuditEntry> transcript = List.of();
             try {
                 AgentTraceListener.registerProgressCallback(actorUserId, callback::onProgress);
 
                 // 获取或创建取消令牌
-                CancellationToken cancelToken = cancelTokenRegistry.computeIfAbsent(
+                cancelToken = cancelTokenRegistry.computeIfAbsent(
                         actorUserId, k -> new CancellationToken());
 
-                invocation = CompletableFuture.supplyAsync(
-                        () -> invokeAgentWithContext(memoryId, actorUserId, query, timeContext, noteContext, cancelToken),
-                        securityExecutor
-                ).get(agentTimeoutSeconds, TimeUnit.SECONDS);
+                CancellationToken activeCancelToken = cancelToken;
+                invocationFuture = securityExecutor.submit(
+                        () -> invokeAgentWithContext(memoryId, actorUserId, query, timeContext, noteContext, activeCancelToken));
+                invocation = invocationFuture.get(agentTimeoutSeconds, TimeUnit.SECONDS);
                 rawResponse = invocation.rawResponse();
                 transcript = invocation.transcript();
             } catch (TimeoutException e) {
                 log.warn("Agent chat stream timed out after {}s", agentTimeoutSeconds);
+                cancelInvocation(invocationFuture, cancelToken);
                 callback.onError("处理时间过长，请稍后重试。");
                 return;
             } finally {
@@ -676,10 +684,7 @@ public class AgentService {
             log.error("Agent chat stream failed", e);
             callback.onError("处理请求时出错：" + e.getMessage());
         } finally {
-            toolLoopDetector.reset();
             ToolAuditLogger.resetTranscript();
-            tokenBudget.reset();
-            GracefulDegradation.reset();
             removeCancelToken(actorUserId);
             concurrencyGuard.release(actorUserId);
         }

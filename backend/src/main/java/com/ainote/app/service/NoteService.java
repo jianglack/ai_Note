@@ -190,9 +190,9 @@ public class NoteService {
         Note saved = noteRepository.save(note);
         cacheService.invalidateNoteCache(id);
         // 触发异步嵌入生成
-        langChain4jRagService.generateEmbeddingAsync(saved.getId());
         String currentUserId = userId;
         afterCommit(() -> {
+            langChain4jRagService.generateEmbeddingAsync(saved.getId());
             knowledgeGraphService.syncNote(saved.getId());
             contentAnalysisService.extractConceptsAsync(saved.getId(), currentUserId,
                     saved.getTitle(), saved.getContent());

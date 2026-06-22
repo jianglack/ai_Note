@@ -460,6 +460,7 @@ public class PlanExecutor {
 
         // 闂備浇顕х换鎰崲閹邦儵娑樜旈崘顏嗩槸闁诲函缍嗛崰鏍矆閸懇鍋撻獮鍨姎闁瑰啿閰ｉ獮鎰板Χ婢跺鍘卞┑顔斤供閸撴岸骞戦敐澶嬬厽闁靛骏缍嗛崵娆愩亜椤愮姴鐏插┑锛勫厴閸┾剝绻涢幆褌澹曢梺鍛婂姦閸犳宕?order 闂傚倷绀侀幉锟犳嚌閹灐褰掓憥閸屾粍妲€婵犵數鍋為崹鍫曞箰閹绢喖纾婚柟鎹愮М?
         stepRepository.shiftStepOrders(plan.getId(), insertOrder);
+        shiftDependsOnReferences(plan.getId(), insertOrder);
 
         // 闂傚倷绀侀幉锛勬暜濡ゅ啰鐭欓柟瀵稿Х绾句粙鏌熼幑鎰靛殭婵☆偅锕㈤弻鐔封枔閸喗鐏嶉梺浼欑秮娴滃爼寮诲☉銏犵鐎规洖娉﹂妶澶嬬厽闁靛牆鎳忛ˉ婊勩亜椤愮姴鐏插┑锛勫厴閸┾剝绻涢幆褌澹?
         TaskStep newStep = new TaskStep();
@@ -486,6 +487,25 @@ public class PlanExecutor {
                 insertOrder, plan.getId(), plan.getTotalSteps());
         progressEmitter.emitPlanUpdate(plan.getId(), plan.getStatus(),
                 plan.getCompletedSteps(), plan.getTotalSteps());
+    }
+
+    private void shiftDependsOnReferences(String planId, int insertOrder) {
+        List<TaskStep> steps = stepRepository.findByPlanIdOrderByStepOrder(planId);
+        for (TaskStep step : steps) {
+            Integer[] dependsOn = step.getDependsOn();
+            if (dependsOn == null || dependsOn.length == 0) {
+                continue;
+            }
+
+            Integer[] shifted = Arrays.stream(dependsOn)
+                    .map(dep -> dep != null && dep >= insertOrder ? dep + 1 : dep)
+                    .toArray(Integer[]::new);
+
+            if (!Arrays.equals(dependsOn, shifted)) {
+                step.setDependsOn(shifted);
+                stepRepository.save(step);
+            }
+        }
     }
 
     private String extractPrerequisiteDescription(String agentResponse) {

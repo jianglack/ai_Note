@@ -9,10 +9,15 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.util.regex.Pattern;
+
 @Service
 public class ReflectionService {
 
     private static final Logger log = LoggerFactory.getLogger(ReflectionService.class);
+    private static final Pattern HARD_ERROR_PATTERN = Pattern.compile(
+            ".*(\u5931\u8d25|\u672a\u627e\u5230|\u4e0d\u5b58\u5728|\u65e0\u6743\u8bbf\u95ee|\u65e0\u6cd5).*",
+            Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     public enum Decision { CONTINUE, RETRY, REPLAN, INSERT_STEP }
 
@@ -90,8 +95,8 @@ public class ReflectionService {
             if (decision.contains("REPLAN")) return Decision.REPLAN;
             return Decision.CONTINUE;
         } catch (Exception e) {
-            log.warn("LLM reflection failed, defaulting to CONTINUE: {}", e.getMessage());
-            return Decision.CONTINUE;
+            log.warn("LLM reflection failed, defaulting to RETRY: {}", e.getMessage());
+            return Decision.RETRY;
         }
     }
 
@@ -102,6 +107,9 @@ public class ReflectionService {
      */
     private boolean containsHardErrorIndicators(String response) {
         String lower = response.toLowerCase();
+        if (HARD_ERROR_PATTERN.matcher(response).matches()) {
+            return true;
+        }
         // API/system-level errors (not natural language)
         return lower.contains("余额不足") || lower.contains("请充值")
                 || lower.contains("api key") || lower.contains("rate limit")

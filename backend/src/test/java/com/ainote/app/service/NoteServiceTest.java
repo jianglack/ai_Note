@@ -18,6 +18,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -245,6 +247,34 @@ class NoteServiceTest {
         noteService.hybridSearch("Java");
 
         verify(langChain4jRagService).searchSimilar("Java", 10);
+    }
+
+    @Test
+    @DisplayName("update should generate embedding only after transaction commit")
+    void update_generatesEmbeddingAfterCommit() {
+        com.ainote.app.model.NoteRequest request = new com.ainote.app.model.NoteRequest();
+        request.setTitle("updated");
+        request.setContent("updated content");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("note-456", "user-123"))
+            .thenReturn(Optional.of(testNote));
+        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            noteService.update("note-456", request);
+
+            verify(langChain4jRagService, never()).generateEmbeddingAsync("note-456");
+
+            for (TransactionSynchronization synchronization : TransactionSynchronizationManager.getSynchronizations()) {
+                synchronization.afterCommit();
+            }
+
+            verify(langChain4jRagService).generateEmbeddingAsync("note-456");
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

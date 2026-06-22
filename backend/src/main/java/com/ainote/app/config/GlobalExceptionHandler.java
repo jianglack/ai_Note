@@ -5,13 +5,20 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -47,6 +54,35 @@ public class GlobalExceptionHandler {
         Map<String, String> error = new HashMap<>();
         error.put("error", e.getMessage());
         return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler({NoSuchElementException.class, EntityNotFoundException.class})
+    public ResponseEntity<Map<String, String>> handleNotFound(Exception e) {
+        log.warn("Resource not found: {}", e.getMessage());
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "\u8d44\u6e90\u4e0d\u5b58\u5728");
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler({
+            HttpMessageNotReadableException.class,
+            MethodArgumentTypeMismatchException.class,
+            MissingServletRequestParameterException.class,
+            ConstraintViolationException.class
+    })
+    public ResponseEntity<Map<String, String>> handleBadRequest(Exception e) {
+        log.warn("Bad request: {}", e.getMessage());
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "\u8bf7\u6c42\u53c2\u6570\u65e0\u6548");
+        return ResponseEntity.badRequest().body(error);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, String>> handleMethodNotSupported(HttpRequestMethodNotSupportedException e) {
+        log.warn("Method not supported: {}", e.getMessage());
+        Map<String, String> error = new HashMap<>();
+        error.put("error", "\u8bf7\u6c42\u65b9\u6cd5\u4e0d\u652f\u6301");
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body(error);
     }
 
     @ExceptionHandler(Exception.class)

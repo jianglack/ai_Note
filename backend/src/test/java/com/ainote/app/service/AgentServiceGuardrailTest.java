@@ -26,8 +26,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -125,6 +127,34 @@ class AgentServiceGuardrailTest {
         assertThat(response.getContent()).contains("不可信内容");
         verify(agentAssistant, never()).chat(anyString(), anyString(), anyString(), anyString());
         verify(concurrencyGuard).release("user-1");
+    }
+
+    @Test
+    @DisplayName("chat timeout cancels the running agent task")
+    void chat_timeoutCancelsRunningAgentTask() throws Exception {
+        ReflectionTestUtils.setField(agentService, "agentTimeoutSeconds", 1);
+        CountDownLatch interrupted = new CountDownLatch(1);
+
+        when(contextAssembler.assemble("slow request", List.of(), "user-1"))
+                .thenReturn("context");
+        when(agentAssistant.chat(anyString(), anyString(), anyString(), anyString()))
+                .thenAnswer(invocation -> {
+                    try {
+                        Thread.sleep(10_000);
+                        return "late reply";
+                    } catch (InterruptedException e) {
+                        interrupted.countDown();
+                        Thread.currentThread().interrupt();
+                        throw new RuntimeException("interrupted", e);
+                    }
+                });
+
+        AiChatResponse response = agentService.chat("slow request", List.of(), "user-1");
+
+        assertThat(response.getContent()).isNotEqualTo("late reply");
+        assertThat(interrupted.await(2, TimeUnit.SECONDS))
+                .as("Future.cancel(true) should interrupt the executor task on timeout")
+                .isTrue();
     }
 
     @Test

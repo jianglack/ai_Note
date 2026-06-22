@@ -14,10 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
@@ -274,6 +276,35 @@ class PlanExecutorDependencyGraphTest {
 
         assertThat(new ObjectMapper().readTree(output).get("response").asText())
                 .isEqualTo(response);
+    }
+
+    @Test
+    void insertDynamicStep_rewritesDownstreamDependenciesAfterOrderShift() {
+        TaskPlan plan = plan("plan-1");
+        plan.setTotalSteps(3);
+        TaskStep current = step("plan-1", 2, TaskStep.STATUS_PENDING, 1);
+        TaskStep downstream = step("plan-1", 3, TaskStep.STATUS_PENDING, 2);
+        when(stepRepository.findByPlanIdOrderByStepOrder("plan-1"))
+                .thenReturn(List.of(current, downstream));
+
+        ReflectionTestUtils.invokeMethod(
+                executor,
+                "insertDynamicStep",
+                plan,
+                current,
+                "Folder does not exist; must first create it");
+
+        ArgumentCaptor<TaskStep> savedSteps = ArgumentCaptor.forClass(TaskStep.class);
+        verify(stepRepository, atLeastOnce()).save(savedSteps.capture());
+
+        assertThat(Arrays.asList(downstream.getDependsOn())).containsExactly(3);
+        assertThat(current.getStepOrder()).isEqualTo(3);
+        assertThat(Arrays.asList(current.getDependsOn())).containsExactly(2);
+        assertThat(savedSteps.getAllValues()).anySatisfy(saved -> {
+            assertThat(saved.getAction()).isEqualTo("AUTO_PREREQUISITE");
+            assertThat(saved.getStepOrder()).isEqualTo(2);
+            assertThat(Arrays.asList(saved.getDependsOn())).containsExactly(1);
+        });
     }
 
     private static class CountingExecutorService extends AbstractExecutorService {

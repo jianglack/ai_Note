@@ -28,4 +28,24 @@ class ReflectionServiceTest {
         assertThat(reflectionService.reflect(step, "无法解析开始时间「2026-06-04 19:00」", null))
                 .isEqualTo(ReflectionService.Decision.RETRY);
     }
+    @Test
+    void retriesWhenChineseHardFailureIndicatorsAppear() {
+        TaskStep step = new TaskStep();
+        step.setStepOrder(5);
+        step.setRetryCount(0);
+
+        assertThat(reflectionService.reflect(step, "\u6267\u884c\u5931\u8d25\uff1a\u7b14\u8bb0\u4e0d\u5b58\u5728", null))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+        assertThat(reflectionService.reflect(step, "\u65e0\u6743\u8bbf\u95ee\u8be5\u7b14\u8bb0", null))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+    }
+
+    @Test
+    void reflectWithLlmFailureRetriesInsteadOfContinuing() {
+        TaskStep step = new TaskStep();
+        step.setStepOrder(6);
+
+        assertThat(reflectionService.reflectWithLlm(step, "ambiguous", "expected"))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+    }
 }
