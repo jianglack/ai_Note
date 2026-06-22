@@ -20,6 +20,10 @@ frontend/*.err.log
 frontend/*.tsbuildinfo
 frontend/dev/
 
+# audit docs — local only, NEVER publish (vulnerability roadmap; repo has public remote)
+AUDIT_REPORT.md
+FIX_PLAN.md
+
 # misc
 .DS_Store
 .env
