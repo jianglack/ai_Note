@@ -72,24 +72,20 @@ public class AdminController {
     public ResponseEntity<RagEvaluationService.EvalReport> evaluateRag(
             @Valid @RequestBody AdminRagEvaluationRequest body) {
         adminAccessGuard.checkAdminAccess();
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            int k = body.getK() != null ? body.getK() : 5;
-            double minScore = body.getMinScore() != null ? body.getMinScore() : 0.5;
+        String userId = securityUtils.getCurrentUserId();
+        int k = body.getK() != null ? body.getK() : 5;
+        double minScore = body.getMinScore() != null ? body.getMinScore() : 0.5;
 
-            List<RagEvaluationService.EvalCase> cases = body.getCases().stream().map(c -> {
-                RagEvaluationService.EvalCase ec = new RagEvaluationService.EvalCase();
-                ec.query = c.getQuery();
-                List<String> ids = c.getExpectedNoteIds();
-                ec.expectedNoteIds = ids != null ? ids : List.of();
-                return ec;
-            }).toList();
+        List<RagEvaluationService.EvalCase> cases = body.getCases().stream().map(c -> {
+            RagEvaluationService.EvalCase ec = new RagEvaluationService.EvalCase();
+            ec.query = c.getQuery();
+            List<String> ids = c.getExpectedNoteIds();
+            ec.expectedNoteIds = ids != null ? ids : List.of();
+            return ec;
+        }).toList();
 
-            RagEvaluationService.EvalReport report = ragEvaluationService.evaluate(cases, k, minScore, userId);
-            return ResponseEntity.ok(report);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        RagEvaluationService.EvalReport report = ragEvaluationService.evaluate(cases, k, minScore, userId);
+        return ResponseEntity.ok(report);
     }
 
     @PostMapping("/eval/agent")
@@ -97,24 +93,20 @@ public class AdminController {
     public ResponseEntity<AgentEvaluationService.AgentEvalReport> evaluateAgent(
             @Valid @RequestBody AdminAgentEvaluationRequest body) {
         adminAccessGuard.checkAdminAccess();
-        try {
-            String userId = securityUtils.getCurrentUserId();
+        String userId = securityUtils.getCurrentUserId();
 
-            List<AgentEvaluationService.AgentEvalCase> cases = body.getCases().stream().map(c -> {
-                AgentEvaluationService.AgentEvalCase ec = new AgentEvaluationService.AgentEvalCase();
-                ec.userQuery = c.getUserQuery();
-                ec.expectedToolName = c.getExpectedToolName();
-                ec.expectedAction = c.getExpectedAction();
-                ec.expectSuccess = c.getExpectSuccess() != null ? c.getExpectSuccess() : true;
-                List<String> keywords = c.getExpectedResponseKeywords();
-                ec.expectedResponseKeywords = keywords != null ? keywords : List.of();
-                return ec;
-            }).toList();
+        List<AgentEvaluationService.AgentEvalCase> cases = body.getCases().stream().map(c -> {
+            AgentEvaluationService.AgentEvalCase ec = new AgentEvaluationService.AgentEvalCase();
+            ec.userQuery = c.getUserQuery();
+            ec.expectedToolName = c.getExpectedToolName();
+            ec.expectedAction = c.getExpectedAction();
+            ec.expectSuccess = c.getExpectSuccess() != null ? c.getExpectSuccess() : true;
+            List<String> keywords = c.getExpectedResponseKeywords();
+            ec.expectedResponseKeywords = keywords != null ? keywords : List.of();
+            return ec;
+        }).toList();
 
-            AgentEvaluationService.AgentEvalReport report = agentEvaluationService.evaluate(cases, userId);
-            return ResponseEntity.ok(report);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        AgentEvaluationService.AgentEvalReport report = agentEvaluationService.evaluate(cases, userId);
+        return ResponseEntity.ok(report);
     }
 }

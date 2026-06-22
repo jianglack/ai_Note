@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -60,7 +61,7 @@ public class AuthController {
             return ResponseEntity.ok(authService.login(request));
         } catch (RateLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
-        } catch (Exception e) {
+        } catch (AuthenticationException e) {
             return ResponseEntity.status(401).build();
         }
     }

@@ -63,6 +63,9 @@ public class LangChain4jConfig {
     @Value("${app.embedding.dimension:1024}")
     private int embeddingDimension;
 
+    @Value("${app.llm.log-io:false}")
+    private boolean logIo;
+
     private void requireNonEmpty(String value, String keyName) {
         if (value == null || value.isBlank()) {
             log.error("Required API key [{}] is not configured. Set the environment variable and restart.", keyName);
@@ -113,8 +116,8 @@ public class LangChain4jConfig {
                 .apiKey(deepseekApiKey)
                 .modelName(deepseekEmbeddingModel)
                 .timeout(Duration.ofSeconds(30))
-                .logRequests(true)
-                .logResponses(true)
+                .logRequests(logIo)
+                .logResponses(logIo)
                 .build();
     }
 
@@ -167,8 +170,8 @@ public class LangChain4jConfig {
                 .temperature(deepseekTemperature)
                 .maxTokens(deepseekMaxTokens)
                 .timeout(Duration.ofSeconds(120))
-                .logRequests(true)
-                .logResponses(true);
+                .logRequests(logIo)
+                .logResponses(logIo);
 
         if (listeners != null && !listeners.isEmpty()) {
             builder.listeners(listeners);

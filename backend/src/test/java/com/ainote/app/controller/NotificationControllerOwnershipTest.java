@@ -3,14 +3,19 @@ package com.ainote.app.controller;
 import com.ainote.app.entity.Notification;
 import com.ainote.app.repository.NotificationRepository;
 import com.ainote.app.security.SecurityUtils;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -53,5 +58,33 @@ class NotificationControllerOwnershipTest {
 
         verify(notificationRepository, never()).save(org.mockito.ArgumentMatchers.any());
         verify(notificationRepository, never()).findById(10L);
+    }
+
+    @Test
+    void getUnread_returnsDtoWithoutUserId() throws Exception {
+        Notification notification = new Notification();
+        notification.setId(10L);
+        notification.setUserId("user-secret");
+        notification.setType("reminder");
+        notification.setTitle("title");
+        notification.setContent("content");
+        notification.setSource("schedule");
+        notification.setRelatedId("schedule-1");
+        notification.setIsRead(false);
+        notification.setCreatedAt(LocalDateTime.of(2026, 6, 23, 10, 0));
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc("user-1"))
+                .thenReturn(List.of(notification));
+
+        List<?> response = controller.getUnread();
+        String json = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .writeValueAsString(response);
+
+        assertThat(json).contains("\"id\":10");
+        assertThat(json).contains("\"relatedId\":\"schedule-1\"");
+        assertThat(json).doesNotContain("userId");
+        assertThat(json).doesNotContain("user-secret");
     }
 }

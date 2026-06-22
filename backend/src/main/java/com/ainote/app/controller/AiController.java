@@ -1,8 +1,8 @@
 package com.ainote.app.controller;
 
 import com.ainote.app.agent.CancellationToken;
-import com.ainote.app.entity.AgentTrace;
 import com.ainote.app.model.ActionFeedbackRequest;
+import com.ainote.app.model.AgentTraceResponse;
 import com.ainote.app.model.AiChatRequest;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.model.AiNoteRequest;
@@ -95,25 +95,17 @@ public class AiController {
     @GetMapping("/chat/history")
     @Operation(summary = "获取对话历史", description = "获取当前用户最近 50 条 AI 对话历史记录")
     public ResponseEntity<List<ChatHistoryItem>> getChatHistory() {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            List<ChatHistoryItem> history = aiService.getChatHistory(userId, 50);
-            return ResponseEntity.ok(history);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        List<ChatHistoryItem> history = aiService.getChatHistory(userId, 50);
+        return ResponseEntity.ok(history);
     }
 
     @DeleteMapping("/chat/history")
     @Operation(summary = "清除对话记忆", description = "清除当前用户的 Agent 对话记忆，解决上下文污染问题")
     public ResponseEntity<Void> clearChatMemory() {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            aiService.clearChatMemory(userId);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        aiService.clearChatMemory(userId);
+        return ResponseEntity.ok().build();
     }
 
 
@@ -121,28 +113,20 @@ public class AiController {
     @PostMapping("/chat/save")
     @Operation(summary = "保存对话消息", description = "保存意图识别直接回复的对话消息到历史记录（不经过 Agent 时使用）")
     public ResponseEntity<Void> saveChatMessages(@Valid @RequestBody ChatSaveRequest body) {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            String userMsg = body.getUserMessage();
-            String aiReply = body.getAiReply();
-            if (userMsg != null) aiService.saveChatMessage(userId, "user", userMsg);
-            if (aiReply != null) aiService.saveChatMessage(userId, "assistant", aiReply);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        String userMsg = body.getUserMessage();
+        String aiReply = body.getAiReply();
+        if (userMsg != null) aiService.saveChatMessage(userId, "user", userMsg);
+        if (aiReply != null) aiService.saveChatMessage(userId, "assistant", aiReply);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/chat")
     @Operation(summary = "AI 对话", description = "与 AI 进行对话，支持基于笔记内容的问答和多轮对话记忆，返回结果包含引用来源")
     public ResponseEntity<AiChatResponse> chat(@Valid @RequestBody AiChatRequest request) {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            return ResponseEntity.ok(
-                    chatOrchestrator.chat(request.getQuery(), request.getNoteIds(), userId));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        return ResponseEntity.ok(
+                chatOrchestrator.chat(request.getQuery(), request.getNoteIds(), userId));
     }
 
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -241,6 +225,7 @@ public class AiController {
             }).toList();
             return ResponseEntity.ok(cards);
         } catch (Exception e) {
+            log.warn("Failed to generate suggestions", e);
             return ResponseEntity.ok(List.of()); // 建议获取失败不影响用户
         }
     }
@@ -322,100 +307,79 @@ public class AiController {
     @PostMapping("/classify")
     @Operation(summary = "智能分类笔记", description = "AI 分析所有笔记内容，建议将笔记分类到合适的文件夹")
     public ResponseEntity<ClassificationResponse> classifyNotes() {
-        try {
-            return ResponseEntity.ok(aiService.classifyNotes());
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(aiService.classifyNotes());
     }
 
     @PostMapping("/extract-schedules")
     @Operation(summary = "提取日程", description = "从笔记内容中智能提取日程信息，支持识别时间、重复规则等")
     public ResponseEntity<ExtractedSchedule.ExtractResponse> extractSchedules(
             @Parameter(description = "笔记 ID") @Valid @RequestBody AiNoteRequest request) {
-        try {
-            return ResponseEntity.ok(aiService.extractSchedules(request.getNoteId()));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        return ResponseEntity.ok(aiService.extractSchedules(request.getNoteId()));
     }
 
     @GetMapping("/traces")
     @Operation(summary = "获取 Agent 调用追踪", description = "获取当前用户的 Agent 调用追踪记录，按时间倒序")
-    public ResponseEntity<List<AgentTrace>> getTraces(
+    public ResponseEntity<List<AgentTraceResponse>> getTraces(
             @Parameter(description = "返回条数，默认 50") @RequestParam(defaultValue = "50") int limit,
             @Parameter(description = "开始时间") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
             @Parameter(description = "结束时间") @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end,
             @Parameter(description = "模型名称") @RequestParam(required = false) String model) {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            List<AgentTrace> traces = traceRepository.findFilteredTraces(
-                    userId,
-                    start,
-                    end,
-                    (model == null || model.isBlank()) ? null : model,
-                    PageRequest.of(0, limit));
-            return ResponseEntity.ok(traces);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        List<AgentTraceResponse> traces = traceRepository.findFilteredTraces(
+                        userId,
+                        start,
+                        end,
+                        (model == null || model.isBlank()) ? null : model,
+                        PageRequest.of(0, limit))
+                .stream()
+                .map(AgentTraceResponse::from)
+                .toList();
+        return ResponseEntity.ok(traces);
     }
 
     @GetMapping("/traces/stats")
     @Operation(summary = "获取 Agent 使用统计", description = "获取当前用户的 Agent 调用次数和 token 消耗统计")
     public ResponseEntity<Map<String, Object>> getTraceStats() {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            long totalCalls = traceRepository.countByUserId(userId);
-            long totalTokens = traceRepository.sumTotalTokensByUserId(userId);
+        String userId = securityUtils.getCurrentUserId();
+        long totalCalls = traceRepository.countByUserId(userId);
+        long totalTokens = traceRepository.sumTotalTokensByUserId(userId);
 
-            // 今日统计
-            java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
-            java.time.LocalDateTime todayEnd = todayStart.plusDays(1);
-            long todayCalls = traceRepository.countByUserIdAndCreatedAtBetween(userId, todayStart, todayEnd);
-            long todayTokens = traceRepository.sumTotalTokensByUserIdAndDateRange(userId, todayStart, todayEnd);
+        // 今日统计
+        java.time.LocalDateTime todayStart = java.time.LocalDate.now().atStartOfDay();
+        java.time.LocalDateTime todayEnd = todayStart.plusDays(1);
+        long todayCalls = traceRepository.countByUserIdAndCreatedAtBetween(userId, todayStart, todayEnd);
+        long todayTokens = traceRepository.sumTotalTokensByUserIdAndDateRange(userId, todayStart, todayEnd);
 
-            Map<String, Object> stats = new LinkedHashMap<>();
-            stats.put("totalCalls", totalCalls);
-            stats.put("totalTokens", totalTokens);
-            stats.put("todayCalls", todayCalls);
-            stats.put("todayTokens", todayTokens);
-            return ResponseEntity.ok(stats);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        Map<String, Object> stats = new LinkedHashMap<>();
+        stats.put("totalCalls", totalCalls);
+        stats.put("totalTokens", totalTokens);
+        stats.put("todayCalls", todayCalls);
+        stats.put("todayTokens", todayTokens);
+        return ResponseEntity.ok(stats);
     }
 
     @PostMapping("/action-feedback")
     @Operation(summary = "操作反馈", description = "用户确认或拒绝 PENDING_ACTION 后，将决策回传给 Agent 继续对话")
     public ResponseEntity<AiChatResponse> actionFeedback(@Valid @RequestBody ActionFeedbackRequest body) {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            String actionJson = body.getActionJson();
-            boolean confirmed = Boolean.TRUE.equals(body.getConfirmed());
-            String feedback = body.getFeedback();
-            AiChatResponse response = agentService.confirmAction(userId, actionJson, confirmed, feedback);
-            return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        String userId = securityUtils.getCurrentUserId();
+        String actionJson = body.getActionJson();
+        boolean confirmed = Boolean.TRUE.equals(body.getConfirmed());
+        String feedback = body.getFeedback();
+        AiChatResponse response = agentService.confirmAction(userId, actionJson, confirmed, feedback);
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/rag-feedback")
     @Operation(summary = "提交 RAG 反馈", description = "用户对搜索结果的反馈，用于自适应调整检索阈值")
     public ResponseEntity<Void> submitRagFeedback(@Valid @RequestBody RagFeedbackRequest body) {
-        try {
-            String userId = securityUtils.getCurrentUserId();
-            String query = body.getQuery();
-            String resultNoteId = body.getResultNoteId();
-            double similarityScore = body.getSimilarityScore() != null ? body.getSimilarityScore() : 0.0;
-            String feedbackType = body.getFeedbackType() != null ? body.getFeedbackType() : "CLICK";
+        String userId = securityUtils.getCurrentUserId();
+        String query = body.getQuery();
+        String resultNoteId = body.getResultNoteId();
+        double similarityScore = body.getSimilarityScore() != null ? body.getSimilarityScore() : 0.0;
+        String feedbackType = body.getFeedbackType() != null ? body.getFeedbackType() : "CLICK";
 
-            ragFeedbackService.recordFeedback(userId, query, resultNoteId, similarityScore, feedbackType);
-            return ResponseEntity.ok().build();
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().build();
-        }
+        ragFeedbackService.recordFeedback(userId, query, resultNoteId, similarityScore, feedbackType);
+        return ResponseEntity.ok().build();
     }
 
     /**

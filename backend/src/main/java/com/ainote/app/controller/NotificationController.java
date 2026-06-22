@@ -1,6 +1,7 @@
 package com.ainote.app.controller;
 
 import com.ainote.app.entity.Notification;
+import com.ainote.app.model.NotificationResponse;
 import com.ainote.app.repository.NotificationRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.springframework.http.ResponseEntity;
@@ -23,9 +24,11 @@ public class NotificationController {
     }
 
     @GetMapping
-    public List<Notification> getUnread() {
+    public List<NotificationResponse> getUnread() {
         String userId = securityUtils.getCurrentUserId();
-        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId);
+        return notificationRepository.findByUserIdAndIsReadFalseOrderByCreatedAtDesc(userId).stream()
+                .map(NotificationResponse::from)
+                .toList();
     }
 
     @GetMapping("/count")

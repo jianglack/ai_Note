@@ -1,5 +1,7 @@
 server:
   port: 8081
+  tomcat:
+    max-http-form-post-size: 2MB
   servlet:
     encoding:
       charset: UTF-8
@@ -9,6 +11,10 @@ server:
 spring:
   profiles:
     active: dev
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
 
 # SpringDoc OpenAPI 配置
 springdoc:

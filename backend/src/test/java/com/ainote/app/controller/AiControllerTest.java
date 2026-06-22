@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -54,6 +55,7 @@ class AiControllerTest {
         LocalDateTime start = LocalDateTime.of(2026, 6, 1, 0, 0);
         LocalDateTime end = LocalDateTime.of(2026, 6, 4, 23, 59);
         AgentTrace trace = new AgentTrace();
+        trace.setTraceId("trace-1");
 
         when(securityUtils.getCurrentUserId()).thenReturn("user-123");
         when(traceRepository.findFilteredTraces(
@@ -66,7 +68,8 @@ class AiControllerTest {
 
         var response = controller.getTraces(25, start, end, "deepseek-chat");
 
-        assertThat(response.getBody()).containsExactly(trace);
+        assertThat(response.getBody()).hasSize(1);
+        assertThat(response.getBody().get(0).traceId()).isEqualTo(trace.getTraceId());
         ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
         verify(traceRepository).findFilteredTraces(
             org.mockito.Mockito.eq("user-123"),
@@ -76,6 +79,61 @@ class AiControllerTest {
             pageableCaptor.capture()
         );
         assertThat(pageableCaptor.getValue().getPageSize()).isEqualTo(25);
+    }
+
+    @Test
+    void getTraces_returnsDtoWithoutUserId() throws Exception {
+        AiController controller = new AiController(
+            aiService, securityUtils, traceRepository, new ObjectMapper(), executorService,
+            ragFeedbackService, smartSuggestionService, noteRepository, agentService, ragService,
+            chatOrchestrator
+        );
+        AgentTrace trace = new AgentTrace();
+        trace.setId("trace-row-1");
+        trace.setUserId("user-secret");
+        trace.setTraceId("trace-1");
+        trace.setInputText("input");
+        trace.setOutputText("output");
+        trace.setTotalTokens(12);
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(traceRepository.findFilteredTraces(
+                org.mockito.Mockito.eq("user-123"),
+                org.mockito.Mockito.isNull(),
+                org.mockito.Mockito.isNull(),
+                org.mockito.Mockito.isNull(),
+                org.mockito.ArgumentMatchers.any(Pageable.class)))
+            .thenReturn(List.of(trace));
+
+        var response = controller.getTraces(25, null, null, null);
+
+        String json = new ObjectMapper().writeValueAsString(response.getBody());
+        assertThat(json).contains("\"id\":\"trace-row-1\"");
+        assertThat(json).contains("\"traceId\":\"trace-1\"");
+        assertThat(json).doesNotContain("userId");
+        assertThat(json).doesNotContain("user-secret");
+    }
+
+    @Test
+    void getTraces_doesNotSwallowInternalExceptionsAsBadRequest() {
+        AiController controller = new AiController(
+            aiService, securityUtils, traceRepository, new ObjectMapper(), executorService,
+            ragFeedbackService, smartSuggestionService, noteRepository, agentService, ragService,
+            chatOrchestrator
+        );
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(traceRepository.findFilteredTraces(
+                org.mockito.Mockito.eq("user-123"),
+                org.mockito.Mockito.isNull(),
+                org.mockito.Mockito.isNull(),
+                org.mockito.Mockito.isNull(),
+                org.mockito.ArgumentMatchers.any(Pageable.class)))
+            .thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> controller.getTraces(25, null, null, null))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("database unavailable");
     }
 
     @Test

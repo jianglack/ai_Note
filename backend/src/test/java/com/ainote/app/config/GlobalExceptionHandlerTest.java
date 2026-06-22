@@ -10,6 +10,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
@@ -112,6 +113,16 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(405, response.getStatusCode().value());
         assertNotNull(response.getBody());
+    }
+
+    @Test
+    void maxUploadSizeExceeded_returns413WithoutLeakingMessage() {
+        ResponseEntity<Map<String, String>> response =
+                handler.handleMaxUploadSizeExceeded(new MaxUploadSizeExceededException(1024));
+
+        assertEquals(413, response.getStatusCode().value());
+        assertNotNull(response.getBody());
+        assertEquals("\u8bf7\u6c42\u4f53\u8fc7\u5927", response.getBody().get("error"));
     }
 
     @SuppressWarnings("unused")

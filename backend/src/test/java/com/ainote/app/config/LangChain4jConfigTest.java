@@ -2,6 +2,10 @@ package com.ainote.app.config;
 
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LangChain4jConfigTest {
@@ -37,6 +41,26 @@ class LangChain4jConfigTest {
                 IllegalStateException.class,
                 config::deepSeekEmbeddingModel
         );
+    }
+
+    @Test
+    void llmIoLogging_isPropertyGatedInsteadOfAlwaysEnabled() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/ainote/app/config/LangChain4jConfig.java"));
+
+        assertThat(source).contains("@Value(\"${app.llm.log-io:false}\")");
+        assertThat(source).contains(".logRequests(logIo)");
+        assertThat(source).contains(".logResponses(logIo)");
+        assertThat(source).doesNotContain(".logRequests(true)");
+        assertThat(source).doesNotContain(".logResponses(true)");
+    }
+
+    @Test
+    void applicationYaml_setsRequestBodyLimits() throws Exception {
+        String yaml = Files.readString(Path.of("src/main/resources/application.yml"));
+
+        assertThat(yaml).contains("max-file-size:");
+        assertThat(yaml).contains("max-request-size:");
+        assertThat(yaml).contains("max-http-form-post-size:");
     }
 
     private void setField(Object target, String fieldName, Object value) {

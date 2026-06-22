@@ -17,6 +17,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
@@ -148,12 +149,23 @@ public class AuthControllerIntegrationTest {
     @Test
     @DisplayName("POST /api/auth/login 应在登录失败时返回401")
     void shouldReturnUnauthorizedWhenLoginFails() throws Exception {
-        Mockito.when(authService.login(Mockito.any(LoginRequest.class))).thenThrow(new RuntimeException("Login failed"));
+        Mockito.when(authService.login(Mockito.any(LoginRequest.class))).thenThrow(new BadCredentialsException("Login failed"));
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(MockMvcResultMatchers.status().isUnauthorized());
+    }
+
+    @Test
+    void shouldReturnInternalServerErrorWhenLoginFailsUnexpectedly() throws Exception {
+        Mockito.when(authService.login(Mockito.any(LoginRequest.class)))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        mockMvc.perform(MockMvcRequestBuilders.post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(MockMvcResultMatchers.status().isInternalServerError());
     }
 
     @Test
