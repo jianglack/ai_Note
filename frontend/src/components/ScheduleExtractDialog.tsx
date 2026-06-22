@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import type { ExtractedSchedule, ExtractedScheduleResponse, ScheduleCreateRequest, Schedule } from '../api';
 import { extractSchedulesFromNote, createSchedule } from '../api';
+import { useToastStore } from '../stores/toastStore';
 import './ScheduleExtractDialog.css';
 
 interface ScheduleExtractDialogProps {
@@ -49,29 +50,34 @@ export default function ScheduleExtractDialog({
   onSave,
   onClose
 }: ScheduleExtractDialogProps) {
+  const toastStore = useToastStore();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [schedules, setSchedules] = useState<ExtractedSchedule[]>([]);
   const [selected, setSelected] = useState<Set<number>>(new Set());
 
-  useEffect(() => {
-    loadSchedules();
-  }, [noteId]);
-
-  const loadSchedules = async () => {
+  const loadSchedules = useCallback(async () => {
     setLoading(true);
+    setErrorMessage(null);
     try {
       const response: ExtractedScheduleResponse = await extractSchedulesFromNote(noteId);
       setSchedules(response.schedules);
       // 默认全选
       setSelected(new Set(response.schedules.map((_, i) => i)));
     } catch (err) {
-      console.error('提取日程失败:', err);
+      const message = `提取日程失败：${(err as Error).message}`;
+      setErrorMessage(message);
+      toastStore.addToast({ type: 'failed', title: '提取日程失败', message: (err as Error).message });
       setSchedules([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, [noteId, toastStore]);
+
+  useEffect(() => {
+    void loadSchedules();
+  }, [loadSchedules]);
 
   const toggleSelect = (index: number) => {
     setSelected(prev => {
@@ -89,6 +95,7 @@ export default function ScheduleExtractDialog({
     if (selected.size === 0) return;
 
     setSaving(true);
+    setErrorMessage(null);
     try {
       const createdSchedules: Schedule[] = [];
       for (const index of selected) {
@@ -105,8 +112,11 @@ export default function ScheduleExtractDialog({
         createdSchedules.push(created);
       }
       onSave(createdSchedules);
+      toastStore.addToast({ type: 'success', title: `已创建 ${createdSchedules.length} 个日程` });
     } catch (err) {
-      console.error('保存日程失败:', err);
+      const message = `保存日程失败：${(err as Error).message}`;
+      setErrorMessage(message);
+      toastStore.addToast({ type: 'failed', title: '保存日程失败', message: (err as Error).message });
     } finally {
       setSaving(false);
     }
@@ -121,12 +131,15 @@ export default function ScheduleExtractDialog({
         </div>
 
         <div className="extract-dialog-body">
+          {errorMessage && (
+            <div className="extract-error" role="alert">{errorMessage}</div>
+          )}
           {loading ? (
             <div className="extract-loading">
               <div className="extract-spinner" />
               <span>正在分析笔记内容...</span>
             </div>
-          ) : schedules.length === 0 ? (
+          ) : errorMessage ? null : schedules.length === 0 ? (
             <div className="extract-empty">
               <div className="extract-empty-icon">📅</div>
               <div>未从笔记中识别到日程信息</div>

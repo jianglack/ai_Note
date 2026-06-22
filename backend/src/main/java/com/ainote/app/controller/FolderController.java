@@ -37,12 +37,12 @@ public class FolderController {
 
     @PostMapping
     public Folder create(@Valid @RequestBody FolderRequest request) {
-        return folderService.create(request.getName(), request.getParentId());
+        return folderService.create(request.getName(), request.getParentId(), request.getColor());
     }
 
     @PutMapping("/{id}")
     public Folder update(@PathVariable String id, @Valid @RequestBody FolderRequest request) {
-        return folderService.update(id, request.getName(), request.getParentId());
+        return folderService.update(id, request.getName(), request.getParentId(), request.getColor());
     }
 
     @DeleteMapping("/{id}")

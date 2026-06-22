@@ -49,6 +49,10 @@ public class FolderService {
     }
 
     public com.ainote.app.model.Folder create(String name, String parentId) {
+        return create(name, parentId, null);
+    }
+
+    public com.ainote.app.model.Folder create(String name, String parentId, String color) {
         User user = securityUtils.getCurrentUser();
         if (parentId != null && !parentId.isBlank()
                 && folderRepository.findByIdAndUserId(parentId, user.getId()).isEmpty()) {
@@ -59,6 +63,7 @@ public class FolderService {
         folder.setId(UUID.randomUUID().toString());
         folder.setName(name);
         folder.setParentId(parentId);
+        folder.setColor(color);
         folder.setUser(user);
         folder.setCreatedAt(LocalDateTime.now());
         folder.setUpdatedAt(LocalDateTime.now());
@@ -69,6 +74,10 @@ public class FolderService {
     }
 
     public com.ainote.app.model.Folder update(String id, String name, String parentId) {
+        return update(id, name, parentId, null);
+    }
+
+    public com.ainote.app.model.Folder update(String id, String name, String parentId, String color) {
         String userId = securityUtils.getCurrentUserId();
         Optional<Folder> folderOpt = folderRepository.findByIdAndUserId(id, userId);
         if (folderOpt.isEmpty()) return null;
@@ -80,6 +89,7 @@ public class FolderService {
         Folder folder = folderOpt.get();
         folder.setName(name);
         folder.setParentId(parentId);
+        folder.setColor(color);
         folder.setUpdatedAt(LocalDateTime.now());
 
         Folder saved = folderRepository.save(folder);
@@ -139,6 +149,7 @@ public class FolderService {
         model.setId(entity.getId());
         model.setName(entity.getName());
         model.setParentId(entity.getParentId());
+        model.setColor(entity.getColor());
         model.setCreatedAt(entity.getCreatedAt().format(FORMATTER));
         model.setUpdatedAt(entity.getUpdatedAt().format(FORMATTER));
         return model;

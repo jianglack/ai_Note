@@ -46,7 +46,14 @@ body {
   overflow: hidden;
 }
 
-/* 侧边�?*/
+.workspace-main {
+  overflow: hidden;
+  display: flex;
+  min-width: 0;
+  position: relative;
+}
+
+/* 侧边�?*/
 .sidebar {
   grid-row: 1 / 3;
   border-right: 1px solid var(--border);
@@ -56,7 +63,7 @@ body {
   flex-direction: column;
 }
 
-/* Folder row �?"..." button hidden until hover */
+/* Folder row �?"..." button hidden until hover */
 .sidebar-folder-more {
   opacity: 0;
   transition: opacity 0.12s;
@@ -124,7 +131,7 @@ body {
   border-color: #fca5a5;
 }
 
-/* 编辑�?*/
+/* 编辑�?*/
 .editor {
   display: flex;
   flex-direction: column;
@@ -357,6 +364,11 @@ body {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
+}
+
+.workspace-main .editor {
+  min-width: 0;
+  flex: 1;
 }
 
 .spirit-header {
@@ -820,7 +832,7 @@ body {
   font-size: 11px;
 }
 
-/* 回收站视�?*/
+/* 回收站视�?*/
 .trash-view {
   display: flex;
   flex-direction: column;
@@ -986,7 +998,7 @@ body {
   border-color: #bd2130;
 }
 
-/* 搜索�?*/
+/* 搜索�?*/
 .search-box {
   position: relative;
   padding: 12px;
@@ -1098,7 +1110,7 @@ body {
   border-radius: 3px;
 }
 
-/* 标签编辑器增强样�?*/
+/* 标签编辑器增强样�?*/
 .tag-editor-header {
   display: flex;
   align-items: center;
@@ -1205,7 +1217,7 @@ body {
 }
 
 
-/* 操作确认对话�?*/
+/* 操作确认对话�?*/
 .confirm-dialog-overlay {
   position: fixed;
   top: 0;
@@ -1372,7 +1384,7 @@ body {
 }
 
 
-/* 笔记选择对话�?*/
+/* 笔记选择对话�?*/
 .note-selection-dialog {
   max-width: 600px;
   max-height: 80vh;
@@ -1504,7 +1516,7 @@ body {
   background: #ccc;
 }
 
-/* 智能分类对话框样�?*/
+/* 智能分类对话框样�?*/
 .classification-dialog {
   max-width: 600px;
   max-height: 80vh;
@@ -1585,7 +1597,7 @@ body {
   line-height: 1.4;
 }
 
-/* 拆分笔记对话框样�?*/
+/* 拆分笔记对话框样�?*/
 .split-dialog {
   max-width: 600px;
   max-height: 80vh;
@@ -1670,7 +1682,7 @@ body {
   height: 16px;
 }
 
-/* 导出笔记对话框样�?*/
+/* 导出笔记对话框样�?*/
 .export-dialog {
   max-width: 600px;
   max-height: 80vh;
@@ -1735,7 +1747,7 @@ body {
   overflow: hidden;
 }
 
-/* 摘要预览对话框样�?*/
+/* 摘要预览对话框样�?*/
 .summary-dialog {
   max-width: 500px;
 }
@@ -1759,9 +1771,9 @@ body {
   margin-top: 8px;
 }
 
-/* ══════════════════════════════════════════════════════════════�?
-   Paper Editor Redesign �?纸张式编辑器
-   ══════════════════════════════════════════════════════════════�?*/
+/* ══════════════════════════════════════════════════════════════�?
+   Paper Editor Redesign �?纸张式编辑器
+   ══════════════════════════════════════════════════════════════�?*/
 
 /* Top action bar */
 .paper-top-action-bar {
@@ -2031,13 +2043,14 @@ body {
   color: var(--color-text, #2b2620);
 }
 
-/* ══════════════════════════════════════════════════════════════�?
-   Paginated Paper Editor �?分页式纸张编辑器 (Design 5)
-   ══════════════════════════════════════════════════════════════�?*/
+/* ══════════════════════════════════════════════════════════════�?
+   Paginated Paper Editor �?分页式纸张编辑器 (Design 5)
+   ══════════════════════════════════════════════════════════════�?*/
 
 /* Toolbar fixed above paper (independent card) */
 .paginated-toolbar {
-  width: 720px;
+  width: 100%;
+  max-width: 720px;
   margin-bottom: 12px;
   background: #ffffff;
   border-radius: 10px;
@@ -2078,10 +2091,11 @@ body {
   flex-shrink: 0;
 }
 
-/* Paper stage �?holds the 720×960 page */
+/* Paper stage �?holds the 720×960 page */
 .paper-stage {
   position: relative;
-  width: 720px;
+  width: 100%;
+  max-width: 720px;
   height: 960px;
   margin: 0 auto;
   flex-shrink: 0;
@@ -2091,7 +2105,8 @@ body {
 .paper-page {
   position: absolute;
   top: 0; left: 0;
-  width: 720px;
+  width: 100%;
+  max-width: 720px;
   height: 960px;
   background: #ffffff;
   border-radius: 8px;
@@ -2130,7 +2145,7 @@ body {
   position: relative;
 }
 
-/* CSS Columns container �?content auto-flows into columns = pages */
+/* CSS Columns container �?content auto-flows into columns = pages */
 .page-columns {
   column-width: 576px;   /* 720 - 72*2 padding */
   column-gap: 144px;     /* gap between columns (hidden by viewport) */
@@ -2154,7 +2169,7 @@ body {
   widows: 2;
 }
 
-/* Page footer �?always pinned at bottom of paper */
+/* Page footer �?always pinned at bottom of paper */
 .paper-page-number {
   padding: 14px 0 20px;
   display: flex;
@@ -2326,7 +2341,7 @@ body {
   height: 805px;
   width: 576px;
   transform-origin: top left;
-  /* scale 60/576 �?0.104 */
+  /* scale 60/576 �?0.104 */
   scale: 0.104;
   font-size: 14px;
   line-height: 1.6;
@@ -2382,7 +2397,7 @@ body {
   background: linear-gradient(90deg, transparent, rgba(43,38,32,0.10) 20%, rgba(43,38,32,0.10) 80%, transparent);
 }
 
-/* Paginated editor container �?allows vertical scroll to see full paper */
+/* Paginated editor container �?allows vertical scroll to see full paper */
 .paginated-scroll-container {
   flex: 1;
   overflow-y: auto;
@@ -2392,6 +2407,75 @@ body {
   flex-direction: column;
   align-items: center;
   position: relative;
+}
+
+@media (max-width: 1180px) {
+  .app {
+    grid-template-columns: minmax(260px, 34vw) minmax(0, 1fr);
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .note-list-panel {
+    grid-column: 1;
+    grid-row: 1 / 3;
+  }
+
+  .workspace-main {
+    grid-column: 2;
+    grid-row: 1 / 2;
+  }
+
+  .ai-chat-panel {
+    width: min(34vw, 380px);
+    min-width: 320px;
+  }
+}
+
+@media (max-width: 760px) {
+  .app {
+    grid-template-columns: 1fr;
+    grid-template-rows: 38vh minmax(0, 1fr) auto;
+  }
+
+  .note-list-panel {
+    grid-column: 1;
+    grid-row: 1;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .workspace-main {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+  }
+
+  .ai-chat-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(100vw, 380px);
+    min-width: 0;
+    z-index: 40;
+  }
+
+  .paginated-scroll-container {
+    padding: 0 12px 24px;
+  }
+
+  .paper-stage,
+  .paper-page {
+    max-width: min(720px, calc(100vw - 24px));
+  }
+
+  .paper-page-inner {
+    padding-left: clamp(28px, 8vw, 72px);
+    padding-right: clamp(28px, 8vw, 72px);
+  }
 }
 
 /* Themed scrollbar for paginated container */

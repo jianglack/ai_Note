@@ -11,6 +11,113 @@ import {
   createSchedule, deleteSchedule,
   type Note, type Schedule,
 } from '../api';
+import { resolveNoteId as resolveNoteIdFromList } from '../utils/notes';
+
+type BooleanLike = boolean | 'true' | 'false';
+
+type ScheduleActionPayload = {
+  title?: string;
+  startTime?: string;
+  endTime?: string;
+  allDay?: BooleanLike;
+  rrule?: string;
+};
+
+type AiAction =
+  | { type: 'CREATE_NOTE'; title?: string; content?: string }
+  | { type: 'UPDATE_NOTE'; noteId?: string; title?: string; content?: string }
+  | { type: 'DELETE_NOTE'; noteId?: string }
+  | { type: 'ADD_TAG'; noteId?: string; tag?: string }
+  | { type: 'REMOVE_TAG'; noteId?: string; tag?: string }
+  | { type: 'RESTORE_NOTE'; noteId?: string }
+  | ({ type: 'CREATE_SCHEDULE' } & ScheduleActionPayload)
+  | { type: 'CREATE_SCHEDULES_BATCH'; schedules?: string }
+  | { type: 'PERMANENT_DELETE'; noteId?: string; title?: string }
+  | { type: 'EMPTY_TRASH'; count?: number | string }
+  | { type: 'DELETE_SCHEDULE'; scheduleId?: string }
+  | { type: 'DELETE_FOLDER'; folderId?: string }
+  | { type: 'UNKNOWN'; originalType: string };
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return value as Record<string, unknown>;
+}
+
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function asOptionalBooleanLike(value: unknown): BooleanLike | undefined {
+  if (typeof value === 'boolean') return value;
+  if (value === 'true' || value === 'false') return value;
+  return undefined;
+}
+
+function normalizeAiAction(value: unknown): AiAction | null {
+  const record = asRecord(value);
+  const type = asOptionalString(record?.type);
+  if (!record || !type) return null;
+
+  switch (type) {
+    case 'CREATE_NOTE':
+      return { type, title: asOptionalString(record.title), content: asOptionalString(record.content) };
+    case 'UPDATE_NOTE':
+      return {
+        type,
+        noteId: asOptionalString(record.noteId),
+        title: asOptionalString(record.title),
+        content: asOptionalString(record.content),
+      };
+    case 'DELETE_NOTE':
+    case 'RESTORE_NOTE':
+    case 'PERMANENT_DELETE':
+      return { type, noteId: asOptionalString(record.noteId), title: asOptionalString(record.title) } as AiAction;
+    case 'ADD_TAG':
+    case 'REMOVE_TAG':
+      return { type, noteId: asOptionalString(record.noteId), tag: asOptionalString(record.tag) } as AiAction;
+    case 'CREATE_SCHEDULE':
+      return {
+        type,
+        title: asOptionalString(record.title),
+        startTime: asOptionalString(record.startTime),
+        endTime: asOptionalString(record.endTime),
+        allDay: asOptionalBooleanLike(record.allDay),
+        rrule: asOptionalString(record.rrule),
+      };
+    case 'CREATE_SCHEDULES_BATCH':
+      return { type, schedules: asOptionalString(record.schedules) };
+    case 'EMPTY_TRASH':
+      return {
+        type,
+        count: typeof record.count === 'number' || typeof record.count === 'string' ? record.count : undefined,
+      };
+    case 'DELETE_SCHEDULE':
+      return { type, scheduleId: asOptionalString(record.scheduleId) };
+    case 'DELETE_FOLDER':
+      return { type, folderId: asOptionalString(record.folderId) };
+    default:
+      return { type: 'UNKNOWN', originalType: type };
+  }
+}
+
+function parseScheduleList(raw: string | undefined): ScheduleActionPayload[] {
+  if (!raw) return [];
+  const parsed: unknown = JSON.parse(raw);
+  if (!Array.isArray(parsed)) return [];
+  return parsed.map(normalizeSchedulePayload).filter((item): item is ScheduleActionPayload => Boolean(item));
+}
+
+function normalizeSchedulePayload(value: unknown): ScheduleActionPayload | null {
+  const record = asRecord(value);
+  if (!record) return null;
+  return {
+    title: asOptionalString(record.title),
+    startTime: asOptionalString(record.startTime),
+    endTime: asOptionalString(record.endTime),
+    allDay: asOptionalBooleanLike(record.allDay),
+    rrule: asOptionalString(record.rrule),
+  };
+}
 
 export function useActions() {
   const noteStore = useNoteStore();
@@ -20,13 +127,10 @@ export function useActions() {
 
   const resolveNoteId = useCallback((noteIdOrTitle: string | undefined): string | undefined => {
     if (!noteIdOrTitle) return undefined;
-    const notes = useNoteStore.getState().notes;
-    if (notes.find(n => n.id === noteIdOrTitle)) return noteIdOrTitle;
-    const byTitle = notes.find(n => n.title === noteIdOrTitle);
-    return byTitle?.id;
+    return resolveNoteIdFromList(useNoteStore.getState().notes, noteIdOrTitle);
   }, []);
 
-  const getActionDescription = useCallback((action: any): string => {
+  const getActionDescription = useCallback((action: AiAction): string => {
     const notes = useNoteStore.getState().notes;
     const trashNotes = useNoteStore.getState().trashNotes;
     switch (action.type) {
@@ -69,12 +173,14 @@ export function useActions() {
         return `删除日程`;
       case 'DELETE_FOLDER':
         return `删除文件夹`;
+      case 'UNKNOWN':
+        return `不支持的操作：${action.originalType}`;
       default:
-        return `操作：${action.type}`;
+        return `操作`;
     }
   }, []);
 
-  const executeSingleAction = useCallback(async (action: any) => {
+  const executeSingleAction = useCallback(async (action: AiAction) => {
     const { notes, selectedNote, setNotes, setSelectedNote, setTrashNotes, addNote, updateNoteInList, removeNote, removeTrashNote } = useNoteStore.getState();
     const { setStatus } = useUiStore.getState();
     const { setSchedules } = useScheduleStore.getState();
@@ -177,7 +283,7 @@ export function useActions() {
       }
       case 'CREATE_SCHEDULES_BATCH': {
         try {
-          const scheduleList = JSON.parse(action.schedules || '[]');
+          const scheduleList = parseScheduleList(action.schedules);
           const createdSchedules: Schedule[] = [];
           for (const item of scheduleList) {
             if (item.title && item.startTime) {
@@ -236,17 +342,25 @@ export function useActions() {
         setStatus('已删除文件夹');
         break;
       }
+      case 'UNKNOWN':
+        setStatus(`不支持的操作类型：${action.originalType}`);
+        break;
       default:
-        console.warn('未知操作类型：' + action.type);
+        setStatus('不支持的操作类型');
     }
   }, [resolveNoteId]);
 
   const executeAiAction = useCallback(async (actionJson: string) => {
     try {
-      const parsed = JSON.parse(actionJson);
-      const actions = Array.isArray(parsed) ? parsed : [parsed];
+      const parsed: unknown = JSON.parse(actionJson);
+      const parsedActions = Array.isArray(parsed) ? parsed : [parsed];
+      const actions = parsedActions.map(normalizeAiAction).filter((action): action is AiAction => Boolean(action));
+      if (actions.length === 0) {
+        ui.setStatus('没有可执行的 AI 操作');
+        return;
+      }
 
-      const pending = actions.map((action: any, index: number) => ({
+      const pending = actions.map((action, index: number) => ({
         id: `action-${Date.now()}-${index}`,
         type: action.type,
         description: getActionDescription(action),
@@ -271,7 +385,11 @@ export function useActions() {
 
     for (const pending of pendingActions) {
       try {
-        await executeSingleAction(pending.data);
+        const action = normalizeAiAction(pending.data);
+        if (!action) {
+          throw new Error('Invalid pending action payload');
+        }
+        await executeSingleAction(action);
         successCount++;
       } catch (err) {
         console.error('执行操作失败:', pending, err);

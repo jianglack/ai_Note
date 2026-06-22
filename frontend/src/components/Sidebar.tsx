@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
+import { FixedSizeList } from 'react-window';
 import {
   GlobeAltIcon,
   ClockIcon,
@@ -16,6 +17,7 @@ import type { SidebarFilter } from '../stores/uiStore';
 import { useNoteStore } from '../stores/noteStore';
 import { useScheduleStore } from '../stores/scheduleStore';
 import { useNotes } from '../hooks/useNotes';
+import { useMeasuredHeight } from '../hooks/useMeasuredHeight';
 
 const FOLDER_COLORS = [
   { name: '朱砂', value: '#b8452e' },
@@ -25,6 +27,11 @@ const FOLDER_COLORS = [
   { name: '靛蓝', value: '#4a7ba6' },
   { name: '墨色', value: '#9a8b73' },
 ];
+const SEARCH_RESULT_ROW_HEIGHT = 112;
+
+function stripHtmlPreview(content: string, limit: number) {
+  return content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, limit);
+}
 
 interface SidebarProps {
   onLogout: () => void;
@@ -167,6 +174,8 @@ export default function Sidebar({ onLogout }: SidebarProps) {
   const folderMenuRef = useRef<HTMLDivElement | null>(null);
   const renameDialogRef = useRef<HTMLDivElement | null>(null);
   const renamePreviousFocusRef = useRef<HTMLElement | null>(null);
+  const searchResultsRef = useRef<HTMLDivElement | null>(null);
+  const searchResultsHeight = useMeasuredHeight(searchResultsRef, 420);
   const isRenameDialogOpen = Boolean(renaming);
 
   // Close menu on click outside
@@ -299,6 +308,54 @@ export default function Sidebar({ onLogout }: SidebarProps) {
     return Array.from(tagSet).slice(0, 8);
   }, [notes]);
 
+  const searchPreviewById = useMemo(() => {
+    return Object.fromEntries(ui.searchResults.map((note) => [
+      note.id,
+      stripHtmlPreview(note.content, 60),
+    ]));
+  }, [ui.searchResults]);
+
+  const renderSearchResult = ({ index, style }: { index: number; style: CSSProperties }) => {
+    const note = ui.searchResults[index];
+    const active = selectedNote?.id === note.id;
+
+    return (
+      <SidebarRowButton
+        key={note.id}
+        ariaLabel={`Open note ${note.title || 'Untitled'}`}
+        active={active}
+        style={{
+          ...style,
+          boxSizing: 'border-box',
+          padding: '10px 18px',
+          borderBottom: '1px solid var(--color-border, #e0d4b8)',
+          cursor: 'pointer',
+          background: active ? 'rgba(184,69,46,0.08)' : 'transparent',
+          borderLeft: active ? '3px solid var(--color-accent, #b8452e)' : '3px solid transparent',
+          transition: 'all .12s',
+        }}
+        onClick={() => {
+          handleSelectNote(note);
+          ui.clearSearch();
+        }}
+      >
+        <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, color: 'var(--color-text, #2b2620)' }}>{note.title || 'Untitled'}</div>
+        <div style={{ fontSize: 11, color: 'var(--color-text-secondary, #7a6b58)', marginBottom: 4, lineHeight: 1.5 }}>
+          {searchPreviewById[note.id]}...
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+          {note.tags?.map((tag) => (
+            <span key={tag.id} style={{
+              fontSize: 10, padding: '1px 6px',
+              background: 'var(--color-paper-2, #f5efe0)',
+              borderRadius: 3, color: 'var(--color-text-secondary, #7a6b58)',
+            }}>{tag.name}</span>
+          ))}
+        </div>
+      </SidebarRowButton>
+    );
+  };
+
   // User initial for avatar
   const userInitial = user?.username?.charAt(0) || '用';
 
@@ -413,40 +470,16 @@ export default function Sidebar({ onLogout }: SidebarProps) {
           }}>
             搜索结果 ({ui.searchResults.length})
           </div>
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {ui.searchResults.map((note) => (
-              <SidebarRowButton
-                key={note.id}
-                ariaLabel={`Open note ${note.title || 'Untitled'}`}
-                active={selectedNote?.id === note.id}
-                style={{
-                  padding: '10px 18px',
-                  borderBottom: '1px solid var(--color-border, #e0d4b8)',
-                  cursor: 'pointer',
-                  background: selectedNote?.id === note.id ? 'rgba(184,69,46,0.08)' : 'transparent',
-                  borderLeft: selectedNote?.id === note.id ? '3px solid var(--color-accent, #b8452e)' : '3px solid transparent',
-                  transition: 'all .12s',
-                }}
-                onClick={() => {
-                  handleSelectNote(note);
-                  ui.clearSearch();
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 3, color: 'var(--color-text, #2b2620)' }}>{note.title || '无标题'}</div>
-                <div style={{ fontSize: 11, color: 'var(--color-text-secondary, #7a6b58)', marginBottom: 4, lineHeight: 1.5 }}>
-                  {note.content.replace(/<[^>]*>/g, '').slice(0, 60)}...
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                  {note.tags?.map((tag) => (
-                    <span key={tag.id} style={{
-                      fontSize: 10, padding: '1px 6px',
-                      background: 'var(--color-paper-2, #f5efe0)',
-                      borderRadius: 3, color: 'var(--color-text-secondary, #7a6b58)',
-                    }}>{tag.name}</span>
-                  ))}
-                </div>
-              </SidebarRowButton>
-            ))}
+          <div ref={searchResultsRef} style={{ flex: 1, minHeight: 0 }}>
+            <FixedSizeList
+              height={searchResultsHeight}
+              width="100%"
+              itemCount={ui.searchResults.length}
+              itemSize={SEARCH_RESULT_ROW_HEIGHT}
+              itemKey={(index) => ui.searchResults[index].id}
+            >
+              {renderSearchResult}
+            </FixedSizeList>
           </div>
         </div>
       ) : (

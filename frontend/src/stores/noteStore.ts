@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { Note, Folder } from '../api';
-import { getNotes, getFolders } from '../api';
+import { loadNotesAndFolders } from '../services/noteData';
 
 interface NoteState {
   notes: Note[];
@@ -68,8 +68,8 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   
   loadData: async () => {
     try {
-      const [notesData, foldersData] = await Promise.all([getNotes(), getFolders()]);
-      set({ notes: notesData, folders: foldersData });
+      const { notes, folders } = await loadNotesAndFolders();
+      set({ notes, folders });
     } catch (err) {
       console.error('加载数据失败:', err);
     }

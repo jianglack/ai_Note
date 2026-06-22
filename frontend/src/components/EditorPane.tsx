@@ -13,6 +13,7 @@ import { useUiStore } from '../stores/uiStore';
 import { useNoteStore } from '../stores/noteStore';
 import { useAiChat } from '../hooks/useAiChat';
 import { useNotes } from '../hooks/useNotes';
+import { useNoteEditor } from '../hooks/useNoteEditor';
 import { createNote } from '../api';
 import TrashView from '../TrashView';
 import TiptapEditor from './TiptapEditor';
@@ -31,14 +32,17 @@ export default function EditorPane() {
   const noteStore = useNoteStore();
   const { handleAiInlineAction, handleAiMessage } = useAiChat();
   const {
-    title, setTitle, content, setContent, tags, setTags, tagInput, setTagInput,
-    handleSelectNote, handleAddTag, handleRemoveTag,
-    handleSuggestTags, handleAddSuggestedTag,
+    handleSelectNote,
     handleCreateNote,
     handleCloseTrash, handleRestoreNote, handlePermanentDelete,
+  } = useNotes();
+  const {
+    title, setTitle, content, setContent, tags, setTags, tagInput, setTagInput,
+    handleAddTag, handleRemoveTag,
+    handleSuggestTags, handleAddSuggestedTag,
     handleExportMarkdown,
     handleTogglePin, handleToggleStar,
-  } = useNotes();
+  } = useNoteEditor();
 
   const folderName = useMemo(() => {
     if (!selectedNote?.folderId) return null;

@@ -148,7 +148,7 @@ export default function App() {
         }}
         onCreateNote={() => handleCreateNote()}
       />
-      <div style={{ overflow: 'hidden', display: 'flex', minWidth: 0 }}>
+      <div className="workspace-main">
         <EditorPane />
         {ui.isAiChatOpen && (
           <AiChatPanel

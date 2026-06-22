@@ -71,8 +71,24 @@
 
 .timeline-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
   padding: 16px 24px;
+}
+
+.timeline-virtual-list {
+  overflow-x: hidden !important;
+}
+
+.timeline-virtual-date {
+  position: static;
+  margin-bottom: 0;
+}
+
+.timeline-virtual-item {
+  margin-left: 20px;
+  border-left: 2px solid #e5e7eb;
+  padding-left: 16px;
+  padding-bottom: 8px;
 }
 
 .timeline-empty {

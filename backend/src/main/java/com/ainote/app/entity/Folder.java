@@ -18,6 +18,9 @@ public class Folder {
     @Column(name = "parent_id")
     private String parentId;
 
+    @Column(name = "color", length = 20)
+    private String color;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
@@ -39,6 +42,8 @@ public class Folder {
     public void setName(String name) { this.name = name; }
     public String getParentId() { return parentId; }
     public void setParentId(String parentId) { this.parentId = parentId; }
+    public String getColor() { return color; }
+    public void setColor(String color) { this.color = color; }
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
     public String getUserId() { return user != null ? user.getId() : null; }

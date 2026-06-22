@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from 'react';
+import { FixedSizeList } from 'react-window';
 import { getCanvases, createCanvas, updateCanvas, deleteCanvas, generateCanvasAI } from '../../api';
 import { useNoteStore } from '../../stores/noteStore';
 import { askConfirm, askPrompt, showAlert } from '../../services/dialogService';
@@ -9,6 +10,7 @@ interface CanvasNode { id: string; x: number; y: number; w: number; h: number; c
 interface CanvasEdge { from: string; to: string; label: string; }
 
 const COLORS = ['#b8452e', '#6b7a5a', '#c9a959', '#6b85a3', '#7a6b58', '#a06b8c'];
+const NOTE_IMPORT_ROW_HEIGHT = 66;
 
 export default function CanvasView({ onClose }: { onClose: () => void }) {
   const { notes } = useNoteStore();
@@ -36,6 +38,13 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
   edgeStartRef.current = edgeStart;
   // Editing container ref (用于判断 blur 是否离开编辑区域)
   const editContainerRef = useRef<HTMLDivElement>(null);
+  const importPreviewById = useMemo(() => {
+    return Object.fromEntries(notes.map((note) => [
+      note.id,
+      note.content.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim().slice(0, 40),
+    ]));
+  }, [notes]);
+  const noteImportHeight = Math.min(360, Math.max(80, notes.length * NOTE_IMPORT_ROW_HEIGHT));
 
   useEffect(() => { loadCanvases(); }, []);
 
@@ -219,6 +228,35 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
     });
     if (!confirmed) return;
     try { await deleteCanvas(id); loadCanvases(); if (currentCanvas?.id === id) { setCurrentCanvas(null); setShowList(true); } } catch (e) { console.error(e); }
+  };
+
+  const renderNoteImportRow = ({ index, style }: { index: number; style: CSSProperties }) => {
+    const note = notes[index];
+    const imported = nodes.some(n => n.noteId === note.id);
+
+    return (
+      <div
+        key={note.id}
+        style={{
+          ...style,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          padding: '8px 10px',
+          borderBottom: '1px solid var(--color-border)',
+          cursor: imported ? 'default' : 'pointer',
+          opacity: imported ? 0.5 : 1,
+          boxSizing: 'border-box',
+        }}
+        onClick={() => { if (!imported) importNote(note.id); }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 500 }}>{note.title || 'Untitled'}</div>
+          <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{importPreviewById[note.id]}</div>
+        </div>
+        {imported ? <span style={{ fontSize: 10, color: 'var(--color-ink-400)' }}>Imported</span> : <button className="feat-btn small primary">Import</button>}
+      </div>
+    );
   };
 
   // --- Canvas list view ---
@@ -427,20 +465,16 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
               <span style={{ fontWeight: 600 }}>导入笔记</span>
               <button className="feat-btn subtle small" onClick={() => setShowNoteImport(false)}>×</button>
             </div>
-            <div style={{ padding: '8px 16px', overflowY: 'auto', maxHeight: '50vh' }}>
-              {notes.map(note => {
-                const imported = nodes.some(n => n.noteId === note.id);
-                return (
-                  <div key={note.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', borderBottom: '1px solid var(--color-border)', cursor: imported ? 'default' : 'pointer', opacity: imported ? 0.5 : 1 }}
-                    onClick={() => { if (!imported) importNote(note.id); }}>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, fontWeight: 500 }}>{note.title || '无标题'}</div>
-                      <div style={{ fontSize: 11, color: 'var(--color-text-secondary)', marginTop: 2 }}>{note.content.replace(/<[^>]*>/g, '').slice(0, 40)}</div>
-                    </div>
-                    {imported ? <span style={{ fontSize: 10, color: 'var(--color-ink-400)' }}>已导入</span> : <button className="feat-btn small primary">导入</button>}
-                  </div>
-                );
-              })}
+            <div style={{ padding: '8px 16px', height: noteImportHeight }}>
+              <FixedSizeList
+                height={noteImportHeight}
+                width="100%"
+                itemCount={notes.length}
+                itemSize={NOTE_IMPORT_ROW_HEIGHT}
+                itemKey={(index) => notes[index].id}
+              >
+                {renderNoteImportRow}
+              </FixedSizeList>
             </div>
             <div className="lp-modal-foot"><button className="feat-btn ghost" onClick={() => setShowNoteImport(false)}>关闭</button></div>
           </div>

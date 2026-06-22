@@ -32,6 +32,12 @@
 }
 
 .settings-back {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
   padding: 0 8px 16px;
   border-bottom: 1px solid var(--color-border, #e0d4b8);
   margin-bottom: 12px;
@@ -53,6 +59,11 @@
 }
 
 .settings-tab {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font-family: inherit;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -165,6 +176,10 @@
   border-bottom: none;
 }
 
+.setting-row.disabled {
+  opacity: 0.55;
+}
+
 .setting-row-label {
   color: var(--color-text, #2b2620);
   font-weight: 500;
@@ -184,6 +199,8 @@
 
 /* ─── Toggle ─────────────────────────────────── */
 .settings-toggle {
+  border: 0;
+  padding: 0;
   width: 36px;
   height: 20px;
   border-radius: 10px;
@@ -192,6 +209,10 @@
   cursor: pointer;
   flex-shrink: 0;
   transition: background 0.15s;
+}
+
+.settings-toggle:disabled {
+  cursor: not-allowed;
 }
 
 .settings-toggle[data-on="true"] {
@@ -223,6 +244,8 @@
 }
 
 .model-card {
+  text-align: left;
+  font-family: inherit;
   padding: 14px;
   border-radius: 10px;
   border: 1px solid var(--color-border, #e0d4b8);
@@ -254,6 +277,7 @@
 }
 
 .model-name {
+  display: block;
   font-weight: 600;
   font-size: 14px;
   margin-bottom: 4px;
@@ -261,8 +285,38 @@
 }
 
 .model-desc {
+  display: block;
   font-size: 11px;
   color: var(--color-ink-500, #9a8b73);
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: -12px;
+  padding-bottom: 8px;
+}
+
+.settings-primary-btn,
+.settings-secondary-btn {
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.settings-primary-btn {
+  border: 0;
+  background: var(--color-accent, #b8452e);
+  color: var(--color-paper-0, #fbf7ee);
+}
+
+.settings-secondary-btn {
+  border: 1px solid var(--color-border, #e0d4b8);
+  background: transparent;
+  color: var(--color-text-secondary, #7a6b58);
 }
 
 /* ─── Textarea ─────────────────────────────────── */

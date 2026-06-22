@@ -73,14 +73,27 @@ export default function ToastItem({ toast }: { toast: Toast }) {
           }}>
             {toast.title}
           </span>
-          <svg
+          <button
+            type="button"
+            aria-label="Dismiss notification"
             onClick={handleDismiss}
-            width={14} height={14} viewBox="0 0 24 24" fill="none"
-            stroke="var(--color-text-tertiary, #a09888)" strokeWidth="2" strokeLinecap="round"
-            style={{ cursor: 'pointer', flexShrink: 0 }}
+            style={{
+              border: 'none',
+              background: 'transparent',
+              padding: 0,
+              cursor: 'pointer',
+              flexShrink: 0,
+              display: 'inline-flex',
+              color: 'var(--color-text-tertiary, #a09888)',
+            }}
           >
-            <path d="M6 18L18 6M6 6l12 12" />
-          </svg>
+            <svg
+              width={14} height={14} viewBox="0 0 24 24" fill="none"
+              stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+            >
+              <path d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
         {toast.message && (
           <div style={{
@@ -91,15 +104,18 @@ export default function ToastItem({ toast }: { toast: Toast }) {
           </div>
         )}
         {toast.action && (
-          <div
+          <button
+            type="button"
             onClick={toast.action.onClick}
             style={{
+              border: 'none', background: 'transparent', fontFamily: 'inherit',
+              textAlign: 'left',
               fontSize: 13, color: 'var(--color-accent, #b8452e)',
               paddingLeft: 24, cursor: 'pointer',
             }}
           >
             {toast.action.label}
-          </div>
+          </button>
         )}
       </div>
     </div>

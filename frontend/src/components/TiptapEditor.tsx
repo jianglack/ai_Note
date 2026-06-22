@@ -104,6 +104,7 @@ export default function TiptapEditor({ content, onChange, onAiAction, onWikiLink
   const [wikiFilter, setWikiFilter] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const editorRef = useRef<ReturnType<typeof useEditor>>(null);
+  const updateTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   // 图片上传处理
   const handleImageUpload = async (file: File) => {
@@ -207,10 +208,14 @@ export default function TiptapEditor({ content, onChange, onAiAction, onWikiLink
     ],
     content: initialContent,
     onUpdate: ({ editor }) => {
-      // 将 HTML 转换回 Markdown
-      const html = editor.getHTML();
-      const markdown = turndownService.turndown(html);
-      onChange(markdown);
+      if (updateTimerRef.current) {
+        window.clearTimeout(updateTimerRef.current);
+      }
+      updateTimerRef.current = window.setTimeout(() => {
+        const html = editor.getHTML();
+        const markdown = turndownService.turndown(html);
+        onChange(markdown);
+      }, 400);
     },
     editorProps: {
       attributes: {
@@ -250,6 +255,14 @@ export default function TiptapEditor({ content, onChange, onAiAction, onWikiLink
 
   // 保存 editor 引用供图片上传使用
   editorRef.current = editor;
+
+  useEffect(() => {
+    return () => {
+      if (updateTimerRef.current) {
+        window.clearTimeout(updateTimerRef.current);
+      }
+    };
+  }, []);
 
   // 暴露 editor 实例给父组件
   useEffect(() => {

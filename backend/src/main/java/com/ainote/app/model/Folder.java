@@ -4,6 +4,7 @@ public class Folder {
     private String id;
     private String name;
     private String parentId; // null 表示根文件夹
+    private String color;
     private String createdAt;
     private String updatedAt;
 
@@ -29,6 +30,14 @@ public class Folder {
 
     public void setParentId(String parentId) {
         this.parentId = parentId;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
     }
 
     public String getCreatedAt() {

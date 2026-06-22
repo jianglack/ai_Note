@@ -105,14 +105,16 @@ class FolderServiceTest {
             return folder;
         });
 
-        com.ainote.app.model.Folder result = folderService.create("New Folder", null);
+        com.ainote.app.model.Folder result = folderService.create("New Folder", null, "#b8452e");
 
         assertThat(result.getName()).isEqualTo("New Folder");
         assertThat(result.getParentId()).isNull();
+        assertThat(result.getColor()).isEqualTo("#b8452e");
 
         ArgumentCaptor<Folder> captor = ArgumentCaptor.forClass(Folder.class);
         verify(folderRepository).save(captor.capture());
         assertThat(captor.getValue().getUser()).isEqualTo(testUser);
+        assertThat(captor.getValue().getColor()).isEqualTo("#b8452e");
     }
 
     @Test
@@ -141,11 +143,12 @@ class FolderServiceTest {
         when(folderRepository.findByIdAndUserId("new-parent", "user-123")).thenReturn(Optional.of(testFolder));
         when(folderRepository.save(any(Folder.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        com.ainote.app.model.Folder result = folderService.update("folder-456", "Updated Name", "new-parent");
+        com.ainote.app.model.Folder result = folderService.update("folder-456", "Updated Name", "new-parent", "#6b7a5a");
 
         assertThat(result).isNotNull();
         assertThat(result.getName()).isEqualTo("Updated Name");
         assertThat(result.getParentId()).isEqualTo("new-parent");
+        assertThat(result.getColor()).isEqualTo("#6b7a5a");
     }
 
     @Test

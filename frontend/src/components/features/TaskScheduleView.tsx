@@ -3,6 +3,7 @@ import {
   getTaskSchedules, createTaskSchedule, toggleTaskSchedule, deleteTaskSchedule,
   type TaskScheduleData,
 } from '../../api';
+import { askConfirm } from '../../services/dialogService';
 
 const T = {
   bg: 'var(--color-paper-0, #fbf7ee)',
@@ -71,6 +72,14 @@ export default function TaskScheduleView({ onClose }: { onClose: () => void }) {
   };
 
   const handleDelete = async (id: string) => {
+    const confirmed = await askConfirm({
+      title: 'Delete scheduled task',
+      message: 'This scheduled task will be permanently deleted.',
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return;
+
     try {
       await deleteTaskSchedule(id);
       setSchedules(prev => prev.filter(s => s.id !== id));

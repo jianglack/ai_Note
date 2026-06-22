@@ -70,7 +70,8 @@
 /* Body / list */
 .note-list-body {
   flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+  min-height: 0;
 }
 
 .note-list-body::-webkit-scrollbar {

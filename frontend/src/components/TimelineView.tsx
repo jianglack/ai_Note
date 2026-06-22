@@ -1,6 +1,9 @@
+import { useCallback, useEffect, useMemo, useRef, type CSSProperties } from 'react';
+import { VariableSizeList, type ListChildComponentProps } from 'react-window';
 import './TimelineView.css';
 import type { Note, Schedule } from '../api';
 import ScheduleCard from './ScheduleCard';
+import { useMeasuredHeight } from '../hooks/useMeasuredHeight';
 
 interface TimelineViewProps {
   notes: Note[];
@@ -14,6 +17,9 @@ interface TimelineViewProps {
 type TimelineItem =
   | { type: 'note'; data: Note; displayTime: Date }
   | { type: 'schedule'; data: Schedule; displayTime: Date };
+type TimelineRow =
+  | { kind: 'date'; date: string }
+  | { kind: 'item'; item: TimelineItem };
 
 function parseDateTime(str: string): Date {
   // 支持 "2026-04-04 10:00:00" 和 "2026-04-04T10:00:00" 格式
@@ -55,8 +61,12 @@ export default function TimelineView({
   onScheduleStatusChange,
   onClose
 }: TimelineViewProps) {
+  const bodyRef = useRef<HTMLDivElement>(null);
+  const listRef = useRef<VariableSizeList<TimelineRow[]>>(null);
+  const bodyHeight = useMeasuredHeight(bodyRef, 640);
+
   // 合并笔记和日程为统一的时间线项
-  const items: TimelineItem[] = [
+  const items = useMemo<TimelineItem[]>(() => [
     ...notes.map(note => ({
       type: 'note' as const,
       data: note,
@@ -67,10 +77,83 @@ export default function TimelineView({
       data: schedule,
       displayTime: parseDateTime(schedule.startTime)
     }))
-  ];
+  ], [notes, schedules]);
 
-  const groups = groupByDate(items);
-  const dates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
+  const groups = useMemo(() => groupByDate(items), [items]);
+  const dates = useMemo(() => Object.keys(groups).sort((a, b) => b.localeCompare(a)), [groups]);
+  const notePreviewById = useMemo(() => {
+    return Object.fromEntries(notes.map((note) => [
+      note.id,
+      note.content.replace(/[#*`>\-\[\]]/g, '').replace(/\s+/g, ' ').trim().substring(0, 80),
+    ]));
+  }, [notes]);
+  const rows = useMemo<TimelineRow[]>(() => {
+    return dates.flatMap((date) => [
+      { kind: 'date' as const, date },
+      ...groups[date].map((item) => ({ kind: 'item' as const, item })),
+    ]);
+  }, [dates, groups]);
+
+  useEffect(() => {
+    listRef.current?.resetAfterIndex(0, true);
+  }, [rows]);
+
+  const getRowHeight = useCallback((index: number) => {
+    const row = rows[index];
+    if (!row || row.kind === 'date') return 42;
+    return row.item.type === 'note' ? 132 : 180;
+  }, [rows]);
+
+  const renderTimelineRow = ({ index, style, data }: ListChildComponentProps<TimelineRow[]>) => {
+    const row = data[index];
+    const rowStyle: CSSProperties = { ...style, boxSizing: 'border-box' };
+
+    if (row.kind === 'date') {
+      return (
+        <div className="timeline-date-label timeline-virtual-date" style={rowStyle}>
+          <span className="timeline-dot" />
+          {formatDate(row.date)}
+        </div>
+      );
+    }
+
+    const item = row.item;
+    return (
+      <div className="timeline-virtual-item" style={rowStyle}>
+        {item.type === 'note' ? (
+          <button
+            key={`note-${item.data.id}`}
+            type="button"
+            className="timeline-note"
+            aria-label={`Open timeline note ${item.data.title || 'Untitled'}`}
+            onClick={() => { onSelectNote(item.data); onClose(); }}
+          >
+            <div className="timeline-note-title">{item.data.title || 'Untitled'}</div>
+            <div className="timeline-note-preview">
+              {notePreviewById[item.data.id]}
+            </div>
+            {item.data.tags && item.data.tags.length > 0 && (
+              <div className="timeline-note-tags">
+                {item.data.tags.map(tag => (
+                  <span key={tag.id} className="timeline-tag">{tag.name}</span>
+                ))}
+              </div>
+            )}
+            <div className="timeline-note-time">
+              {item.data.updatedAt.split(' ')[1]?.substring(0, 5) ||
+               item.data.updatedAt.split('T')[1]?.substring(0, 5)}
+            </div>
+          </button>
+        ) : (
+          <ScheduleCard
+            schedule={item.data}
+            onSelect={onSelectSchedule}
+            onStatusChange={onScheduleStatusChange}
+          />
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="timeline-overlay">
@@ -80,54 +163,26 @@ export default function TimelineView({
           <span className="timeline-stats">{notes.length} 篇笔记 · {schedules.length} 个日程</span>
           <button type="button" className="timeline-close" aria-label="Close timeline" onClick={onClose}>✕</button>
         </div>
-        <div className="timeline-body">
+        <div className="timeline-body" ref={bodyRef}>
           {dates.length === 0 ? (
             <div className="timeline-empty">暂无内容</div>
           ) : (
-            dates.map(date => (
-              <div key={date} className="timeline-group">
-                <div className="timeline-date-label">
-                  <span className="timeline-dot" />
-                  {formatDate(date)}
-                </div>
-                <div className="timeline-items">
-                  {groups[date].map(item => (
-                    item.type === 'note' ? (
-                      <button
-                        key={`note-${item.data.id}`}
-                        type="button"
-                        className="timeline-note"
-                        aria-label={`Open timeline note ${item.data.title || 'Untitled'}`}
-                        onClick={() => { onSelectNote(item.data); onClose(); }}
-                      >
-                        <div className="timeline-note-title">{item.data.title || '无标题'}</div>
-                        <div className="timeline-note-preview">
-                          {item.data.content.replace(/[#*`>\-\[\]]/g, '').substring(0, 80)}
-                        </div>
-                        {item.data.tags && item.data.tags.length > 0 && (
-                          <div className="timeline-note-tags">
-                            {item.data.tags.map(tag => (
-                              <span key={tag.id} className="timeline-tag">{tag.name}</span>
-                            ))}
-                          </div>
-                        )}
-                        <div className="timeline-note-time">
-                          {item.data.updatedAt.split(' ')[1]?.substring(0, 5) ||
-                           item.data.updatedAt.split('T')[1]?.substring(0, 5)}
-                        </div>
-                      </button>
-                    ) : (
-                      <ScheduleCard
-                        key={`schedule-${item.data.id}`}
-                        schedule={item.data}
-                        onSelect={onSelectSchedule}
-                        onStatusChange={onScheduleStatusChange}
-                      />
-                    )
-                  ))}
-                </div>
-              </div>
-            ))
+            <VariableSizeList<TimelineRow[]>
+              ref={listRef}
+              className="timeline-virtual-list"
+              height={bodyHeight}
+              width="100%"
+              itemCount={rows.length}
+              itemData={rows}
+              itemSize={getRowHeight}
+              itemKey={(index, data) => {
+                const row = data[index];
+                if (row.kind === 'date') return `date-${row.date}`;
+                return `${row.item.type}-${row.item.data.id}`;
+              }}
+            >
+              {renderTimelineRow}
+            </VariableSizeList>
           )}
         </div>
       </div>

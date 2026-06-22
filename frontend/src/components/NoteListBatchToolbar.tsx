@@ -14,7 +14,7 @@ import {
   getNotes,
   getTrashNotes,
 } from '../api';
-import { askPrompt } from '../services/dialogService';
+import { askConfirm, askPrompt } from '../services/dialogService';
 
 const T = {
   bg: '#fff',
@@ -58,6 +58,17 @@ export default function NoteListBatchToolbar() {
     }
   };
 
+  const handleBatchDelete = async () => {
+    const confirmed = await askConfirm({
+      title: 'Delete selected notes',
+      message: `Move ${selectedIds.length} selected notes to trash?`,
+      confirmLabel: 'Delete',
+      danger: true,
+    });
+    if (!confirmed) return;
+    await handleBatchAction(() => batchDeleteNotes(selectedIds), '删除');
+  };
+
   return (
     <div style={{
       position: 'absolute', bottom: 12, left: 12, right: 12,
@@ -77,7 +88,7 @@ export default function NoteListBatchToolbar() {
 
       {/* Action buttons */}
       <ActionBtn icon={<TrashIcon style={{ width: 18, height: 18 }} />} label="删除" disabled={loading}
-        onClick={() => handleBatchAction(() => batchDeleteNotes(selectedIds), '删除')} />
+        onClick={() => { void handleBatchDelete(); }} />
       <ActionBtn icon={<FolderIcon style={{ width: 18, height: 18 }} />} label="移动" disabled={loading}
         onClick={() => {
           const folders = noteStore.folders;

@@ -5,7 +5,7 @@ interface PendingAction {
   id: string;
   type: string;
   description: string;
-  data: any;
+  data: unknown;
 }
 
 interface NoteSelectionContext {

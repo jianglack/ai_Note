@@ -1,5 +1,6 @@
 import api from './services/api';
 import { getAuthToken } from './services/apiBase';
+import { parseSseStream } from './services/sse';
 
 export type Tag = {
   id: string;
@@ -100,8 +101,8 @@ export async function createFolder(name: string, parentId?: string | null): Prom
   return res.data;
 }
 
-export async function updateFolder(id: string, name: string, color?: string | null): Promise<Folder> {
-  const body: Record<string, string | null> = { name };
+export async function updateFolder(id: string, name: string, color?: string | null, parentId?: string | null): Promise<Folder> {
+  const body: Record<string, string | null> = { name, parentId: parentId ?? null };
   if (color !== undefined) body.color = color;
   const res = await api.put(`/api/folders/${id}`, body);
   return res.data;
@@ -146,7 +147,7 @@ export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
 }
 
 export async function aiChat(message: string, scope: 'all' | 'selected', noteId?: string): Promise<AiChatResponse> {
-  const payload: any = {
+  const payload: Record<string, unknown> = {
     query: message,
     message: message
   };
@@ -178,7 +179,7 @@ export async function aiChatStream(
   onProgress?: (step: string, detail: string) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const payload: any = {
+  const payload: Record<string, unknown> = {
     query: message,
     message: message
   };
@@ -206,69 +207,34 @@ export async function aiChatStream(
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const reader = response.body?.getReader();
-    if (!reader) {
-      throw new Error('No response body');
-    }
-
-    const decoder = new TextDecoder();
-    let buffer = '';
-
-    // 状态机：跟踪当前事件类型，修复跨 chunk 丢失 bug
-    let currentEventType = 'token';
-
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split('\n');
-      buffer = lines.pop() || '';
-
-      for (const line of lines) {
-        // Spring SseEmitter 发送 "event:name"（无空格），也兼容 "event: name"
-        if (line.startsWith('event:')) {
-          currentEventType = line.substring(6).trim();
-          continue;
+    await parseSseStream(response, ({ event, data }) => {
+      try {
+        switch (event) {
+          case 'token':
+            onToken(data);
+            break;
+          case 'complete':
+            onComplete(JSON.parse(data) as AiChatResponse);
+            break;
+          case 'error':
+            onError(data);
+            break;
+          case 'progress':
+            if (onProgress) {
+              const p = JSON.parse(data) as { step: string; detail: string };
+              onProgress(p.step, p.detail);
+            }
+            break;
         }
-
-        // Spring SseEmitter 发送 "data:value"（无空格），也兼容 "data: value"
-        if (line.startsWith('data:')) {
-          const data = line.substring(5).replace(/^ /, '');
-
-          try {
-            switch (currentEventType) {
-              case 'token':
-                onToken(data);
-                break;
-              case 'complete':
-                onComplete(JSON.parse(data) as AiChatResponse);
-                break;
-              case 'error':
-                onError(data);
-                break;
-              case 'progress':
-                if (onProgress) {
-                  const p = JSON.parse(data);
-                  onProgress(p.step, p.detail);
-                }
-                break;
-            }
-          } catch (e) {
-            console.warn(`[SSE] parse error for eventType=${currentEventType}:`, e, 'data:', data);
-            // JSON 解析失败，当作 token 处理
-            if (data.trim()) {
-              onToken(data);
-            }
-          }
-
-          // 重置事件类型，下一个 data 没有前置 event 时默认为 token
-          currentEventType = 'token';
+      } catch (e) {
+        console.warn(`[SSE] parse error for eventType=${event}:`, e, 'data:', data);
+        if (data.trim()) {
+          onToken(data);
         }
       }
-    }
-  } catch (error: any) {
-    onError(error.message || 'Stream connection failed');
+    }, { defaultEventType: 'token' });
+  } catch (error: unknown) {
+    onError(error instanceof Error ? error.message : 'Stream connection failed');
   }
 }
 
@@ -550,7 +516,7 @@ export async function getNotifications(): Promise<NotificationData[]> {
 
 export async function getNotificationCount(): Promise<number> {
   const res = await api.get('/api/notifications/count');
-  return res.data;
+  return res.data.count;
 }
 
 export async function markNotificationRead(id: string): Promise<void> {
@@ -1061,40 +1027,15 @@ export function subscribePlanProgress(
 
       if (!response.ok) return;
 
-      const reader = response.body?.getReader();
-      if (!reader) return;
-
-      const decoder = new TextDecoder();
-      let buffer = '';
-      let currentEventType = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          if (line.startsWith('event:')) {
-            currentEventType = line.substring(6).trim();
-            continue;
+      await parseSseStream(response, ({ event, data }) => {
+        try {
+          switch (event) {
+            case 'step_update': onStepUpdate(JSON.parse(data)); break;
+            case 'plan_update': onPlanUpdate(JSON.parse(data)); break;
+            case 'log': onLog?.(JSON.parse(data)); break;
           }
-          if (line.startsWith('data:')) {
-            const data = line.substring(5).replace(/^ /, '');
-            try {
-              const parsed = JSON.parse(data);
-              switch (currentEventType) {
-                case 'step_update': onStepUpdate(parsed); break;
-                case 'plan_update': onPlanUpdate(parsed); break;
-                case 'log': onLog?.(parsed); break;
-              }
-            } catch { /* ignore parse errors */ }
-            currentEventType = '';
-          }
-        }
-      }
+        } catch { /* ignore parse errors */ }
+      }, { defaultEventType: '' });
     } catch (err) {
       if ((err as DOMException).name !== 'AbortError') {
         // connection closed

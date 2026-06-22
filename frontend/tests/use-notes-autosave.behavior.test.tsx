@@ -28,7 +28,7 @@ vi.mock('../src/services/dialogService', () => ({
 
 import type { Note } from '../src/api';
 import { updateNote } from '../src/api';
-import { useNotes } from '../src/hooks/useNotes';
+import { useNoteEditor } from '../src/hooks/useNoteEditor';
 import { useNoteStore } from '../src/stores/noteStore';
 import { useUiStore } from '../src/stores/uiStore';
 
@@ -68,7 +68,7 @@ describe('useNotes autosave behavior', () => {
     vi.mocked(updateNote).mockResolvedValue(updatedNote);
     useNoteStore.setState({ notes: [originalNote], selectedNote: originalNote });
 
-    const { result } = renderHook(() => useNotes());
+    const { result } = renderHook(() => useNoteEditor());
 
     await act(async () => {
       await Promise.resolve();
@@ -95,6 +95,8 @@ describe('useNotes autosave behavior', () => {
       tags: [],
       folderId: null,
     });
-    expect(useNoteStore.getState().selectedNote?.title).toBe('Edited title');
+    expect(result.current.title).toBe('Edited title');
+    expect(useNoteStore.getState().notes[0].title).toBe('Edited title');
+    expect(useNoteStore.getState().selectedNote?.title).toBe('Original title');
   });
 });

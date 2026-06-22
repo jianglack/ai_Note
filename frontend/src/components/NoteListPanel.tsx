@@ -1,14 +1,16 @@
-import { useState, useMemo, type KeyboardEvent } from 'react';
+import { useState, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
+import { FixedSizeList, type ListChildComponentProps } from 'react-window';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useUiStore } from '../stores/uiStore';
 import { useNoteStore } from '../stores/noteStore';
-import { useToastStore } from '../stores/toastStore';
 import NoteListBatchToolbar from './NoteListBatchToolbar';
 import WorkflowCheckbox from './workflow/WorkflowCheckbox';
+import { useMeasuredHeight } from '../hooks/useMeasuredHeight';
 import type { Note } from '../api';
 import './NoteListPanel.css';
 
 type SortMode = 'recent' | 'oldest' | 'ai';
+const NOTE_ROW_HEIGHT = 132;
 
 interface NoteListPanelProps {
   notes: Note[];
@@ -37,6 +39,11 @@ function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 }
 
+type NoteListItemData = {
+  notes: Note[];
+  previews: Record<string, string>;
+};
+
 export default function NoteListPanel({
   notes,
   selectedNoteId,
@@ -46,6 +53,8 @@ export default function NoteListPanel({
   const ui = useUiStore();
   const { folders } = useNoteStore();
   const [sortMode, setSortMode] = useState<SortMode>('recent');
+  const listBodyRef = useRef<HTMLDivElement>(null);
+  const listHeight = useMeasuredHeight(listBodyRef, 480);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -112,6 +121,13 @@ export default function NoteListPanel({
     return [...pinned, ...unpinned];
   }, [filtered, sortMode]);
 
+  const previewById = useMemo(() => {
+    return Object.fromEntries(sorted.map((note) => [
+      note.id,
+      stripHtml(note.content).slice(0, 80),
+    ]));
+  }, [sorted]);
+
   const activateNote = (note: Note) => {
     if (ui.multiSelectMode) {
       ui.toggleMultiNoteSelection(note.id);
@@ -144,6 +160,57 @@ export default function NoteListPanel({
       event.preventDefault();
       focusAdjacentNote(event.currentTarget, event.key === 'ArrowDown' ? 1 : -1);
     }
+  };
+
+  const renderNoteRow = ({ index, style, data }: ListChildComponentProps<NoteListItemData>) => {
+    const note = data.notes[index];
+    const active = note.id === selectedNoteId;
+    const isSelected = ui.multiSelectedNoteIds.has(note.id);
+    const optionSelected = ui.multiSelectMode ? isSelected : active;
+    const preview = data.previews[note.id];
+    const rowStyle: CSSProperties = {
+      ...style,
+      boxSizing: 'border-box',
+    };
+
+    return (
+      <div
+        key={note.id}
+        className={`note-list-item ${active ? 'active' : ''} ${isSelected ? 'multi-selected' : ''}`}
+        role="option"
+        aria-selected={optionSelected}
+        tabIndex={active || (!selectedNoteId && index === 0) ? 0 : -1}
+        onClick={() => activateNote(note)}
+        onKeyDown={(event) => handleNoteKeyDown(event, note)}
+        style={rowStyle}
+      >
+        <div className="note-list-item-top">
+          {ui.multiSelectMode && (
+            <WorkflowCheckbox
+              checked={isSelected}
+              onChange={() => ui.toggleMultiNoteSelection(note.id)}
+            />
+          )}
+          <h3 className="note-list-item-title">
+            {note.pinned && <span className="note-list-pin">📌</span>}
+            {note.title || 'Untitled'}
+          </h3>
+          <span className="note-list-item-date">{formatDate(note.updatedAt)}</span>
+        </div>
+        {preview && (
+          <p className="note-list-item-preview">{preview}</p>
+        )}
+        {note.tags && note.tags.length > 0 && (
+          <div className="note-list-item-tags">
+            {note.tags.map((tag) => (
+              <span key={tag.id} className={`note-list-tag ${active ? 'active' : ''}`}>
+                {tag.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -231,6 +298,7 @@ export default function NoteListPanel({
 
       {/* List */}
       <div
+        ref={listBodyRef}
         className="note-list-body"
         role="listbox"
         aria-label="Notes"
@@ -239,49 +307,18 @@ export default function NoteListPanel({
         {sorted.length === 0 && (
           <div className="note-list-empty">暂无笔记</div>
         )}
-        {sorted.map((note, index) => {
-          const active = note.id === selectedNoteId;
-          const isSelected = ui.multiSelectedNoteIds.has(note.id);
-          const optionSelected = ui.multiSelectMode ? isSelected : active;
-          const preview = stripHtml(note.content).slice(0, 80);
-          return (
-            <div
-              key={note.id}
-              className={`note-list-item ${active ? 'active' : ''} ${isSelected ? 'multi-selected' : ''}`}
-              role="option"
-              aria-selected={optionSelected}
-              tabIndex={active || (!selectedNoteId && index === 0) ? 0 : -1}
-              onClick={() => activateNote(note)}
-              onKeyDown={(event) => handleNoteKeyDown(event, note)}
-            >
-              <div className="note-list-item-top">
-                {ui.multiSelectMode && (
-                  <WorkflowCheckbox
-                    checked={isSelected}
-                    onChange={() => ui.toggleMultiNoteSelection(note.id)}
-                  />
-                )}
-                <h3 className="note-list-item-title">
-                  {note.pinned && <span className="note-list-pin">📌</span>}
-                  {note.title || '无标题'}
-                </h3>
-                <span className="note-list-item-date">{formatDate(note.updatedAt)}</span>
-              </div>
-              {preview && (
-                <p className="note-list-item-preview">{preview}</p>
-              )}
-              {note.tags && note.tags.length > 0 && (
-                <div className="note-list-item-tags">
-                  {note.tags.map((tag) => (
-                    <span key={tag.id} className={`note-list-tag ${active ? 'active' : ''}`}>
-                      {tag.name}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {sorted.length > 0 && (
+          <FixedSizeList<NoteListItemData>
+            height={listHeight}
+            width="100%"
+            itemCount={sorted.length}
+            itemSize={NOTE_ROW_HEIGHT}
+            itemData={{ notes: sorted, previews: previewById }}
+            itemKey={(index, data) => data.notes[index].id}
+          >
+            {renderNoteRow}
+          </FixedSizeList>
+        )}
       </div>
 
       {/* Create button (always shown) */}

@@ -58,6 +58,17 @@
   padding: 16px 24px;
 }
 
+.extract-error {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(184, 69, 46, 0.25);
+  border-radius: 8px;
+  background: rgba(184, 69, 46, 0.08);
+  color: var(--color-danger, #b8452e);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .extract-empty {
   text-align: center;
   padding: 40px 20px;
