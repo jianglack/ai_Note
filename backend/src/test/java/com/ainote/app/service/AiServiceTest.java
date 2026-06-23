@@ -5,6 +5,7 @@ import com.ainote.app.model.ChatHistoryItem;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.security.SecurityUtils;
 import com.ainote.app.util.PromptLoader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -47,7 +48,7 @@ class AiServiceTest {
     @BeforeEach
     void setUp() {
         aiService = new AiService(noteService, folderService, chatModel,
-                securityUtils, userMemoryRepository, promptLoader);
+                securityUtils, userMemoryRepository, promptLoader, new ObjectMapper());
     }
 
     @Test

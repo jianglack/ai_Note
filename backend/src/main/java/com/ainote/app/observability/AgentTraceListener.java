@@ -139,6 +139,7 @@ public class AgentTraceListener implements ChatModelListener {
             SecurityUtils securityUtils,
             com.ainote.app.service.CostTrackingService costTrackingService,
             com.ainote.app.agent.budget.TokenBudget tokenBudget,
+            ObjectMapper objectMapper,
             @Value("${app.observability.enabled:true}") boolean enabled,
             @Value("${app.deepseek.model:deepseek-chat}") String deepseekModel
     ) {
@@ -146,7 +147,7 @@ public class AgentTraceListener implements ChatModelListener {
         this.securityUtils = securityUtils;
         this.costTrackingService = costTrackingService;
         this.tokenBudget = tokenBudget;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.enabled = enabled;
         this.activeModelName = deepseekModel;
         log.info("AgentTraceListener initialized, enabled: {}, model: {}", enabled, activeModelName);

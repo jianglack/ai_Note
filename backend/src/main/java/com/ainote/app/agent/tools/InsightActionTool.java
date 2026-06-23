@@ -19,14 +19,15 @@ public class InsightActionTool {
     private static final Logger log = LoggerFactory.getLogger(InsightActionTool.class);
     private final NoteInsightService insightService;
     private final SecurityUtils securityUtils;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final ToolExecutionPipeline pipeline;
 
     public InsightActionTool(NoteInsightService insightService, SecurityUtils securityUtils,
-                             ToolExecutionPipeline pipeline) {
+                             ToolExecutionPipeline pipeline, ObjectMapper objectMapper) {
         this.insightService = insightService;
         this.securityUtils = securityUtils;
         this.pipeline = pipeline;
+        this.objectMapper = objectMapper;
     }
 
     @Tool(name = "insightAction", value = """

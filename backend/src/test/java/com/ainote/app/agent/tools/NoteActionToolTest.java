@@ -9,6 +9,7 @@ import com.ainote.app.service.AiService;
 import com.ainote.app.service.NoteService;
 import com.ainote.app.service.NoteVersionService;
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -40,7 +41,8 @@ class NoteActionToolTest {
                 securityUtils,
                 mock(AiService.class),
                 mock(NoteVersionService.class),
-                pipeline
+                pipeline,
+                new ObjectMapper()
         );
 
         com.ainote.app.entity.Note existing = new com.ainote.app.entity.Note();

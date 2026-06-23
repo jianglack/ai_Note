@@ -1,6 +1,7 @@
 package com.ainote.app.service;
 
 import com.ainote.app.util.PromptLoader;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -24,7 +25,7 @@ class QueryRewritingServiceTest {
 
     @Test
     void normalizeQueryVariants_keepsOriginalDeduplicatesAndLimitsToThree() {
-        QueryRewritingService service = new QueryRewritingService(mock(PromptLoader.class));
+        QueryRewritingService service = new QueryRewritingService(mock(PromptLoader.class), new ObjectMapper());
         ReflectionTestUtils.setField(service, "maxVariants", 3);
 
         List<String> normalized = service.normalizeQueryVariants(

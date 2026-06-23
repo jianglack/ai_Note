@@ -54,13 +54,14 @@ public class AiService {
             @Qualifier("agentChatModel") ChatModel chatModel,
             SecurityUtils securityUtils,
             UserMemoryRepository userMemoryRepository,
-            PromptLoader promptLoader) {
+            PromptLoader promptLoader,
+            ObjectMapper objectMapper) {
         this.noteService = noteService;
         this.folderService = folderService;
         this.chatModel = chatModel;
         this.securityUtils = securityUtils;
         this.userMemoryRepository = userMemoryRepository;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
     }
 

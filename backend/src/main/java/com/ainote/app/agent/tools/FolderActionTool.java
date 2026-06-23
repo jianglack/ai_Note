@@ -30,11 +30,12 @@ public class FolderActionTool {
     private final ToolExecutionPipeline pipeline;
 
     public FolderActionTool(FolderService folderService, FolderRepository folderRepository,
-                            SecurityUtils securityUtils, ToolExecutionPipeline pipeline) {
+                            SecurityUtils securityUtils, ToolExecutionPipeline pipeline,
+                            ObjectMapper objectMapper) {
         this.folderService = folderService;
         this.folderRepository = folderRepository;
         this.securityUtils = securityUtils;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.pipeline = pipeline;
     }
 

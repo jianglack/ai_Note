@@ -44,11 +44,12 @@ public class ScheduleActionTool {
 
     public ScheduleActionTool(ScheduleService scheduleService, ScheduleRepository scheduleRepository,
                               SecurityUtils securityUtils, @Lazy AiService aiService,
-                              ToolExecutionPipeline pipeline) {
+                              ToolExecutionPipeline pipeline,
+                              ObjectMapper objectMapper) {
         this.scheduleService = scheduleService;
         this.scheduleRepository = scheduleRepository;
         this.securityUtils = securityUtils;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.aiService = aiService;
         this.pipeline = pipeline;
     }

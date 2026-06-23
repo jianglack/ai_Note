@@ -34,17 +34,19 @@ public class ContentAnalysisService {
     private final NoteConceptRepository conceptRepository;
     private final KnowledgeGraphService knowledgeGraphService;
     private final PromptLoader promptLoader;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     public ContentAnalysisService(
             ChatModel chatModel,
             NoteConceptRepository conceptRepository,
             KnowledgeGraphService knowledgeGraphService,
-            PromptLoader promptLoader) {
+            PromptLoader promptLoader,
+            ObjectMapper objectMapper) {
         this.chatModel = chatModel;
         this.conceptRepository = conceptRepository;
         this.knowledgeGraphService = knowledgeGraphService;
         this.promptLoader = promptLoader;
+        this.objectMapper = objectMapper;
     }
 
     /**

@@ -28,7 +28,7 @@ public class KnowledgeActionTool {
     private final NoteConceptRepository conceptRepository;
     private final NoteRepository noteRepository;
     private final SecurityUtils securityUtils;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final ToolExecutionPipeline pipeline;
 
     public KnowledgeActionTool(
@@ -36,12 +36,14 @@ public class KnowledgeActionTool {
             NoteConceptRepository conceptRepository,
             NoteRepository noteRepository,
             SecurityUtils securityUtils,
-            ToolExecutionPipeline pipeline) {
+            ToolExecutionPipeline pipeline,
+            ObjectMapper objectMapper) {
         this.graphService = graphService;
         this.conceptRepository = conceptRepository;
         this.noteRepository = noteRepository;
         this.securityUtils = securityUtils;
         this.pipeline = pipeline;
+        this.objectMapper = objectMapper;
     }
 
     @Tool(name = "knowledgeAction", value = """

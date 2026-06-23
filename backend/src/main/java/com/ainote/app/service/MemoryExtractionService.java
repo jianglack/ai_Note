@@ -77,13 +77,14 @@ public class MemoryExtractionService {
             SemanticMemoryRepository semanticMemoryRepository,
             EpisodicMemoryRepository episodicMemoryRepository,
             UserMemoryRepository userMemoryRepository,
-            PromptLoader promptLoader) {
+            PromptLoader promptLoader,
+            ObjectMapper objectMapper) {
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
         this.semanticMemoryRepository = semanticMemoryRepository;
         this.episodicMemoryRepository = episodicMemoryRepository;
         this.userMemoryRepository = userMemoryRepository;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
         log.info("MemoryExtractionService initialized (fuzzy dedup + decay + capacity management)");
     }

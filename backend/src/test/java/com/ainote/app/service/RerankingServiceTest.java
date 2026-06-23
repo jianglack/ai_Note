@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import com.ainote.app.entity.Note;
 import com.ainote.app.entity.Tag;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -23,7 +24,7 @@ class RerankingServiceTest {
 
     @BeforeEach
     void setUp() {
-        rerankingService = new RerankingService();
+        rerankingService = new RerankingService(new ObjectMapper());
         ReflectionTestUtils.setField(rerankingService, "enabled", true);
         ReflectionTestUtils.setField(rerankingService, "useCohere", false);
     }

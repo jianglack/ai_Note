@@ -49,13 +49,14 @@ public class NoteActionTool {
     public NoteActionTool(NoteService noteService, NoteRepository noteRepository,
                           SecurityUtils securityUtils, @Lazy AiService aiService,
                           NoteVersionService noteVersionService,
-                          ToolExecutionPipeline pipeline) {
+                          ToolExecutionPipeline pipeline,
+                          ObjectMapper objectMapper) {
         this.noteService = noteService;
         this.noteRepository = noteRepository;
         this.securityUtils = securityUtils;
         this.aiService = aiService;
         this.noteVersionService = noteVersionService;
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.pipeline = pipeline;
     }
 

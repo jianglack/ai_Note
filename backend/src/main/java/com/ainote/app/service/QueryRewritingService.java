@@ -47,11 +47,11 @@ public class QueryRewritingService {
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
 
-    public QueryRewritingService(PromptLoader promptLoader) {
+    public QueryRewritingService(PromptLoader promptLoader, ObjectMapper objectMapper) {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
     }
 

@@ -40,11 +40,11 @@ public class RerankingService {
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
 
-    public RerankingService() {
+    public RerankingService(ObjectMapper objectMapper) {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(30))
                 .build();
-        this.objectMapper = new ObjectMapper();
+        this.objectMapper = objectMapper;
     }
 
     /**

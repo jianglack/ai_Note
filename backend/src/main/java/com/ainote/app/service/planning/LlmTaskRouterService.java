@@ -21,11 +21,13 @@ public class LlmTaskRouterService {
     private static final Logger log = LoggerFactory.getLogger(LlmTaskRouterService.class);
 
     private final ChatModel chatModel;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     private final String systemPrompt;
 
-    public LlmTaskRouterService(@Qualifier("agentChatModel") ChatModel chatModel) {
+    public LlmTaskRouterService(@Qualifier("agentChatModel") ChatModel chatModel,
+                                ObjectMapper objectMapper) {
         this.chatModel = chatModel;
+        this.objectMapper = objectMapper;
         this.systemPrompt = loadPrompt();
     }
 

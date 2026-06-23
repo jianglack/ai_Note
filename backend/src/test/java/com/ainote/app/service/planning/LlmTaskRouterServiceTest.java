@@ -1,5 +1,6 @@
 package com.ainote.app.service.planning;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -36,7 +37,7 @@ class LlmTaskRouterServiceTest {
                 {"route":"PLANNED_TASK","confidence":0.98,"reason":"批量检索后还要打标签和创建日程","requiresUserPlanApproval":true,"estimatedToolSteps":5,"riskLevel":"MEDIUM"}
                 """));
 
-        LlmTaskRouterService router = new LlmTaskRouterService(chatModel);
+        LlmTaskRouterService router = new LlmTaskRouterService(chatModel, new ObjectMapper());
 
         TaskRouteDecision decision = router.route(
                 "请先查找所有 RAG 相关笔记，然后总结，再统一加标签，最后创建复习日程。",
@@ -55,7 +56,7 @@ class LlmTaskRouterServiceTest {
                 {"route":"DIRECT_AGENT","confidence":0.91,"reason":"只是检索并总结，可由普通 Agent 一次完成","requiresUserPlanApproval":false,"estimatedToolSteps":2,"riskLevel":"LOW"}
                 """));
 
-        LlmTaskRouterService router = new LlmTaskRouterService(chatModel);
+        LlmTaskRouterService router = new LlmTaskRouterService(chatModel, new ObjectMapper());
 
         TaskRouteDecision decision = router.route("查找 RAG 相关笔记并总结一下。", List.of());
 
@@ -68,7 +69,7 @@ class LlmTaskRouterServiceTest {
         ChatModel chatModel = mock(ChatModel.class);
         when(chatModel.chat(any(ChatRequest.class))).thenReturn(response("我认为应该直接执行。"));
 
-        LlmTaskRouterService router = new LlmTaskRouterService(chatModel);
+        LlmTaskRouterService router = new LlmTaskRouterService(chatModel, new ObjectMapper());
 
         TaskRouteDecision decision = router.route("删除当前笔记", List.of("note-1"));
 
