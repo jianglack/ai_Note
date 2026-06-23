@@ -11,15 +11,20 @@ SELECT old_tag_id,
            ELSE 'tag-' || md5(old_tag_id || ':' || user_id || ':V52')
        END AS new_tag_id
 FROM (
-    SELECT DISTINCT
-           nt.tag_id AS old_tag_id,
-           t.name AS tag_name,
-           n.user_id AS user_id,
-           ROW_NUMBER() OVER (PARTITION BY nt.tag_id ORDER BY n.user_id) AS owner_rank
-    FROM note_tags nt
-    JOIN notes n ON n.id = nt.note_id
-    JOIN tags t ON t.id = nt.tag_id
-) owners;
+    SELECT old_tag_id,
+           tag_name,
+           user_id,
+           ROW_NUMBER() OVER (PARTITION BY old_tag_id ORDER BY user_id) AS owner_rank
+    FROM (
+        SELECT DISTINCT
+               nt.tag_id AS old_tag_id,
+               t.name AS tag_name,
+               n.user_id AS user_id
+        FROM note_tags nt
+        JOIN notes n ON n.id = nt.note_id
+        JOIN tags t ON t.id = nt.tag_id
+    ) distinct_owners
+) ranked;
 
 INSERT INTO tags (id, name, user_id)
 SELECT new_tag_id, tag_name, user_id
