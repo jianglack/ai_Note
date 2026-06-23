@@ -12,12 +12,14 @@ import dev.langchain4j.model.chat.listener.ChatModelResponseContext;
 import dev.langchain4j.model.output.TokenUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executor;
 import java.util.function.BiConsumer;
 
 /**
@@ -133,6 +135,7 @@ public class AgentTraceListener implements ChatModelListener {
     private final String activeModelName;
     private final com.ainote.app.service.CostTrackingService costTrackingService;
     private final com.ainote.app.agent.budget.TokenBudget tokenBudget;
+    private final Executor traceExecutor;
 
     public AgentTraceListener(
             AgentTraceRepository traceRepository,
@@ -140,6 +143,7 @@ public class AgentTraceListener implements ChatModelListener {
             com.ainote.app.service.CostTrackingService costTrackingService,
             com.ainote.app.agent.budget.TokenBudget tokenBudget,
             ObjectMapper objectMapper,
+            @Qualifier("taskExecutor") Executor traceExecutor,
             @Value("${app.observability.enabled:true}") boolean enabled,
             @Value("${app.deepseek.model:deepseek-chat}") String deepseekModel
     ) {
@@ -148,6 +152,7 @@ public class AgentTraceListener implements ChatModelListener {
         this.costTrackingService = costTrackingService;
         this.tokenBudget = tokenBudget;
         this.objectMapper = objectMapper;
+        this.traceExecutor = traceExecutor;
         this.enabled = enabled;
         this.activeModelName = deepseekModel;
         log.info("AgentTraceListener initialized, enabled: {}, model: {}", enabled, activeModelName);
@@ -239,9 +244,7 @@ public class AgentTraceListener implements ChatModelListener {
             double cost = costTrackingService.calculateCost(model, inputTokens, outputTokens);
             trace.setEstimatedCostYuan(cost);
 
-            traceRepository.save(trace);
-
-            log.info("Agent trace saved: traceId={}, latency={}ms, tokens={}, model={}, cost=¥{}",
+            enqueueTraceSave(trace, "Agent trace saved: traceId={}, latency={}ms, tokens={}, model={}, cost=¥{}",
                     traceId, latencyMs, totalTokens, model, String.format("%.6f", cost));
 
         } catch (Exception e) {
@@ -277,12 +280,25 @@ public class AgentTraceListener implements ChatModelListener {
             trace.setErrorMessage(errorMessage);
             trace.setCreatedAt(LocalDateTime.now());
 
-            traceRepository.save(trace);
-
-            log.warn("Agent error trace saved: traceId={}, error={}", traceId, errorMessage);
+            enqueueTraceSave(trace, "Agent error trace saved: traceId={}, error={}", traceId, errorMessage);
 
         } catch (Exception e) {
             log.error("Failed to save agent error trace", e);
+        }
+    }
+
+    void enqueueTraceSave(AgentTrace trace, String successMessage, Object... args) {
+        try {
+            traceExecutor.execute(() -> {
+                try {
+                    traceRepository.save(trace);
+                    log.info(successMessage, args);
+                } catch (Exception e) {
+                    log.error("Failed to persist agent trace asynchronously", e);
+                }
+            });
+        } catch (RuntimeException e) {
+            log.error("Failed to enqueue agent trace persistence", e);
         }
     }
 
