@@ -32,8 +32,12 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -204,40 +208,52 @@ public class LangChain4jRagService {
                 return CompletableFuture.completedFuture(null);
             }
 
-            // 删除该笔记的旧嵌入
-            // LangChain4j 的 EmbeddingStore 没有按 metadata 删除的原生支持
-            // 需要通过自定义逻辑或直接操作数据库
-            deleteEmbeddingsForNote(noteId);
-
             // 创建文档并分块
+            String contentHash = sha256(fullText);
             Metadata metadata = Metadata.from("noteId", noteId)
                     .put("userId", userId)
-                    .put("title", note.getTitle());
+                    .put("title", note.getTitle())
+                    .put("contentHash", contentHash);
 
             Document document = Document.from(fullText, metadata);
             List<TextSegment> segments = documentSplitter.split(document);
 
             log.info("Note {} split into {} segments", noteId, segments.size());
 
-            // 为每个段落生成嵌入并存储
+            if (embeddingsAreCurrent(noteId, contentHash, segments.size())) {
+                log.info("Skipping embedding regeneration for unchanged note: {}", noteId);
+                return CompletableFuture.completedFuture(null);
+            }
+
+            // 删除该笔记的旧嵌入
+            // LangChain4j 的 EmbeddingStore 没有按 metadata 删除的原生支持
+            // 需要通过自定义逻辑或直接操作数据库
+            deleteEmbeddingsForNote(noteId);
+
+            List<TextSegment> enrichedSegments = new ArrayList<>(segments.size());
             for (int i = 0; i < segments.size(); i++) {
                 TextSegment segment = segments.get(i);
 
                 // 添加分块索引到 metadata
                 Metadata segmentMetadata = segment.metadata()
+                        .put("noteId", noteId)
+                        .put("userId", userId)
+                        .put("title", note.getTitle())
+                        .put("contentHash", contentHash)
                         .put("chunkIndex", String.valueOf(i));
-                TextSegment enrichedSegment = TextSegment.from(segment.text(), segmentMetadata);
+                enrichedSegments.add(TextSegment.from(segment.text(), segmentMetadata));
+            }
 
-                // 生成嵌入（通过熔断器保护）
-                Response<Embedding> response = resilientLlmService.embed(enrichedSegment);
-                if (response == null) {
-                    log.warn("Embedding model unavailable, skipping segment {} for note {}", i, noteId);
-                    continue;
-                }
-                Embedding embedding = response.content();
-
-                // 存储到向量数据库
-                embeddingStore.add(embedding, enrichedSegment);
+            // 批量生成嵌入（通过熔断器保护）并存储
+            Response<List<Embedding>> response = resilientLlmService.embedAll(enrichedSegments);
+            List<Embedding> embeddings = response == null ? List.of() : response.content();
+            if (embeddings == null || embeddings.size() != enrichedSegments.size()) {
+                log.warn("Embedding batch returned {} vectors for {} segments, skipping note {}",
+                        embeddings == null ? 0 : embeddings.size(), enrichedSegments.size(), noteId);
+                return CompletableFuture.completedFuture(null);
+            }
+            for (int i = 0; i < enrichedSegments.size(); i++) {
+                embeddingStore.add(embeddings.get(i), enrichedSegments.get(i));
                 log.debug("Stored embedding for note {} segment {}", noteId, i);
             }
 
@@ -248,6 +264,38 @@ public class LangChain4jRagService {
         } catch (Exception e) {
             log.error("Error generating embedding for note {}: {}", noteId, e.getMessage(), e);
             return CompletableFuture.completedFuture(null);
+        }
+    }
+
+    private boolean embeddingsAreCurrent(String noteId, String contentHash, int segmentCount) {
+        if (segmentCount == 0) {
+            return false;
+        }
+        try {
+            Integer count = jdbcTemplate.queryForObject(
+                    """
+                    SELECT COUNT(*)
+                    FROM langchain4j_embeddings
+                    WHERE metadata->>'noteId' = ?
+                      AND metadata->>'contentHash' = ?
+                    """,
+                    Integer.class,
+                    noteId,
+                    contentHash
+            );
+            return count != null && count == segmentCount;
+        } catch (Exception e) {
+            log.debug("Embedding freshness check failed for note {}: {}", noteId, e.getMessage());
+            return false;
+        }
+    }
+
+    private String sha256(String text) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(text.getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 digest is unavailable", e);
         }
     }
 

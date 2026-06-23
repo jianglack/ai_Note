@@ -4,6 +4,7 @@ import com.ainote.app.entity.Note;
 import com.ainote.app.entity.User;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
+import dev.langchain4j.data.document.Document;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -13,6 +14,7 @@ import dev.langchain4j.store.embedding.EmbeddingMatch;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
+import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -30,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -120,7 +123,8 @@ class LangChain4jRagServiceTest {
                 new EmbeddingMatch<>(0.9, "id", fakeEmbedding, segment);
         when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
                 .thenReturn(new EmbeddingSearchResult<>(List.of(match)));
-        when(noteRepository.findAllById(any())).thenReturn(List.of(testNote));
+        when(noteRepository.findByIdsAndUserIdAndDeletedAtIsNull(any(), eq("user-123")))
+                .thenReturn(List.of(testNote));
 
         List<com.ainote.app.model.Note> result = ragService.searchSimilar("test", 10);
 
@@ -145,13 +149,8 @@ class LangChain4jRagServiceTest {
         when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
                 .thenReturn(new EmbeddingSearchResult<>(List.of(match)));
 
-        Note otherUserNote = new Note();
-        otherUserNote.setId("note-789");
-        User otherUser = new User();
-        otherUser.setId("other-user");
-        otherUserNote.setUser(otherUser);
-
-        when(noteRepository.findAllById(any())).thenReturn(List.of(otherUserNote));
+        when(noteRepository.findByIdsAndUserIdAndDeletedAtIsNull(any(), eq("user-123")))
+                .thenReturn(List.of());
 
         List<com.ainote.app.model.Note> result = ragService.searchSimilar("test", 10);
 
@@ -176,8 +175,8 @@ class LangChain4jRagServiceTest {
         when(embeddingStore.search(any(EmbeddingSearchRequest.class)))
                 .thenReturn(new EmbeddingSearchResult<>(List.of(match)));
 
-        testNote.setDeletedAt(LocalDateTime.now());
-        when(noteRepository.findAllById(any())).thenReturn(List.of(testNote));
+        when(noteRepository.findByIdsAndUserIdAndDeletedAtIsNull(any(), eq("user-123")))
+                .thenReturn(List.of());
 
         List<com.ainote.app.model.Note> result = ragService.searchSimilar("test", 10);
 
@@ -268,8 +267,6 @@ class LangChain4jRagServiceTest {
         when(resilientLlmService.isRerankAvailable()).thenReturn(true);
         when(resilientLlmService.scoreAll(any(), anyString()))
                 .thenReturn(Response.from(List.of(0.9, 0.8, 0.7, 0.6, 0.5)));
-        when(noteRepository.findAllById(any())).thenReturn(List.of());
-
         ragService.searchSimilar("test", 10);
 
         org.mockito.ArgumentCaptor<List<TextSegment>> segments =
@@ -286,5 +283,47 @@ class LangChain4jRagServiceTest {
         ragService.generateEmbeddingAsync("nonexistent");
 
         verifyNoInteractions(embeddingStore);
+    }
+
+    @Test
+    void generateEmbeddingAsync_skipsUnchangedContentHash() {
+        when(noteRepository.findById("note-456")).thenReturn(Optional.of(testNote));
+        when(noteMediaRepository.findByNoteId("note-456")).thenReturn(List.of());
+        when(structureAwareSplitter.split(any(Document.class))).thenReturn(List.of(
+                TextSegment.from("chunk 1", Metadata.from("noteId", "note-456")),
+                TextSegment.from("chunk 2", Metadata.from("noteId", "note-456"))
+        ));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("note-456"), anyString()))
+                .thenReturn(2);
+
+        ragService.generateEmbeddingAsync("note-456");
+
+        verify(resilientLlmService, never()).embedAll(any());
+        verifyNoInteractions(embeddingStore);
+    }
+
+    @Test
+    void generateEmbeddingAsync_usesBatchEmbeddingAndStoresContentHashMetadata() {
+        when(noteRepository.findById("note-456")).thenReturn(Optional.of(testNote));
+        when(noteMediaRepository.findByNoteId("note-456")).thenReturn(List.of());
+        when(structureAwareSplitter.split(any(Document.class))).thenReturn(List.of(
+                TextSegment.from("chunk 1", Metadata.from("noteId", "note-456")),
+                TextSegment.from("chunk 2", Metadata.from("noteId", "note-456"))
+        ));
+        when(jdbcTemplate.queryForObject(anyString(), eq(Integer.class), eq("note-456"), anyString()))
+                .thenReturn(0);
+        when(resilientLlmService.embedAll(any())).thenReturn(Response.from(List.of(
+                Embedding.from(new float[]{0.1f}),
+                Embedding.from(new float[]{0.2f})
+        )));
+
+        ragService.generateEmbeddingAsync("note-456");
+
+        ArgumentCaptor<List<TextSegment>> segmentsCaptor = ArgumentCaptor.forClass(List.class);
+        verify(resilientLlmService).embedAll(segmentsCaptor.capture());
+        assertThat(segmentsCaptor.getValue()).hasSize(2);
+        assertThat(segmentsCaptor.getValue().get(0).metadata().getString("contentHash")).isNotBlank();
+        assertThat(segmentsCaptor.getValue().get(0).metadata().getString("chunkIndex")).isEqualTo("0");
+        verify(embeddingStore, times(2)).add(any(Embedding.class), any(TextSegment.class));
     }
 }
