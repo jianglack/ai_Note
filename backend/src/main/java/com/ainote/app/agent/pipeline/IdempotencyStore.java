@@ -24,11 +24,7 @@ public class IdempotencyStore {
      * 如果 key 已存在返回 true（重复），否则记录 key 并返回 false（首次）。
      */
     public boolean isDuplicate(String key) {
-        if (cache.getIfPresent(key) != null) {
-            return true;
-        }
-        cache.put(key, Boolean.TRUE);
-        return false;
+        return cache.asMap().putIfAbsent(key, Boolean.TRUE) != null;
     }
 
     /**

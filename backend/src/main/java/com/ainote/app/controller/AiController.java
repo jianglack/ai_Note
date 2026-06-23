@@ -41,6 +41,7 @@ import java.time.LocalDateTime;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
 @RestController
@@ -138,14 +139,15 @@ public class AiController {
         String userId = securityUtils.getCurrentUserId();
 
         // 创建取消令牌，SSE 断开/超时时自动取消
-        CancellationToken cancelToken = agentService.createCancelToken(userId);
+        String requestId = UUID.randomUUID().toString();
+        CancellationToken cancelToken = agentService.createCancelToken(userId, requestId);
         emitter.onCompletion(() -> cancelToken.cancel());
         emitter.onTimeout(() -> cancelToken.cancel());
         emitter.onError(e -> cancelToken.cancel());
 
         executorService.execute(() -> {
             try {
-                chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, new StreamCallback() {
+                chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, requestId, new StreamCallback() {
                     @Override
                     public void onToken(String token) {
                         try {

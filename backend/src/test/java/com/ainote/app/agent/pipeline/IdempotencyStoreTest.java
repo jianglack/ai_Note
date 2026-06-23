@@ -4,6 +4,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DisplayName("IdempotencyStore 幂等缓存测试")
@@ -30,6 +36,36 @@ class IdempotencyStoreTest {
         store.isDuplicate(key); // 第一次
         boolean dup = store.isDuplicate(key); // 第二次
         assertThat(dup).isTrue();
+    }
+
+    @Test
+    void concurrentFirstCallOnlyAllowsOneWinner() throws Exception {
+        String key = "user1:noteAction:create:race";
+        int threads = 16;
+        ExecutorService executor = Executors.newFixedThreadPool(threads);
+        CountDownLatch ready = new CountDownLatch(threads);
+        CountDownLatch start = new CountDownLatch(1);
+        AtomicInteger firstCalls = new AtomicInteger();
+
+        for (int i = 0; i < threads; i++) {
+            executor.submit(() -> {
+                ready.countDown();
+                try {
+                    start.await();
+                    if (!store.isDuplicate(key)) {
+                        firstCalls.incrementAndGet();
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            });
+        }
+
+        ready.await(2, TimeUnit.SECONDS);
+        start.countDown();
+        executor.shutdown();
+        assertThat(executor.awaitTermination(2, TimeUnit.SECONDS)).isTrue();
+        assertThat(firstCalls.get()).isEqualTo(1);
     }
 
     @Test

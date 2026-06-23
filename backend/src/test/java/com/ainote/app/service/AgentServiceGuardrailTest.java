@@ -1,6 +1,7 @@
 package com.ainote.app.service;
 
 import com.ainote.app.agent.AgentAssistant;
+import com.ainote.app.agent.CancellationToken;
 import com.ainote.app.agent.ConcurrencyGuard;
 import com.ainote.app.agent.budget.TokenBudget;
 import com.ainote.app.agent.guardrail.GuardrailResult;
@@ -269,6 +270,19 @@ class AgentServiceGuardrailTest {
         );
 
         assertThat(result).isEqualTo("正文");
+    }
+
+    @Test
+    @DisplayName("cancel tokens are isolated by request id")
+    void cancelTokens_areRequestScoped() {
+        CancellationToken first = agentService.createCancelToken("user-1", "req-1");
+        CancellationToken second = agentService.createCancelToken("user-1", "req-2");
+
+        ReflectionTestUtils.invokeMethod(agentService, "removeCancelToken", "user-1", "req-1");
+        agentService.cancelCurrentRequest("user-1");
+
+        assertThat(first.isCancelled()).isFalse();
+        assertThat(second.isCancelled()).isTrue();
     }
 
     private void stubSuccessfulAgentResponse(String content) {

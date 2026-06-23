@@ -14,5 +14,10 @@ public interface ChatStrategy {
 
     void chatStream(String query, List<String> noteIds, String userId, StreamCallback callback);
 
+    default void chatStream(String query, List<String> noteIds, String userId,
+                            String requestId, StreamCallback callback) {
+        chatStream(query, noteIds, userId, callback);
+    }
+
     String name();
 }

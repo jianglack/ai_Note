@@ -50,9 +50,21 @@ class AgentChatStrategyTest {
 
         verify(agentService).chatStreamAlreadyChecked(
                 eq("query"), eq(List.of()), eq("user-1"),
+                anyString(),
                 any(AgentService.StreamCallback.class));
         verify(agentService, never()).chatStream(
                 anyString(), anyList(), anyString(),
+                any(AgentService.StreamCallback.class));
+    }
+
+    @Test
+    void chatStreamPassesRequestIdWhenProvided() {
+        StreamCallback callback = Mockito.mock(StreamCallback.class);
+
+        strategy.chatStream("query", List.of(), "user-1", "req-1", callback);
+
+        verify(agentService).chatStreamAlreadyChecked(
+                eq("query"), eq(List.of()), eq("user-1"), eq("req-1"),
                 any(AgentService.StreamCallback.class));
     }
 

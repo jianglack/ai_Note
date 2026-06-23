@@ -74,6 +74,7 @@ public class AgentService {
 
     /** 用户 → 取消令牌的注册表，SSE 断开时通过此令牌取消 Agent 执行 */
     private final ConcurrentHashMap<String, CancellationToken> cancelTokenRegistry = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Set<String>> cancelTokenKeysByUser = new ConcurrentHashMap<>();
 
     @Value("${app.agent.timeout-seconds:300}")
     private int agentTimeoutSeconds;
@@ -159,23 +160,54 @@ public class AgentService {
      * 创建取消令牌并注册。由 AiController 在 SSE 建立时调用。
      */
     public CancellationToken createCancelToken(String userId) {
+        return createCancelToken(userId, UUID.randomUUID().toString());
+    }
+
+    public CancellationToken createCancelToken(String userId, String requestId) {
         CancellationToken token = new CancellationToken();
-        cancelTokenRegistry.put(userId, token);
+        String key = cancelTokenKey(userId, requestId);
+        cancelTokenRegistry.put(key, token);
+        cancelTokenKeysByUser.computeIfAbsent(userId, ignored -> ConcurrentHashMap.newKeySet()).add(key);
         return token;
     }
 
     public void cancelCurrentRequest(String userId) {
-        CancellationToken token = cancelTokenRegistry.get(userId);
-        if (token != null) {
-            token.cancel();
+        Set<String> keys = cancelTokenKeysByUser.get(userId);
+        if (keys != null) {
+            for (String key : keys) {
+                CancellationToken token = cancelTokenRegistry.get(key);
+                if (token != null) {
+                    token.cancel();
+                }
+            }
         }
     }
 
     /**
      * 移除取消令牌。由 Agent 调用结束后清理。
      */
-    private void removeCancelToken(String userId) {
-        cancelTokenRegistry.remove(userId);
+    private CancellationToken getOrCreateCancelToken(String userId, String requestId) {
+        String key = cancelTokenKey(userId, requestId);
+        return cancelTokenRegistry.computeIfAbsent(key, ignored -> {
+            cancelTokenKeysByUser.computeIfAbsent(userId, user -> ConcurrentHashMap.newKeySet()).add(key);
+            return new CancellationToken();
+        });
+    }
+
+    private void removeCancelToken(String userId, String requestId) {
+        String key = cancelTokenKey(userId, requestId);
+        cancelTokenRegistry.remove(key);
+        Set<String> keys = cancelTokenKeysByUser.get(userId);
+        if (keys != null) {
+            keys.remove(key);
+            if (keys.isEmpty()) {
+                cancelTokenKeysByUser.remove(userId, keys);
+            }
+        }
+    }
+
+    private String cancelTokenKey(String userId, String requestId) {
+        return userId + ":" + requestId;
     }
 
     /**
@@ -261,6 +293,7 @@ public class AgentService {
         }
 
         ToolAuditLogger.resetTranscript();
+        String requestId = UUID.randomUUID().toString();
 
         Span agentSpan = tracer.spanBuilder("agent-chat")
                 .setAttribute("user.id", actorUserId)
@@ -313,8 +346,7 @@ public class AgentService {
             try {
                 final String currentUserId = actorUserId;
                 // 获取或创建取消令牌
-                cancelToken = cancelTokenRegistry.computeIfAbsent(
-                        currentUserId, k -> new CancellationToken());
+                cancelToken = getOrCreateCancelToken(currentUserId, requestId);
 
                 CancellationToken activeCancelToken = cancelToken;
                 invocationFuture = securityExecutor.submit(
@@ -394,7 +426,7 @@ public class AgentService {
             return new AiChatResponse("抱歉，处理请求时出错：" + e.getMessage(), new HashMap<>(), (String) null);
         } finally {
             ToolAuditLogger.resetTranscript();
-            removeCancelToken(actorUserId);
+            removeCancelToken(actorUserId, requestId);
             concurrencyGuard.release(actorUserId);
             agentSpan.end();
         }
@@ -530,11 +562,19 @@ public class AgentService {
      * 流式 Agent 对话
      */
     public void chatStream(String query, List<String> noteIds, String userId, StreamCallback callback) {
-        doChatStream(query, noteIds, userId, userId, GuardrailMode.USER_INPUT, callback);
+        chatStream(query, noteIds, userId, UUID.randomUUID().toString(), callback);
+    }
+
+    public void chatStream(String query, List<String> noteIds, String userId, String requestId, StreamCallback callback) {
+        doChatStream(query, noteIds, userId, userId, requestId, GuardrailMode.USER_INPUT, callback);
     }
 
     public void chatStreamAlreadyChecked(String query, List<String> noteIds, String userId, StreamCallback callback) {
-        doChatStream(query, noteIds, userId, userId, GuardrailMode.ALREADY_CHECKED_USER_INPUT, callback);
+        chatStreamAlreadyChecked(query, noteIds, userId, UUID.randomUUID().toString(), callback);
+    }
+
+    public void chatStreamAlreadyChecked(String query, List<String> noteIds, String userId, String requestId, StreamCallback callback) {
+        doChatStream(query, noteIds, userId, userId, requestId, GuardrailMode.ALREADY_CHECKED_USER_INPUT, callback);
     }
 
     private void doChatStream(
@@ -542,6 +582,7 @@ public class AgentService {
             List<String> noteIds,
             String memoryId,
             String actorUserId,
+            String requestId,
             GuardrailMode guardrailMode,
             StreamCallback callback
     ) {
@@ -605,8 +646,7 @@ public class AgentService {
                 AgentTraceListener.registerProgressCallback(actorUserId, callback::onProgress);
 
                 // 获取或创建取消令牌
-                cancelToken = cancelTokenRegistry.computeIfAbsent(
-                        actorUserId, k -> new CancellationToken());
+                cancelToken = getOrCreateCancelToken(actorUserId, requestId);
 
                 CancellationToken activeCancelToken = cancelToken;
                 invocationFuture = securityExecutor.submit(
@@ -688,7 +728,7 @@ public class AgentService {
             callback.onError("处理请求时出错：" + e.getMessage());
         } finally {
             ToolAuditLogger.resetTranscript();
-            removeCancelToken(actorUserId);
+            removeCancelToken(actorUserId, requestId);
             concurrencyGuard.release(actorUserId);
         }
     }

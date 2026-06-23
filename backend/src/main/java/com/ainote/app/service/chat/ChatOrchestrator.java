@@ -83,6 +83,11 @@ public class ChatOrchestrator {
 
     public void chatStream(String query, List<String> noteIds,
                            String userId, StreamCallback callback) {
+        chatStream(query, noteIds, userId, java.util.UUID.randomUUID().toString(), callback);
+    }
+
+    public void chatStream(String query, List<String> noteIds,
+                           String userId, String requestId, StreamCallback callback) {
         chatMetrics.recordRequest();
 
         GuardrailResult guardResult = inputGuardrail.check(query);
@@ -104,7 +109,7 @@ public class ChatOrchestrator {
 
         try {
             circuitBreaker.executeRunnable(
-                    () -> agentStrategy.chatStream(query, noteIds, userId, trackingCallback));
+                    () -> agentStrategy.chatStream(query, noteIds, userId, requestId, trackingCallback));
             long latency = System.currentTimeMillis() - startTime;
             chatMetrics.recordSuccess("AGENT_STREAM", latency);
 

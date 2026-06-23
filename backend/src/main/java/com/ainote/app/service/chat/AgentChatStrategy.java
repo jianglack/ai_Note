@@ -47,7 +47,13 @@ public class AgentChatStrategy implements ChatStrategy {
     @Override
     public void chatStream(String query, List<String> noteIds,
                            String userId, StreamCallback callback) {
-        agentService.chatStreamAlreadyChecked(query, noteIds, userId,
+        chatStream(query, noteIds, userId, java.util.UUID.randomUUID().toString(), callback);
+    }
+
+    @Override
+    public void chatStream(String query, List<String> noteIds,
+                           String userId, String requestId, StreamCallback callback) {
+        agentService.chatStreamAlreadyChecked(query, noteIds, userId, requestId,
                 new AgentService.StreamCallback() {
                     @Override
                     public void onToken(String token) {
