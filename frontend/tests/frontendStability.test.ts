@@ -107,6 +107,28 @@ describe('frontend stability guards', () => {
     assert.match(quickSwitcher, /aria-activedescendant=/);
   });
 
+  it('keeps QuickSwitcher filtering memoized while using refs for stable keyboard navigation', () => {
+    const quickSwitcher = read('src/components/QuickSwitcher.tsx');
+
+    assert.match(quickSwitcher, /const filteredNotes = useMemo\(\(\) => notes\.filter/);
+    assert.match(quickSwitcher, /filteredNotesRef\.current = filteredNotes/);
+    assert.match(quickSwitcher, /selectedIndexRef\.current = selectedIndex/);
+    assert.match(quickSwitcher, /filteredNotesRef\.current\[selectedIndexRef\.current\]/);
+    assert.match(quickSwitcher, /\}, \[isOpen, onSelectNote, onClose\]\);/);
+    assert.doesNotMatch(quickSwitcher, /\}, \[isOpen, selectedIndex, filteredNotes, onSelectNote, onClose\]\);/);
+  });
+
+  it('updates TiptapEditor initial HTML when external content changes', () => {
+    const tiptap = read('src/components/TiptapEditor.tsx');
+
+    assert.match(tiptap, /const toEditorHtml = \(text: string\): string =>/);
+    assert.match(
+      tiptap,
+      /useEffect\(\(\) => \{\s*setInitialContent\(toEditorHtml\(content\)\);\s*\}, \[content\]\);/
+    );
+    assert.match(tiptap, /editor\.commands\.setContent\(toEditorHtml\(content\)\)/);
+  });
+
   it('gives chat panel landmark and live-region semantics', () => {
     const aiChatPanel = read('src/components/chat/AiChatPanel.tsx');
 

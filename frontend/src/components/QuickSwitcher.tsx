@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import './QuickSwitcher.css';
 
 interface Note {
@@ -20,13 +20,23 @@ export default function QuickSwitcher({ isOpen, onClose, notes, onSelectNote }: 
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const filteredNotesRef = useRef<Note[]>([]);
+  const selectedIndexRef = useRef(0);
 
   // 过滤笔记
-  const filteredNotes = notes.filter(note => {
+  const filteredNotes = useMemo(() => notes.filter(note => {
     const query = searchQuery.toLowerCase();
     return note.title.toLowerCase().includes(query) ||
            note.content.toLowerCase().includes(query);
-  });
+  }), [notes, searchQuery]);
+
+  useEffect(() => {
+    filteredNotesRef.current = filteredNotes;
+  }, [filteredNotes]);
+
+  useEffect(() => {
+    selectedIndexRef.current = selectedIndex;
+  }, [selectedIndex]);
 
   // 重置状态
   useEffect(() => {
@@ -39,24 +49,26 @@ export default function QuickSwitcher({ isOpen, onClose, notes, onSelectNote }: 
 
   // 键盘导航
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
 
+    const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         e.preventDefault();
         onClose();
       } else if (e.key === 'ArrowDown') {
         e.preventDefault();
+        const maxIndex = filteredNotesRef.current.length - 1;
         setSelectedIndex(prev =>
-          prev < filteredNotes.length - 1 ? prev + 1 : prev
+          prev < maxIndex ? prev + 1 : prev
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         setSelectedIndex(prev => prev > 0 ? prev - 1 : 0);
       } else if (e.key === 'Enter') {
         e.preventDefault();
-        if (filteredNotes[selectedIndex]) {
-          onSelectNote(filteredNotes[selectedIndex].id);
+        const current = filteredNotesRef.current[selectedIndexRef.current];
+        if (current) {
+          onSelectNote(current.id);
           onClose();
         }
       }
@@ -64,7 +76,7 @@ export default function QuickSwitcher({ isOpen, onClose, notes, onSelectNote }: 
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, filteredNotes, onSelectNote, onClose]);
+  }, [isOpen, onSelectNote, onClose]);
 
   // 自动滚动到选中项
   useEffect(() => {

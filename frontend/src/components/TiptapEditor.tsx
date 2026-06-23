@@ -97,6 +97,13 @@ const isMarkdown = (text: string): boolean => {
   return markdownPatterns.some(pattern => pattern.test(text));
 };
 
+const toEditorHtml = (text: string): string => {
+  if (text && isMarkdown(text)) {
+    return marked.parse(text) as string;
+  }
+  return text || '';
+};
+
 export default function TiptapEditor({ content, onChange, onAiAction, onWikiLinkClick, allNotes = [], noteId, onAddTags, onSlashAiAction, onEditorReady, hideToolbar }: TiptapEditorProps) {
   const [showAiMenu, setShowAiMenu] = useState(false);
   const [initialContent, setInitialContent] = useState('');
@@ -136,13 +143,8 @@ export default function TiptapEditor({ content, onChange, onAiAction, onWikiLink
 
   // 将 Markdown 转换为 HTML
   useEffect(() => {
-    if (content && isMarkdown(content)) {
-      const html = marked.parse(content) as string;
-      setInitialContent(html);
-    } else {
-      setInitialContent(content);
-    }
-  }, []);
+    setInitialContent(toEditorHtml(content));
+  }, [content]);
 
   const editor = useEditor({
     extensions: [
@@ -277,12 +279,7 @@ export default function TiptapEditor({ content, onChange, onAiAction, onWikiLink
 
     // 如果外部内容与编辑器内容不同，更新编辑器
     if (content !== currentMarkdown) {
-      if (content && isMarkdown(content)) {
-        const html = marked.parse(content) as string;
-        editor.commands.setContent(html);
-      } else {
-        editor.commands.setContent(content || '');
-      }
+      editor.commands.setContent(toEditorHtml(content));
     }
   }, [content, editor]);
   
