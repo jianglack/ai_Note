@@ -1,6 +1,8 @@
 package com.ainote.app.controller;
 
+import com.ainote.app.agent.CancellationToken;
 import com.ainote.app.entity.AgentTrace;
+import com.ainote.app.model.AiChatRequest;
 import com.ainote.app.repository.AgentTraceRepository;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
@@ -18,14 +20,20 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -156,5 +164,27 @@ class AiControllerTest {
         Map<String, Object> body = response.getBody();
         assertThat(body.get("error")).isEqualTo("\u5d4c\u5165\u53ef\u89c6\u5316\u751f\u6210\u5931\u8d25");
         assertThat(body.get("error").toString()).doesNotContain("secret internal path");
+    }
+
+    @Test
+    void chatStream_returns503WhenSecurityExecutorRejectsInitialWork() {
+        AiController controller = new AiController(
+            aiService, securityUtils, traceRepository, new ObjectMapper(), executorService,
+            ragFeedbackService, smartSuggestionService, noteRepository, agentService, ragService,
+            chatOrchestrator
+        );
+        AiChatRequest request = new AiChatRequest();
+        request.setQuery("hello");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(agentService.createCancelToken(eq("user-123"), anyString())).thenReturn(new CancellationToken());
+        doThrow(new RejectedExecutionException("full"))
+                .when(executorService).execute(any(Runnable.class));
+
+        assertThatThrownBy(() -> controller.chatStream(request))
+                .isInstanceOf(ResponseStatusException.class)
+                .satisfies(error -> assertThat(((ResponseStatusException) error).getStatusCode().value()).isEqualTo(503));
+
+        verify(agentService).cancelRequest(eq("user-123"), anyString());
     }
 }

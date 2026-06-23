@@ -26,9 +26,11 @@ import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -43,6 +45,7 @@ import java.util.Map;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -145,60 +148,65 @@ public class AiController {
         emitter.onTimeout(() -> cancelToken.cancel());
         emitter.onError(e -> cancelToken.cancel());
 
-        executorService.execute(() -> {
-            try {
-                chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, requestId, new StreamCallback() {
-                    @Override
-                    public void onToken(String token) {
-                        try {
-                            emitter.send(SseEmitter.event()
-                                    .name("token")
-                                    .data(token));
-                        } catch (IOException e) {
-                            emitter.completeWithError(e);
+        try {
+            executorService.execute(() -> {
+                try {
+                    chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, requestId, new StreamCallback() {
+                        @Override
+                        public void onToken(String token) {
+                            try {
+                                emitter.send(SseEmitter.event()
+                                        .name("token")
+                                        .data(token));
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onComplete(AiChatResponse response) {
-                        try {
-                            emitter.send(SseEmitter.event()
-                                    .name("complete")
-                                    .data(response));
-                            emitter.complete();
-                        } catch (IOException e) {
-                            emitter.completeWithError(e);
+                        @Override
+                        public void onComplete(AiChatResponse response) {
+                            try {
+                                emitter.send(SseEmitter.event()
+                                        .name("complete")
+                                        .data(response));
+                                emitter.complete();
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onError(String error) {
-                        try {
-                            emitter.send(SseEmitter.event()
-                                    .name("error")
-                                    .data(error));
-                            emitter.complete();
-                        } catch (IOException e) {
-                            emitter.completeWithError(e);
+                        @Override
+                        public void onError(String error) {
+                            try {
+                                emitter.send(SseEmitter.event()
+                                        .name("error")
+                                        .data(error));
+                                emitter.complete();
+                            } catch (IOException e) {
+                                emitter.completeWithError(e);
+                            }
                         }
-                    }
 
-                    @Override
-                    public void onProgress(String step, String detail) {
-                        try {
-                            Map<String, String> progress = Map.of("step", step, "detail", detail);
-                            emitter.send(SseEmitter.event()
-                                    .name("progress")
-                                    .data(progress, MediaType.APPLICATION_JSON));
-                        } catch (IOException e) {
-                            // 忽略：客户端可能已断开
+                        @Override
+                        public void onProgress(String step, String detail) {
+                            try {
+                                Map<String, String> progress = Map.of("step", step, "detail", detail);
+                                emitter.send(SseEmitter.event()
+                                        .name("progress")
+                                        .data(progress, MediaType.APPLICATION_JSON));
+                            } catch (IOException e) {
+                                // 忽略：客户端可能已断开
+                            }
                         }
-                    }
-                });
-            } catch (Exception e) {
-                emitter.completeWithError(e);
-            }
-        });
+                    });
+                } catch (Exception e) {
+                    emitter.completeWithError(e);
+                }
+            });
+        } catch (RejectedExecutionException e) {
+            agentService.cancelRequest(userId, requestId);
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI stream is busy", e);
+        }
 
         return emitter;
     }

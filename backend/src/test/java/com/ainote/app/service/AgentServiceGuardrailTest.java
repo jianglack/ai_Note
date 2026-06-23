@@ -278,10 +278,13 @@ class AgentServiceGuardrailTest {
         CancellationToken first = agentService.createCancelToken("user-1", "req-1");
         CancellationToken second = agentService.createCancelToken("user-1", "req-2");
 
-        ReflectionTestUtils.invokeMethod(agentService, "removeCancelToken", "user-1", "req-1");
+        agentService.cancelRequest("user-1", "req-1");
+
+        assertThat(first.isCancelled()).isTrue();
+        assertThat(second.isCancelled()).isFalse();
+
         agentService.cancelCurrentRequest("user-1");
 
-        assertThat(first.isCancelled()).isFalse();
         assertThat(second.isCancelled()).isTrue();
     }
 

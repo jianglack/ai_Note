@@ -171,6 +171,15 @@ public class AgentService {
         return token;
     }
 
+    public void cancelRequest(String userId, String requestId) {
+        String key = cancelTokenKey(userId, requestId);
+        CancellationToken token = cancelTokenRegistry.get(key);
+        if (token != null) {
+            token.cancel();
+        }
+        removeCancelToken(userId, requestId);
+    }
+
     public void cancelCurrentRequest(String userId) {
         Set<String> keys = cancelTokenKeysByUser.get(userId);
         if (keys != null) {

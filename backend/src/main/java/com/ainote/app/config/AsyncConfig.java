@@ -51,7 +51,7 @@ public class AsyncConfig {
                     t.setDaemon(true);
                     return t;
                 },
-                new ThreadPoolExecutor.CallerRunsPolicy()
+                new ThreadPoolExecutor.AbortPolicy()
         );
         return new DelegatingSecurityContextExecutorService(
                 delegate
