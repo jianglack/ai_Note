@@ -57,11 +57,12 @@ public class AnnotationService {
         // 处理标签（标签直接添加到笔记上）
         if (tagNames != null && !tagNames.isEmpty()) {
             for (String tagName : tagNames) {
-                Tag tag = tagRepository.findByName(tagName)
+                Tag tag = tagRepository.findByNameAndUserId(tagName, userId)
                     .orElseGet(() -> {
                         Tag newTag = new Tag();
                         newTag.setId(java.util.UUID.randomUUID().toString());
                         newTag.setName(tagName);
+                        newTag.setUserId(userId);
                         return tagRepository.save(newTag);
                     });
 
@@ -113,11 +114,12 @@ public class AnnotationService {
             Note note = annotation.getNote();
 
             for (String tagName : tagNames) {
-                Tag tag = tagRepository.findByName(tagName)
+                Tag tag = tagRepository.findByNameAndUserId(tagName, userId)
                     .orElseGet(() -> {
                         Tag newTag = new Tag();
                         newTag.setId(java.util.UUID.randomUUID().toString());
                         newTag.setName(tagName);
+                        newTag.setUserId(userId);
                         return tagRepository.save(newTag);
                     });
 

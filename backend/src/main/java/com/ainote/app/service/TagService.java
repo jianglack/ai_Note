@@ -33,38 +33,38 @@ public class TagService {
     }
     
     public com.ainote.app.model.Tag create(String name) {
-        Tag tag = new Tag();
-        tag.setId(UUID.randomUUID().toString());
-        tag.setName(name);
-        Tag saved = tagRepository.save(tag);
-        
-        com.ainote.app.model.Tag model = new com.ainote.app.model.Tag();
-        model.setId(saved.getId());
-        model.setName(saved.getName());
-        return model;
+        String userId = securityUtils.getCurrentUserId();
+        Tag tag = tagRepository.findByNameAndUserId(name, userId)
+                .orElseGet(() -> {
+                    Tag newTag = new Tag();
+                    newTag.setId(UUID.randomUUID().toString());
+                    newTag.setName(name);
+                    newTag.setUserId(userId);
+                    return tagRepository.save(newTag);
+                });
+        return toModel(tag);
     }
     
     public List<com.ainote.app.model.Tag> listAll() {
-        return tagRepository.findAll().stream()
-                .map(tag -> {
-                    com.ainote.app.model.Tag model = new com.ainote.app.model.Tag();
-                    model.setId(tag.getId());
-                    model.setName(tag.getName());
-                    return model;
-                })
+        String userId = securityUtils.getCurrentUserId();
+        return tagRepository.findAllByUserId(userId).stream()
+                .map(this::toModel)
                 .collect(Collectors.toList());
     }
     
     public void delete(String id) {
-        tagRepository.deleteById(id);
-        afterCommit(() -> knowledgeGraphService.deleteTag(id));
+        String userId = securityUtils.getCurrentUserId();
+        tagRepository.findByIdAndUserId(id, userId).ifPresent(tag -> {
+            tagRepository.delete(tag);
+            afterCommit(() -> knowledgeGraphService.deleteTag(id));
+        });
     }
     
     public void assign(String noteId, List<String> tagIds) {
         String currentUserId = securityUtils.getCurrentUserId();
         noteRepository.findByIdAndUserIdAndDeletedAtIsNull(noteId, currentUserId).ifPresent(note -> {
             List<Tag> tags = (tagIds != null) ? tagIds.stream()
-                    .map(tagId -> tagRepository.findById(tagId).orElse(null))
+                    .map(tagId -> tagRepository.findByIdAndUserId(tagId, currentUserId).orElse(null))
                     .filter(tag -> tag != null)
                     .collect(Collectors.toList()) : List.of();
             note.getTags().clear();
@@ -72,6 +72,13 @@ public class TagService {
             noteRepository.save(note);
             afterCommit(() -> knowledgeGraphService.syncNote(noteId));
         });
+    }
+
+    private com.ainote.app.model.Tag toModel(Tag tag) {
+        com.ainote.app.model.Tag model = new com.ainote.app.model.Tag();
+        model.setId(tag.getId());
+        model.setName(tag.getName());
+        return model;
     }
 
     private void afterCommit(Runnable action) {

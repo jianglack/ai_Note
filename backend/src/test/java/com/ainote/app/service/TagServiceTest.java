@@ -48,7 +48,10 @@ class TagServiceTest {
         Tag savedTag = new Tag();
         savedTag.setId("tag-123");
         savedTag.setName("Work");
+        savedTag.setUserId("user-1");
 
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findByNameAndUserId("Work", "user-1")).thenReturn(Optional.empty());
         when(tagRepository.save(any(Tag.class))).thenReturn(savedTag);
 
         com.ainote.app.model.Tag result = tagService.create("Work");
@@ -59,6 +62,25 @@ class TagServiceTest {
         ArgumentCaptor<Tag> captor = ArgumentCaptor.forClass(Tag.class);
         verify(tagRepository).save(captor.capture());
         assertThat(captor.getValue().getName()).isEqualTo("Work");
+        assertThat(captor.getValue().getUserId()).isEqualTo("user-1");
+    }
+
+    @Test
+    @DisplayName("create reuses current user's existing tag by name")
+    void shouldReuseExistingTagForCurrentUser() {
+        Tag existingTag = new Tag();
+        existingTag.setId("tag-123");
+        existingTag.setName("Work");
+        existingTag.setUserId("user-1");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findByNameAndUserId("Work", "user-1")).thenReturn(Optional.of(existingTag));
+
+        com.ainote.app.model.Tag result = tagService.create("Work");
+
+        assertThat(result.getId()).isEqualTo("tag-123");
+        assertThat(result.getName()).isEqualTo("Work");
+        verify(tagRepository, never()).save(any());
     }
 
     @Test
@@ -67,24 +89,29 @@ class TagServiceTest {
         Tag tag1 = new Tag();
         tag1.setId("tag-1");
         tag1.setName("Work");
+        tag1.setUserId("user-1");
 
         Tag tag2 = new Tag();
         tag2.setId("tag-2");
         tag2.setName("Personal");
+        tag2.setUserId("user-1");
 
-        when(tagRepository.findAll()).thenReturn(List.of(tag1, tag2));
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findAllByUserId("user-1")).thenReturn(List.of(tag1, tag2));
 
         List<com.ainote.app.model.Tag> result = tagService.listAll();
 
         assertThat(result).hasSize(2);
         assertThat(result.get(0).getName()).isEqualTo("Work");
         assertThat(result.get(1).getName()).isEqualTo("Personal");
+        verify(tagRepository).findAllByUserId("user-1");
     }
 
     @Test
     @DisplayName("listAll 无标签时返回空列表")
     void shouldReturnEmptyListWhenNoTags() {
-        when(tagRepository.findAll()).thenReturn(List.of());
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findAllByUserId("user-1")).thenReturn(List.of());
 
         List<com.ainote.app.model.Tag> result = tagService.listAll();
 
@@ -94,9 +121,29 @@ class TagServiceTest {
     @Test
     @DisplayName("delete 应删除标签")
     void shouldDeleteTag() {
+        Tag tag = new Tag();
+        tag.setId("tag-123");
+        tag.setName("Work");
+        tag.setUserId("user-1");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findByIdAndUserId("tag-123", "user-1")).thenReturn(Optional.of(tag));
+
         tagService.delete("tag-123");
 
-        verify(tagRepository).deleteById("tag-123");
+        verify(tagRepository).delete(tag);
+    }
+
+    @Test
+    @DisplayName("delete ignores tags not owned by current user")
+    void shouldNotDeleteTagOwnedByAnotherUser() {
+        when(securityUtils.getCurrentUserId()).thenReturn("user-2");
+        when(tagRepository.findByIdAndUserId("tag-123", "user-2")).thenReturn(Optional.empty());
+
+        tagService.delete("tag-123");
+
+        verify(tagRepository, never()).delete(any());
+        verify(knowledgeGraphService, never()).deleteTag(any());
     }
 
     @Test
@@ -115,8 +162,8 @@ class TagServiceTest {
         tag2.setName("Important");
 
         mockCurrentUserNote("note-123", note);
-        when(tagRepository.findById("tag-1")).thenReturn(Optional.of(tag1));
-        when(tagRepository.findById("tag-2")).thenReturn(Optional.of(tag2));
+        when(tagRepository.findByIdAndUserId("tag-1", "user-1")).thenReturn(Optional.of(tag1));
+        when(tagRepository.findByIdAndUserId("tag-2", "user-1")).thenReturn(Optional.of(tag2));
 
         tagService.assign("note-123", List.of("tag-1", "tag-2"));
 
@@ -143,7 +190,7 @@ class TagServiceTest {
         tagService.assign("note-other-user", List.of("tag-1"));
 
         verify(noteRepository, never()).save(any());
-        verify(tagRepository, never()).findById(any());
+        verify(tagRepository, never()).findByIdAndUserId(any(), any());
         assertThat(otherUserNote.getTags()).isEmpty();
     }
 
@@ -159,8 +206,8 @@ class TagServiceTest {
         tag1.setName("Work");
 
         mockCurrentUserNote("note-123", note);
-        when(tagRepository.findById("tag-1")).thenReturn(Optional.of(tag1));
-        when(tagRepository.findById("tag-nonexistent")).thenReturn(Optional.empty());
+        when(tagRepository.findByIdAndUserId("tag-1", "user-1")).thenReturn(Optional.of(tag1));
+        when(tagRepository.findByIdAndUserId("tag-nonexistent", "user-1")).thenReturn(Optional.empty());
 
         tagService.assign("note-123", List.of("tag-1", "tag-nonexistent"));
 
@@ -197,7 +244,7 @@ class TagServiceTest {
         newTag.setName("New");
 
         mockCurrentUserNote("note-123", note);
-        when(tagRepository.findById("new-tag")).thenReturn(Optional.of(newTag));
+        when(tagRepository.findByIdAndUserId("new-tag", "user-1")).thenReturn(Optional.of(newTag));
 
         tagService.assign("note-123", List.of("new-tag"));
 
@@ -213,7 +260,10 @@ class TagServiceTest {
         Tag savedTag = new Tag();
         savedTag.setId("tag-123");
         savedTag.setName("");
+        savedTag.setUserId("user-1");
 
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findByNameAndUserId("", "user-1")).thenReturn(Optional.empty());
         when(tagRepository.save(any(Tag.class))).thenReturn(savedTag);
 
         com.ainote.app.model.Tag result = tagService.create("");
@@ -228,7 +278,10 @@ class TagServiceTest {
         Tag savedTag = new Tag();
         savedTag.setId("tag-123");
         savedTag.setName(null);
+        savedTag.setUserId("user-1");
 
+        when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        when(tagRepository.findByNameAndUserId(null, "user-1")).thenReturn(Optional.empty());
         when(tagRepository.save(any(Tag.class))).thenReturn(savedTag);
 
         com.ainote.app.model.Tag result = tagService.create(null);

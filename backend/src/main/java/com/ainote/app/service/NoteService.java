@@ -122,7 +122,7 @@ public class NoteService {
 
         if (request.getTags() != null && !request.getTags().isEmpty()) {
             for (String tagName : request.getTags()) {
-                note.getTags().add(getOrCreateTag(tagName));
+                note.getTags().add(getOrCreateTag(tagName, user.getId()));
             }
         }
 
@@ -185,7 +185,7 @@ public class NoteService {
         if (request.getTags() != null) {
             note.getTags().clear();
             for (String tagName : request.getTags()) {
-                note.getTags().add(getOrCreateTag(tagName));
+                note.getTags().add(getOrCreateTag(tagName, userId));
             }
         }
 
@@ -471,12 +471,13 @@ public class NoteService {
         return model;
     }
 
-    private Tag getOrCreateTag(String tagName) {
-        return tagRepository.findByName(tagName)
+    private Tag getOrCreateTag(String tagName, String userId) {
+        return tagRepository.findByNameAndUserId(tagName, userId)
                 .orElseGet(() -> {
                     Tag tag = new Tag();
                     tag.setId(UUID.randomUUID().toString());
                     tag.setName(tagName);
+                    tag.setUserId(userId);
                     return tagRepository.save(tag);
                 });
     }

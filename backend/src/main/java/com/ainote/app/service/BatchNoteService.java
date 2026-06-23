@@ -154,7 +154,7 @@ public class BatchNoteService {
     public BatchOperationResult batchAddTag(List<String> noteIds, String tagName) {
         String userId = securityUtils.getCurrentUserId();
         BatchOperationResult result = new BatchOperationResult();
-        Tag tag = getOrCreateTag(tagName);
+        Tag tag = getOrCreateTag(tagName, userId);
 
         for (String noteId : noteIds) {
             try {
@@ -180,7 +180,7 @@ public class BatchNoteService {
         String userId = securityUtils.getCurrentUserId();
         BatchOperationResult result = new BatchOperationResult();
 
-        Optional<Tag> tagOpt = tagRepository.findByName(tagName);
+        Optional<Tag> tagOpt = tagRepository.findByNameAndUserId(tagName, userId);
         if (tagOpt.isEmpty()) {
             for (String noteId : noteIds) {
                 result.addFailure(noteId, noteId, "标签不存在: " + tagName);
@@ -232,12 +232,13 @@ public class BatchNoteService {
         return result;
     }
 
-    private Tag getOrCreateTag(String tagName) {
-        return tagRepository.findByName(tagName)
+    private Tag getOrCreateTag(String tagName, String userId) {
+        return tagRepository.findByNameAndUserId(tagName, userId)
                 .orElseGet(() -> {
                     Tag tag = new Tag();
                     tag.setId(UUID.randomUUID().toString());
                     tag.setName(tagName);
+                    tag.setUserId(userId);
                     return tagRepository.save(tag);
                 });
     }
