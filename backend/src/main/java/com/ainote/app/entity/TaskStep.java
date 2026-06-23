@@ -1,6 +1,8 @@
 package com.ainote.app.entity;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 import java.time.LocalDateTime;
 
 @Entity
@@ -25,12 +27,15 @@ public class TaskStep {
     private String status = "PENDING";
 
     @Column(name = "input_params", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String inputParams;
 
     @Column(name = "output_result", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String outputResult;
 
     @Column(columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String compensation;
 
     @Column(name = "depends_on", columnDefinition = "integer[]")

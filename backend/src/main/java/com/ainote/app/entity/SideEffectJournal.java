@@ -5,6 +5,8 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 
@@ -49,15 +51,18 @@ public class SideEffectJournal {
     private String reason;
 
     @Column(name = "output_snapshot", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String outputSnapshot;
 
     @Column(length = 30, nullable = false)
     private String status = STATUS_PENDING;
 
     @Column(name = "journal_json", columnDefinition = "jsonb", nullable = false)
+    @JdbcTypeCode(SqlTypes.JSON)
     private String journalJson;
 
     @Column(name = "rollback_result", columnDefinition = "jsonb")
+    @JdbcTypeCode(SqlTypes.JSON)
     private String rollbackResult;
 
     @Column(name = "created_at", nullable = false)
