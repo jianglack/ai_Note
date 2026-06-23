@@ -16,7 +16,7 @@ public class ReflectionService {
 
     private static final Logger log = LoggerFactory.getLogger(ReflectionService.class);
     private static final Pattern HARD_ERROR_PATTERN = Pattern.compile(
-            ".*(\u5931\u8d25|\u672a\u627e\u5230|\u4e0d\u5b58\u5728|\u65e0\u6743\u8bbf\u95ee|\u65e0\u6cd5).*",
+            ".*(\u5931\u8d25|\u65e0\u6743\u8bbf\u95ee).*",
             Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
     public enum Decision { CONTINUE, RETRY, REPLAN, INSERT_STEP }

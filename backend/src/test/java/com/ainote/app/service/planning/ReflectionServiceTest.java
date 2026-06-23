@@ -41,6 +41,32 @@ class ReflectionServiceTest {
     }
 
     @Test
+    void continuesWhenNormalSuccessfulResponsesContainMissingWords() {
+        TaskStep step = new TaskStep();
+        step.setStepOrder(8);
+        step.setRetryCount(0);
+
+        assertThat(reflectionService.reflect(step, "\u627e\u4e0d\u5230\u66f4\u591a\u76f8\u5173\u7b14\u8bb0", null))
+                .isEqualTo(ReflectionService.Decision.CONTINUE);
+        assertThat(reflectionService.reflect(step, "\u4f60\u7684\u7b14\u8bb0\u4e2d\u4e0d\u5b58\u5728\u91cd\u590d\u9879", null))
+                .isEqualTo(ReflectionService.Decision.CONTINUE);
+    }
+
+    @Test
+    void retriesWhenStrongFailureSignalsAppear() {
+        TaskStep step = new TaskStep();
+        step.setStepOrder(9);
+        step.setRetryCount(0);
+
+        assertThat(reflectionService.reflect(step, "\u64cd\u4f5c\u5931\u8d25", null))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+        assertThat(reflectionService.reflect(step, "java.lang.NullPointerException", null))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+        assertThat(reflectionService.reflect(step, "\u4f59\u989d\u4e0d\u8db3", null))
+                .isEqualTo(ReflectionService.Decision.RETRY);
+    }
+
+    @Test
     void reflectWithLlmFailureRetriesInsteadOfContinuing() {
         TaskStep step = new TaskStep();
         step.setStepOrder(6);
