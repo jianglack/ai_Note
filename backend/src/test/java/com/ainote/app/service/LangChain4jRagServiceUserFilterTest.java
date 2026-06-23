@@ -1,8 +1,6 @@
 package com.ainote.app.service;
 
 import com.ainote.app.chunking.StructureAwareDocumentSplitter;
-import com.ainote.app.entity.Note;
-import com.ainote.app.entity.User;
 import com.ainote.app.repository.NoteMediaRepository;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
@@ -98,16 +96,12 @@ class LangChain4jRagServiceUserFilterTest {
         when(embeddingStore.search(any()))
                 .thenReturn(new EmbeddingSearchResult<>(List.of(match)));
 
-        Note otherNote = new Note();
-        otherNote.setId("note-1");
-        User otherUser = new User();
-        otherUser.setId(OTHER_USER_ID);
-        otherNote.setUser(otherUser);
-        when(noteRepository.findAllById(List.of("note-1")))
-                .thenReturn(List.of(otherNote));
+        when(noteRepository.findByIdsAndUserIdAndDeletedAtIsNull(List.of("note-1"), USER_ID))
+                .thenReturn(List.of());
 
         var results = ragService.searchWithMinScore("test", 5, 0.5, USER_ID);
         assertThat(results).isEmpty();
+        verify(noteRepository).findByIdsAndUserIdAndDeletedAtIsNull(List.of("note-1"), USER_ID);
     }
 
     @Test
