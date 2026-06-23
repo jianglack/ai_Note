@@ -70,9 +70,21 @@ export default function EditorPane() {
   const [thumbsOpen, setThumbsOpen] = useState(false);
   const [indicatorFaded, setIndicatorFaded] = useState(false);
   const [tiptapEditor, setTiptapEditor] = useState<Editor | null>(null);
+  const [tagInputOpen, setTagInputOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const tagInputRef = useRef<HTMLInputElement>(null);
   const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>();
   const pageStageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (tagInputOpen) {
+      tagInputRef.current?.focus();
+    }
+  }, [tagInputOpen]);
+
+  useEffect(() => {
+    setTagInputOpen(false);
+  }, [selectedNote?.id]);
 
   // 翻页逻辑 — 立即更新 currentPage，CSS transition 负责动画
   const goPage = useCallback((delta: number) => {
@@ -438,29 +450,41 @@ export default function EditorPane() {
                             </button>
                           </span>
                         ))}
-                        <span className="paper-add-tag-btn" onClick={() => document.getElementById('paper-tag-input')?.focus()}>
+                        <button
+                          type="button"
+                          className="paper-add-tag-btn"
+                          aria-label="添加标签"
+                          onClick={() => setTagInputOpen(true)}
+                        >
                           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
                           添加标签
-                        </span>
+                        </button>
                       </div>
                     </div>
                     <input
                       id="paper-tag-input"
+                      ref={tagInputRef}
                       style={{
                         border: 'none', outline: 'none', background: 'transparent',
                         fontSize: 12, width: 140, marginTop: 4,
                         color: 'var(--color-text-secondary)',
-                        display: tagInput || document.activeElement?.id === 'paper-tag-input' ? 'block' : 'none',
+                        display: tagInputOpen || tagInput ? 'block' : 'none',
                       }}
                       placeholder="输入标签后回车..."
                       value={tagInput}
                       onChange={(e) => setTagInput(e.target.value)}
                       onKeyDown={(e) => {
-                        if (e.key === 'Enter') { e.preventDefault(); handleAddTag(); }
-                        if (e.key === 'Escape') (e.target as HTMLInputElement).blur();
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddTag();
+                          setTagInputOpen(false);
+                        }
+                        if (e.key === 'Escape') {
+                          setTagInput('');
+                          setTagInputOpen(false);
+                        }
                       }}
-                      onFocus={(e) => e.currentTarget.style.display = 'block'}
-                      onBlur={(e) => { if (!tagInput) e.currentTarget.style.display = 'none'; }}
+                      onBlur={() => { if (!tagInput) setTagInputOpen(false); }}
                     />
                     {ai.tagSuggestions.length > 0 && (
                       <div style={{ display: 'flex', gap: 4, marginTop: 8, flexWrap: 'wrap', alignItems: 'center' }}>

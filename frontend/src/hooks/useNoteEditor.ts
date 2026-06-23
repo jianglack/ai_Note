@@ -16,34 +16,53 @@ export function useNoteEditor() {
   const store = useNoteStore();
   const ui = useUiStore();
   const ai = useAiStore();
-  const selectedNoteId = store.selectedNote?.id;
+  const selectedNote = store.selectedNote;
+  const selectedNoteId = selectedNote?.id;
+  const selectedNoteSignature = selectedNote
+    ? noteSignature(selectedNote.title, selectedNote.content, tagNamesFromNote(selectedNote))
+    : '';
 
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const lastSavedRef = useRef('');
+  const localSignatureRef = useRef('');
+  const loadedNoteIdRef = useRef<string | null>(null);
   const saveTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const saveSequenceRef = useRef(0);
 
   useEffect(() => {
-    const note = useNoteStore.getState().selectedNote;
+    localSignatureRef.current = noteSignature(title, content, tags);
+  }, [title, content, tags]);
+
+  useEffect(() => {
+    const note = selectedNote;
     if (!note) {
       setTitle('');
       setContent('');
       setTags([]);
       setTagInput('');
       lastSavedRef.current = '';
+      loadedNoteIdRef.current = null;
       return;
     }
 
     const nextTags = tagNamesFromNote(note);
+    const incomingSignature = noteSignature(note.title, note.content, nextTags);
+    const switchedNote = loadedNoteIdRef.current !== note.id;
+
+    if (!switchedNote && lastSavedRef.current && localSignatureRef.current !== lastSavedRef.current) {
+      return;
+    }
+
     setTitle(note.title);
     setContent(note.content);
     setTags(nextTags);
     setTagInput('');
-    lastSavedRef.current = noteSignature(note.title, note.content, nextTags);
-  }, [selectedNoteId]);
+    lastSavedRef.current = incomingSignature;
+    loadedNoteIdRef.current = note.id;
+  }, [selectedNote, selectedNoteId, selectedNoteSignature]);
 
   useEffect(() => {
     const note = useNoteStore.getState().selectedNote;
@@ -73,15 +92,7 @@ export function useNoteEditor() {
         if (sequence !== saveSequenceRef.current) return;
 
         const current = useNoteStore.getState();
-        if (current.selectedNote?.id === updated.id) {
-          useNoteStore.setState((state) => ({
-            notes: state.notes.map((candidate) => (
-              candidate.id === updated.id ? updated : candidate
-            )),
-          }));
-        } else {
-          current.updateNoteInList(updated);
-        }
+        current.updateNoteInList(updated);
 
         lastSavedRef.current = signature;
         ui.setStatus('Autosaved');

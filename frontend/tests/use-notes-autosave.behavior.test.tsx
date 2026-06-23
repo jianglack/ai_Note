@@ -97,6 +97,43 @@ describe('useNotes autosave behavior', () => {
     });
     expect(result.current.title).toBe('Edited title');
     expect(useNoteStore.getState().notes[0].title).toBe('Edited title');
-    expect(useNoteStore.getState().selectedNote?.title).toBe('Original title');
+    expect(useNoteStore.getState().selectedNote?.title).toBe('Edited title');
+  });
+
+  it('syncs selected note editor fields when the note list is refreshed externally', async () => {
+    const originalNote: Note = {
+      id: 'note-1',
+      title: 'Original title',
+      content: 'Original body',
+      folderId: null,
+      createdAt: '2026-06-23T00:00:00Z',
+      updatedAt: '2026-06-23T00:00:00Z',
+      tags: [],
+    };
+    const externallyUpdated: Note = {
+      ...originalNote,
+      updatedAt: '2026-06-23T00:02:00Z',
+      tags: [{ id: 'tag-1', name: 'batch-tag' }],
+    };
+
+    useNoteStore.setState({ notes: [originalNote], selectedNote: originalNote });
+
+    const { result } = renderHook(() => useNoteEditor());
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.tags).toEqual([]);
+
+    act(() => {
+      useNoteStore.getState().setNotes([externallyUpdated]);
+    });
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(useNoteStore.getState().selectedNote?.tags.map((tag) => tag.name)).toEqual(['batch-tag']);
+    expect(result.current.tags).toEqual(['batch-tag']);
   });
 });

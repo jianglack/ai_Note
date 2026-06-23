@@ -186,10 +186,12 @@ export default function NoteListPanel({
       >
         <div className="note-list-item-top">
           {ui.multiSelectMode && (
-            <WorkflowCheckbox
-              checked={isSelected}
-              onChange={() => ui.toggleMultiNoteSelection(note.id)}
-            />
+            <span onClick={(event) => event.stopPropagation()}>
+              <WorkflowCheckbox
+                checked={isSelected}
+                onChange={() => ui.toggleMultiNoteSelection(note.id)}
+              />
+            </span>
           )}
           <h3 className="note-list-item-title">
             {note.pinned && <span className="note-list-pin">📌</span>}

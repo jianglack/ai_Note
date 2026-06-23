@@ -31,7 +31,15 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   selectedNote: null,
   trashNotes: [],
 
-  setNotes: (notes) => set({ notes }),
+  // setNotes 期望接收全量笔记列表：它会用新列表对账 selectedNote，
+  // 找不到即视为该笔记已删除并置空。切勿传过滤/搜索子集（搜索结果走 ui.setSearchResults）。
+  setNotes: (notes) =>
+    set((s) => ({
+      notes,
+      selectedNote: s.selectedNote
+        ? notes.find((note) => note.id === s.selectedNote?.id) ?? null
+        : null,
+    })),
   setFolders: (folders) => set({ folders }),
   setSelectedNote: (note) => set({ selectedNote: note }),
   setTrashNotes: (notes) => set({ trashNotes: notes }),

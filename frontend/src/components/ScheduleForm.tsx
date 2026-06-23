@@ -1,4 +1,4 @@
-import { useId, useState, useEffect, useRef, type KeyboardEvent } from 'react';
+import { useId, useState, useEffect, useRef, type FormEvent, type KeyboardEvent } from 'react';
 import type { Schedule, Note, ScheduleCreateRequest } from '../api';
 import { createSchedule, updateSchedule } from '../api';
 import './ScheduleForm.css';
@@ -57,6 +57,10 @@ function formatDateLocal(dateStr?: string) {
 export default function ScheduleForm({ schedule, notes, onSave, onClose }: ScheduleFormProps) {
   const formId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
+  const descriptionInputRef = useRef<HTMLTextAreaElement>(null);
+  const startTimeInputRef = useRef<HTMLInputElement>(null);
+  const endTimeInputRef = useRef<HTMLInputElement>(null);
   const headingId = `${formId}-heading`;
   const titleId = `${formId}-title`;
   const descriptionId = `${formId}-description`;
@@ -83,6 +87,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
     schedule?.notes.map(n => n.id) || []
   );
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const [showNoteSelector, setShowNoteSelector] = useState(false);
 
   useEffect(() => {
@@ -106,17 +111,25 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
     }
   }, [allDay]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim() || !startTime) return;
+  const handleSave = async () => {
+    const currentTitle = (titleInputRef.current?.value ?? title).trim();
+    const currentDescription = (descriptionInputRef.current?.value ?? description).trim();
+    const currentStartTime = startTimeInputRef.current?.value ?? startTime;
+    const currentEndTime = endTimeInputRef.current?.value ?? endTime;
+
+    if (!currentTitle || !currentStartTime) {
+      setError('请填写标题和开始时间');
+      return;
+    }
 
     setLoading(true);
+    setError('');
     try {
       const payload: ScheduleCreateRequest = {
-        title: title.trim(),
-        description: description.trim() || undefined,
-        startTime: allDay ? startTime + 'T00:00:00' : startTime + ':00',
-        endTime: endTime ? (allDay ? endTime + 'T23:59:59' : endTime + ':00') : undefined,
+        title: currentTitle,
+        description: currentDescription || undefined,
+        startTime: allDay ? currentStartTime + 'T00:00:00' : currentStartTime + ':00',
+        endTime: currentEndTime ? (allDay ? currentEndTime + 'T23:59:59' : currentEndTime + ':00') : undefined,
         allDay,
         rrule: rrule || undefined,
         reminderMinutes: reminderMinutes || undefined,
@@ -128,9 +141,16 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
         : await createSchedule(payload);
 
       onSave(result);
+    } catch (err) {
+      setError((err as Error).message || '保存日程失败');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void handleSave();
   };
 
   const toggleNote = (noteId: string) => {
@@ -184,6 +204,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
           <div className="form-group">
             <label htmlFor={titleId}>标题</label>
             <input
+              ref={titleInputRef}
               id={titleId}
               type="text"
               value={title}
@@ -196,6 +217,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
           <div className="form-group">
             <label htmlFor={descriptionId}>描述</label>
             <textarea
+              ref={descriptionInputRef}
               id={descriptionId}
               value={description}
               onChange={e => setDescription(e.target.value)}
@@ -220,6 +242,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
             <div className="form-group">
               <label htmlFor={startTimeId}>开始</label>
               <input
+                ref={startTimeInputRef}
                 id={startTimeId}
                 type={allDay ? 'date' : 'datetime-local'}
                 value={startTime}
@@ -230,6 +253,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
             <div className="form-group">
               <label htmlFor={endTimeId}>结束</label>
               <input
+                ref={endTimeInputRef}
                 id={endTimeId}
                 type={allDay ? 'date' : 'datetime-local'}
                 value={endTime}
@@ -294,10 +318,20 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
           </div>
 
           <div className="schedule-form-actions">
+            {error && (
+              <div className="schedule-form-error" role="alert">
+                {error}
+              </div>
+            )}
             <button type="button" onClick={onClose} disabled={loading}>
               取消
             </button>
-            <button type="submit" className="primary" disabled={loading || !title.trim()}>
+            <button
+              type="button"
+              className="primary"
+              disabled={loading}
+              onClick={() => { void handleSave(); }}
+            >
               {loading ? '保存中...' : '保存'}
             </button>
           </div>
