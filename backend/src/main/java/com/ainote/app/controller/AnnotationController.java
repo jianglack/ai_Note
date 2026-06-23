@@ -4,6 +4,10 @@ import com.ainote.app.model.Annotation;
 import com.ainote.app.service.AnnotationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,7 +25,7 @@ public class AnnotationController {
     
     @PostMapping
     @Operation(summary = "创建注释", description = "为笔记中的选中文字创建注释")
-    public Annotation createAnnotation(@RequestBody CreateAnnotationRequest request) {
+    public Annotation createAnnotation(@Valid @RequestBody CreateAnnotationRequest request) {
         return annotationService.create(
             request.getNoteId(),
             request.getTextContent(),
@@ -40,7 +44,7 @@ public class AnnotationController {
     
     @PutMapping("/{id}")
     @Operation(summary = "更新注释", description = "更新注释内容和标签")
-    public Annotation updateAnnotation(@PathVariable String id, @RequestBody UpdateAnnotationRequest request) {
+    public Annotation updateAnnotation(@PathVariable String id, @Valid @RequestBody UpdateAnnotationRequest request) {
         return annotationService.update(id, request.getComment(), request.getTags());
     }
     
@@ -52,12 +56,20 @@ public class AnnotationController {
     
     // Request DTOs
     public static class CreateAnnotationRequest {
+        @NotBlank(message = "Note id is required")
+        @Size(max = 64, message = "Note id must be at most 64 characters")
         private String noteId;
+        @NotBlank(message = "Selected text is required")
+        @Size(max = 20000, message = "Selected text must be at most 20000 characters")
         private String textContent;
+        @Size(max = 10000, message = "Comment must be at most 10000 characters")
         private String comment;
+        @Min(value = 0, message = "Start offset must be non-negative")
         private Integer startOffset;
+        @Min(value = 0, message = "End offset must be non-negative")
         private Integer endOffset;
-        private List<String> tags;
+        @Size(max = 50, message = "At most 50 tags are allowed")
+        private List<@NotBlank(message = "Tag must not be blank") @Size(max = 50, message = "Tag must be at most 50 characters") String> tags;
         
         public String getNoteId() {
             return noteId;
@@ -109,8 +121,10 @@ public class AnnotationController {
     }
     
     public static class UpdateAnnotationRequest {
+        @Size(max = 10000, message = "Comment must be at most 10000 characters")
         private String comment;
-        private List<String> tags;
+        @Size(max = 50, message = "At most 50 tags are allowed")
+        private List<@NotBlank(message = "Tag must not be blank") @Size(max = 50, message = "Tag must be at most 50 characters") String> tags;
         
         public String getComment() {
             return comment;

@@ -41,13 +41,13 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void illegalArgument_stillReturnsBizMessage() {
+    void illegalArgument_doesNotLeakOriginalMessage() {
         ResponseEntity<Map<String, String>> response =
                 handler.handleIllegalArgument(new IllegalArgumentException("\u7b14\u8bb0\u4e0d\u5b58\u5728"));
 
         assertEquals(400, response.getStatusCode().value());
         assertNotNull(response.getBody());
-        assertEquals("\u7b14\u8bb0\u4e0d\u5b58\u5728", response.getBody().get("error"));
+        assertEquals("\u8bf7\u6c42\u53c2\u6570\u65e0\u6548", response.getBody().get("error"));
     }
 
     @Test

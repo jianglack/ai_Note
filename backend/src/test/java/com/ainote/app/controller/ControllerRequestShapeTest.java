@@ -29,6 +29,8 @@ class ControllerRequestShapeTest {
         assertValidatedDto("AiController.java", "RagFeedbackRequest");
         assertValidatedDto("AiController.java", "GenerateCanvasRequest");
         assertValidatedDto("MediaController.java", "MediaTableRequest");
+        assertValidatedDto("AnnotationController.java", "CreateAnnotationRequest");
+        assertValidatedDto("AnnotationController.java", "UpdateAnnotationRequest");
         assertValidatedDto("PlanController.java", "PlanSmartChatRequest");
         assertValidatedDto("PlanController.java", "PlanRouteRequest");
         assertValidatedDto("PlanController.java", "PlanModifyStepRequest");

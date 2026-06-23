@@ -53,7 +53,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleIllegalArgument(IllegalArgumentException e) {
         log.warn("Illegal argument: {}", e.getMessage());
         Map<String, String> error = new HashMap<>();
-        error.put("error", e.getMessage());
+        error.put("error", "\u8bf7\u6c42\u53c2\u6570\u65e0\u6548");
         return ResponseEntity.badRequest().body(error);
     }
 

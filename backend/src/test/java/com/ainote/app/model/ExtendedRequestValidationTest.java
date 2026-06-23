@@ -1,8 +1,11 @@
 package com.ainote.app.model;
 
+import com.ainote.app.controller.AnnotationController;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -126,6 +129,30 @@ class ExtendedRequestValidationTest {
         assertThat(validator.validate(request))
                 .extracting(violation -> violation.getPropertyPath().toString())
                 .contains("noteId", "tablePayloadPresent");
+    }
+
+    @Test
+    void annotationCreateRequestRequiresNoteIdAndSelectedText() {
+        AnnotationController.CreateAnnotationRequest request =
+                new AnnotationController.CreateAnnotationRequest();
+        request.setStartOffset(-1);
+        request.setTags(List.of(" "));
+
+        assertThat(validator.validate(request))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("noteId", "textContent", "startOffset", "tags[0].<list element>");
+    }
+
+    @Test
+    void annotationUpdateRequestLimitsCommentAndTags() {
+        AnnotationController.UpdateAnnotationRequest request =
+                new AnnotationController.UpdateAnnotationRequest();
+        request.setComment("x".repeat(10001));
+        request.setTags(List.of("x".repeat(51)));
+
+        assertThat(validator.validate(request))
+                .extracting(violation -> violation.getPropertyPath().toString())
+                .contains("comment", "tags[0].<list element>");
     }
 
     @Test
