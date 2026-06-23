@@ -244,6 +244,33 @@ class NoteServiceTest {
     }
 
     @Test
+    void updateShouldPersistPinnedAndStarredFlags() {
+        com.ainote.app.model.NoteRequest request = new com.ainote.app.model.NoteRequest();
+        request.setTitle("updated");
+        request.setContent("updated content");
+        request.setPinned(true);
+        request.setStarred(true);
+        request.setArchived(true);
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("note-456", "user-123"))
+                .thenReturn(Optional.of(testNote));
+        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        Optional<com.ainote.app.model.Note> result = noteService.update("note-456", request);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().isPinned()).isTrue();
+        assertThat(result.get().isStarred()).isTrue();
+        assertThat(result.get().isArchived()).isTrue();
+        ArgumentCaptor<Note> captor = ArgumentCaptor.forClass(Note.class);
+        verify(noteRepository).save(captor.capture());
+        assertThat(captor.getValue().isPinned()).isTrue();
+        assertThat(captor.getValue().isStarred()).isTrue();
+        assertThat(captor.getValue().isArchived()).isTrue();
+    }
+
+    @Test
     void shouldPruneOldVersionsByIdProjection() {
         ReflectionTestUtils.setField(noteService, "maxVersions", 2);
         com.ainote.app.model.NoteRequest request = new com.ainote.app.model.NoteRequest();

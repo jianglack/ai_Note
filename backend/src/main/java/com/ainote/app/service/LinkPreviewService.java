@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SNIHostName;
@@ -54,6 +55,7 @@ public class LinkPreviewService {
     private static final Pattern TITLE_TAG = Pattern.compile("<title[^>]*>([^<]*)</title>", Pattern.CASE_INSENSITIVE);
     private static final Pattern DESC_META = Pattern.compile("<meta[^>]*name=[\"']description[\"'][^>]*content=[\"']([^\"']*)[\"']", Pattern.CASE_INSENSITIVE);
 
+    @Autowired
     public LinkPreviewService(UrlSafetyValidator urlSafetyValidator) {
         this(urlSafetyValidator, InetAddress::getAllByName, new SocketFixedAddressFetcher());
     }

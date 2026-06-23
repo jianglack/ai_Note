@@ -173,6 +173,15 @@ public class NoteService {
         note.setTitle(request.getTitle());
         note.setContent(request.getContent());
         note.setUpdatedAt(LocalDateTime.now());
+        if (request.getPinned() != null) {
+            note.setPinned(request.getPinned());
+        }
+        if (request.getStarred() != null) {
+            note.setStarred(request.getStarred());
+        }
+        if (request.getArchived() != null) {
+            note.setArchived(request.getArchived());
+        }
 
         if (request.getFolderId() != null && !request.getFolderId().isEmpty()) {
             Optional<Folder> folderOpt = folderRepository.findByIdAndUserId(request.getFolderId(), userId);
@@ -455,6 +464,9 @@ public class NoteService {
         model.setCreatedAt(entity.getCreatedAt().format(FORMATTER));
         model.setUpdatedAt(entity.getUpdatedAt().format(FORMATTER));
         model.setDeletedAt(entity.getDeletedAt() != null ? entity.getDeletedAt().format(FORMATTER) : null);
+        model.setPinned(entity.isPinned());
+        model.setStarred(entity.isStarred());
+        model.setArchived(entity.isArchived());
 
         if (entity.getTags() != null && !entity.getTags().isEmpty()) {
             List<com.ainote.app.model.Tag> tags = entity.getTags().stream()
