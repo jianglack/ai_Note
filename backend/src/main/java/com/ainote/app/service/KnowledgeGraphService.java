@@ -344,6 +344,15 @@ public class KnowledgeGraphService {
         for (Note note : userNotes) {
             byTitle.putIfAbsent(note.getTitle(), note);
         }
+        Map<String, List<Note>> byFolderId = userNotes.stream()
+                .filter(note -> note.getFolder() != null)
+                .collect(Collectors.groupingBy(note -> note.getFolder().getId()));
+        Map<String, List<Note>> byTagId = new HashMap<>();
+        for (Note note : userNotes) {
+            for (Tag tag : note.getTags()) {
+                byTagId.computeIfAbsent(tag.getId(), ignored -> new ArrayList<>()).add(note);
+            }
+        }
 
         LinkedHashMap<String, Note> result = new LinkedHashMap<>();
         for (String seedId : seedNoteIds) {
@@ -359,16 +368,14 @@ public class KnowledgeGraphService {
                 }
             }
             if (seed.getFolder() != null) {
-                for (Note candidate : userNotes) {
-                    if (candidate.getFolder() != null && seed.getFolder().getId().equals(candidate.getFolder().getId())) {
-                        result.put(candidate.getId(), candidate);
-                    }
+                for (Note candidate : byFolderId.getOrDefault(seed.getFolder().getId(), List.of())) {
+                    result.put(candidate.getId(), candidate);
                 }
             }
             Set<String> tagIds = seed.getTags().stream().map(Tag::getId).collect(Collectors.toSet());
             if (!tagIds.isEmpty()) {
-                for (Note candidate : userNotes) {
-                    if (candidate.getTags().stream().anyMatch(tag -> tagIds.contains(tag.getId()))) {
+                for (String tagId : tagIds) {
+                    for (Note candidate : byTagId.getOrDefault(tagId, List.of())) {
                         result.put(candidate.getId(), candidate);
                     }
                 }

@@ -184,4 +184,16 @@ public class Note {
     public void setVersions(Set<NoteVersion> versions) {
         this.versions = versions;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof Note other)) return false;
+        return id != null && id.equals(other.id);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }

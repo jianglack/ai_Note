@@ -21,6 +21,9 @@ import java.util.List;
 @Tag(name = "笔记管理", description = "笔记的增删改查、搜索、回收站等功能")
 @SecurityRequirement(name = "Bearer Authentication")
 public class NoteController {
+    private static final int DEFAULT_PAGE_SIZE = 100;
+    private static final int MAX_PAGE_SIZE = 200;
+
     private final NoteService noteService;
     private final NoteVersionService noteVersionService;
 
@@ -34,9 +37,9 @@ public class NoteController {
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size) {
         if (page != null && size != null) {
-            return ResponseEntity.ok(noteService.listAllPaged(PageRequest.of(page, size)));
+            return ResponseEntity.ok(noteService.listAllPaged(PageRequest.of(sanitizePage(page), sanitizeSize(size))));
         }
-        return ResponseEntity.ok(noteService.listAll());
+        return ResponseEntity.ok(noteService.listAllPaged(PageRequest.of(0, DEFAULT_PAGE_SIZE)).getContent());
     }
 
     @PostMapping
@@ -77,9 +80,18 @@ public class NoteController {
     @Operation(summary = "搜索笔记", description = "使用混合搜索（关键词 + 语义）查找笔记")
     public List<Note> search(@RequestParam(name = "q", required = false) String q) {
         if (q == null || q.isBlank()) {
-            return noteService.listAll();
+            return noteService.listAllPaged(PageRequest.of(0, DEFAULT_PAGE_SIZE)).getContent();
         }
         return noteService.hybridSearch(q);
+    }
+
+    private int sanitizePage(Integer page) {
+        return Math.max(0, page != null ? page : 0);
+    }
+
+    private int sanitizeSize(Integer size) {
+        int requested = size != null ? size : DEFAULT_PAGE_SIZE;
+        return Math.max(1, Math.min(requested, MAX_PAGE_SIZE));
     }
 
     @GetMapping("/trash")

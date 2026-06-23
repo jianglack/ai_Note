@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -206,15 +207,19 @@ class NoteServiceTest {
     }
 
     @Test
-    @DisplayName("hybridSearch 空查询应返回所有笔记")
+    @DisplayName("hybridSearch 空查询应返回默认分页笔记")
     void shouldReturnAllNotesForEmptySearch() {
         when(securityUtils.getCurrentUserId()).thenReturn("user-123");
-        when(noteRepository.findByUserIdWithTagsAndFolder("user-123"))
-            .thenReturn(List.of(testNote));
+        PageRequest pageable = PageRequest.of(0, 100);
+        when(noteRepository.findNoteIdsByUserId("user-123", pageable))
+                .thenReturn(new PageImpl<>(List.of("note-456"), pageable, 1));
+        when(noteRepository.findByIdsWithTagsAndFolder(List.of("note-456"), "user-123"))
+                .thenReturn(List.of(testNote));
 
         List<com.ainote.app.model.Note> result = noteService.hybridSearch("");
 
         assertThat(result).hasSize(1);
+        verify(noteRepository, never()).findByUserIdWithTagsAndFolder(anyString());
     }
 
     @Test
@@ -236,6 +241,27 @@ class NoteServiceTest {
                 && "<p>测试内容</p>".equals(version.getContent())
                 && version.getCreatedAt() != null
         ));
+    }
+
+    @Test
+    void shouldPruneOldVersionsByIdProjection() {
+        ReflectionTestUtils.setField(noteService, "maxVersions", 2);
+        com.ainote.app.model.NoteRequest request = new com.ainote.app.model.NoteRequest();
+        request.setTitle("更新后的标题");
+        request.setContent("<p>更新后的内容</p>");
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("note-456", "user-123"))
+                .thenReturn(Optional.of(testNote));
+        when(noteRepository.save(any(Note.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(noteVersionRepository.countByNoteId("note-456")).thenReturn(4L);
+        when(noteVersionRepository.findOldestIdsByNoteId("note-456", PageRequest.of(0, 2)))
+                .thenReturn(List.of("version-1", "version-2"));
+
+        noteService.update("note-456", request);
+
+        verify(noteVersionRepository).deleteAllByIdInBatch(List.of("version-1", "version-2"));
+        verify(noteVersionRepository, never()).findByNoteIdOrderByCreatedAtAsc(anyString());
     }
 
     @Test

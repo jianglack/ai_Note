@@ -53,6 +53,9 @@ public interface NoteRepository extends JpaRepository<Note, String> {
     @Query("SELECT DISTINCT n FROM Note n LEFT JOIN FETCH n.tags LEFT JOIN FETCH n.folder WHERE n.id IN :ids AND n.user.id = :userId AND n.deletedAt IS NULL")
     List<Note> findByIdsWithTagsAndFolder(@Param("ids") List<String> ids, @Param("userId") String userId);
 
+    @Query("SELECT n FROM Note n WHERE n.id IN :ids AND n.user.id = :userId AND n.deletedAt IS NULL")
+    List<Note> findByIdsAndUserIdAndDeletedAtIsNull(@Param("ids") List<String> ids, @Param("userId") String userId);
+
     @Query("SELECT n FROM Note n WHERE n.deletedAt IS NULL AND (LOWER(n.title) LIKE LOWER(CONCAT('%', :query, '%')) OR LOWER(n.content) LIKE LOWER(CONCAT('%', :query, '%')))")
     List<Note> searchNotes(@Param("query") String query);
 

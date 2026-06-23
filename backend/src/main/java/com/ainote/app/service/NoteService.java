@@ -13,6 +13,7 @@ import com.ainote.app.repository.TagRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 public class NoteService {
 
     private static final Logger log = LoggerFactory.getLogger(NoteService.class);
+    private static final int DEFAULT_LIST_LIMIT = 100;
 
     private final NoteRepository noteRepository;
     private final NoteVersionRepository noteVersionRepository;
@@ -217,10 +219,9 @@ public class NoteService {
             return;
         }
         int removeCount = (int) (count - maxVersions);
-        List<NoteVersion> versions = noteVersionRepository.findByNoteIdOrderByCreatedAtAsc(noteId);
-        versions.stream()
-                .limit(removeCount)
-                .forEach(noteVersionRepository::delete);
+        List<String> versionIds = noteVersionRepository.findOldestIdsByNoteId(
+                noteId, PageRequest.of(0, removeCount));
+        noteVersionRepository.deleteAllByIdInBatch(versionIds);
     }
 
     public void delete(String id) {
@@ -247,7 +248,9 @@ public class NoteService {
      */
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public List<com.ainote.app.model.Note> hybridSearch(String query) {
-        if (query == null || query.isBlank()) return listAll();
+        if (query == null || query.isBlank()) {
+            return listAllPaged(PageRequest.of(0, DEFAULT_LIST_LIMIT)).getContent();
+        }
 
         // 使用 LangChain4j 的语义搜索（已包含 Query Rewriting）
         String userId = securityUtils.getCurrentUserId();

@@ -35,6 +35,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
@@ -347,13 +349,7 @@ public class LangChain4jRagService {
                     .limit(limit)
                     .collect(Collectors.toList());
 
-            // 查询笔记详情
-            List<com.ainote.app.entity.Note> notes = noteRepository.findAllById(noteIds);
-
-            // 过滤用户权限
-            return notes.stream()
-                    .filter(note -> note.getUser().getId().equals(userId))
-                    .filter(note -> note.getDeletedAt() == null)
+            return findOwnedNotesInResultOrder(noteIds, userId).stream()
                     .map(this::toModel)
                     .limit(limit)
                     .collect(Collectors.toList());
@@ -415,11 +411,7 @@ public class LangChain4jRagService {
                     .limit(limit)
                     .collect(Collectors.toList());
 
-            // 查询并过滤
-            List<com.ainote.app.entity.Note> notes = noteRepository.findAllById(noteIds);
-            return notes.stream()
-                    .filter(note -> note.getUser().getId().equals(userId))
-                    .filter(note -> note.getDeletedAt() == null)
+            return findOwnedNotesInResultOrder(noteIds, userId).stream()
                     .map(this::toModel)
                     .limit(limit)
                     .collect(Collectors.toList());
@@ -456,6 +448,20 @@ public class LangChain4jRagService {
      */
     public EmbeddingModel getEmbeddingModel() {
         return embeddingModel;
+    }
+
+    private List<com.ainote.app.entity.Note> findOwnedNotesInResultOrder(List<String> noteIds, String userId) {
+        if (noteIds == null || noteIds.isEmpty()) {
+            return List.of();
+        }
+        Map<String, com.ainote.app.entity.Note> byId = noteRepository
+                .findByIdsAndUserIdAndDeletedAtIsNull(noteIds, userId)
+                .stream()
+                .collect(Collectors.toMap(com.ainote.app.entity.Note::getId, note -> note));
+        return noteIds.stream()
+                .map(byId::get)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
     }
 
     private Note toModel(com.ainote.app.entity.Note entity) {

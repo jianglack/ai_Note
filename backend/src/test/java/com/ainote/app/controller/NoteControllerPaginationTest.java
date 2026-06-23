@@ -42,14 +42,16 @@ class NoteControllerPaginationTest {
     }
 
     @Test
-    void listAllWithoutPagingParamsReturnsLegacyList() {
-        when(noteService.listAll()).thenReturn(List.of(note));
+    void listAllWithoutPagingParamsReturnsDefaultFirstPageContent() {
+        PageRequest pageable = PageRequest.of(0, 100);
+        when(noteService.listAllPaged(pageable))
+                .thenReturn(new PageImpl<>(List.of(note), pageable, 1));
 
         ResponseEntity<?> response = controller.listAll(null, null);
 
         assertThat(response.getBody()).isEqualTo(List.of(note));
-        verify(noteService).listAll();
-        verify(noteService, never()).listAllPaged(any(Pageable.class));
+        verify(noteService).listAllPaged(pageable);
+        verify(noteService, never()).listAll();
     }
 
     @Test
@@ -66,13 +68,26 @@ class NoteControllerPaginationTest {
     }
 
     @Test
-    void listAllWithOnlyPageParamFallsBackToLegacyList() {
-        when(noteService.listAll()).thenReturn(List.of(note));
+    void listAllWithOnlyPageParamUsesDefaultFirstPageContent() {
+        PageRequest pageable = PageRequest.of(0, 100);
+        when(noteService.listAllPaged(pageable))
+                .thenReturn(new PageImpl<>(List.of(note), pageable, 1));
 
         ResponseEntity<?> response = controller.listAll(0, null);
 
         assertThat(response.getBody()).isEqualTo(List.of(note));
-        verify(noteService).listAll();
-        verify(noteService, never()).listAllPaged(any(Pageable.class));
+        verify(noteService).listAllPaged(pageable);
+        verify(noteService, never()).listAll();
+    }
+
+    @Test
+    void listAllClampsInvalidPageAndOversizedPageSize() {
+        PageRequest pageable = PageRequest.of(0, 200);
+        when(noteService.listAllPaged(pageable))
+                .thenReturn(new PageImpl<>(List.of(note), pageable, 1));
+
+        controller.listAll(-1, 500);
+
+        verify(noteService).listAllPaged(pageable);
     }
 }

@@ -68,7 +68,9 @@ public class NoteControllerIntegrationTest {
     @DisplayName("GET /api/notes 应返回所有笔记")
     @WithMockUser(username = "test", roles = {"USER"})
     void shouldListAllNotes() throws Exception {
-        Mockito.when(noteService.listAll()).thenReturn(noteList);
+        PageRequest pageable = PageRequest.of(0, 100);
+        Mockito.when(noteService.listAllPaged(pageable))
+                .thenReturn(new PageImpl<>(noteList, pageable, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/notes"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
@@ -76,8 +78,8 @@ public class NoteControllerIntegrationTest {
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value("note-123"))
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].title").value("Test Note"));
 
-        Mockito.verify(noteService).listAll();
-        Mockito.verify(noteService, Mockito.never()).listAllPaged(Mockito.any(Pageable.class));
+        Mockito.verify(noteService).listAllPaged(pageable);
+        Mockito.verify(noteService, Mockito.never()).listAll();
     }
 
     @Test
@@ -193,12 +195,17 @@ public class NoteControllerIntegrationTest {
     @DisplayName("GET /api/notes/search 应在查询为空时返回所有笔记")
     @WithMockUser(username = "test", roles = {"USER"})
     void shouldReturnAllNotesWhenSearchQueryIsEmpty() throws Exception {
-        Mockito.when(noteService.listAll()).thenReturn(noteList);
+        PageRequest pageable = PageRequest.of(0, 100);
+        Mockito.when(noteService.listAllPaged(pageable))
+                .thenReturn(new PageImpl<>(noteList, pageable, 1));
 
         mockMvc.perform(MockMvcRequestBuilders.get("/api/notes/search"))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.jsonPath("$[0].id").value("note-123"));
+
+        Mockito.verify(noteService).listAllPaged(pageable);
+        Mockito.verify(noteService, Mockito.never()).listAll();
     }
 
     @Test
