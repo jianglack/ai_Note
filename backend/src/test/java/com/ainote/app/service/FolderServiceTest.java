@@ -9,11 +9,7 @@ import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,20 +18,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("FolderService 单元测试")
 class FolderServiceTest {
-
-    @Mock
     private FolderRepository folderRepository;
-    @Mock
     private NoteRepository noteRepository;
-    @Mock
     private SecurityUtils securityUtils;
-    @Mock
     private KnowledgeGraphService knowledgeGraphService;
-
     private FolderService folderService;
 
     private User testUser;
@@ -43,6 +32,10 @@ class FolderServiceTest {
 
     @BeforeEach
     void setUp() {
+        folderRepository = mock(FolderRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        knowledgeGraphService = mock(KnowledgeGraphService.class);
         folderService = new FolderService(folderRepository, noteRepository, securityUtils, knowledgeGraphService);
 
         testUser = new User();

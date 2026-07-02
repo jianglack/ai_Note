@@ -7,10 +7,7 @@ import com.ainote.app.repository.UserRepository;
 import com.ainote.app.security.TokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.Clock;
@@ -25,37 +22,22 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class PasswordResetServiceTest {
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordResetTokenRepository tokenRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private TokenService tokenService;
-
-    @Mock
-    private PasswordResetNotifier notifier;
-
-    @Mock
-    private AuthAuditLogger authAuditLogger;
-
-    @Mock
-    private AuthRateLimiter authRateLimiter;
-
+    private UserRepository userRepository;    private PasswordResetTokenRepository tokenRepository;    private PasswordEncoder passwordEncoder;    private TokenService tokenService;    private PasswordResetNotifier notifier;    private AuthAuditLogger authAuditLogger;    private AuthRateLimiter authRateLimiter;
     private PasswordResetService passwordResetService;
 
     private User user;
 
     @BeforeEach
     void setUp() {
+        userRepository = mock(UserRepository.class);
+        tokenRepository = mock(PasswordResetTokenRepository.class);
+        passwordEncoder = mock(PasswordEncoder.class);
+        tokenService = mock(TokenService.class);
+        notifier = mock(PasswordResetNotifier.class);
+        authAuditLogger = mock(AuthAuditLogger.class);
+        authRateLimiter = mock(AuthRateLimiter.class);
         passwordResetService = new PasswordResetService(
                 userRepository,
                 tokenRepository,

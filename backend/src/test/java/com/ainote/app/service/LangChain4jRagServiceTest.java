@@ -18,9 +18,6 @@ import org.mockito.ArgumentCaptor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -38,30 +35,18 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.never;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("LangChain4jRagService unit tests")
 class LangChain4jRagServiceTest {
-
-    @Mock
     private EmbeddingModel embeddingModel;
-    @Mock
     private EmbeddingStore<TextSegment> embeddingStore;
-    @Mock
     private NoteRepository noteRepository;
-    @Mock
     private SecurityUtils securityUtils;
-    @Mock
     private QueryRewritingService queryRewritingService;
-    @Mock
     private JdbcTemplate jdbcTemplate;
-    @Mock
     private com.ainote.app.chunking.StructureAwareDocumentSplitter structureAwareSplitter;
-    @Mock
     private ResilientLlmService resilientLlmService;
-    @Mock
     private com.ainote.app.repository.NoteMediaRepository noteMediaRepository;
-
     private LangChain4jRagService ragService;
 
     private User testUser;
@@ -69,6 +54,15 @@ class LangChain4jRagServiceTest {
 
     @BeforeEach
     void setUp() {
+        embeddingModel = mock(EmbeddingModel.class);
+        embeddingStore = mock(EmbeddingStore.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        queryRewritingService = mock(QueryRewritingService.class);
+        jdbcTemplate = mock(JdbcTemplate.class);
+        structureAwareSplitter = mock(com.ainote.app.chunking.StructureAwareDocumentSplitter.class);
+        resilientLlmService = mock(ResilientLlmService.class);
+        noteMediaRepository = mock(com.ainote.app.repository.NoteMediaRepository.class);
         ragService = new LangChain4jRagService(
                 embeddingModel, embeddingStore,
                 noteRepository, securityUtils, null,

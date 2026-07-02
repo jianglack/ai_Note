@@ -6,6 +6,8 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
+let redirectingToLogin = false;
+
 // 璇锋眰鎷︽埅鍣細鑷姩娣诲姞 Token + TraceId
 api.interceptors.request.use((config) => {
   const token = getAuthToken();
@@ -23,8 +25,9 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       clearAuthStorage();
-      if (!window.location.pathname.startsWith('/login')) {
-        window.location.replace('/login');
+      if (!redirectingToLogin && !window.location.pathname.startsWith('/login')) {
+        redirectingToLogin = true;
+        window.location.assign('/login');
       }
     }
     return Promise.reject(error);

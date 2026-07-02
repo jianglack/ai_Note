@@ -39,6 +39,7 @@ public class ScheduleService {
         this.knowledgeGraphService = knowledgeGraphService;
     }
 
+    @Transactional(readOnly = true)
     public List<ScheduleResponse> getSchedules(String userId, LocalDateTime startDate, LocalDateTime endDate) {
         List<Schedule> schedules;
         if (startDate != null && endDate != null) {
@@ -51,6 +52,7 @@ public class ScheduleService {
             .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public ScheduleResponse getSchedule(String id, String userId) {
         Schedule schedule = scheduleRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Schedule not found"));

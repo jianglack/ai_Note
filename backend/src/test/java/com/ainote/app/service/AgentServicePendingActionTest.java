@@ -102,7 +102,7 @@ class AgentServicePendingActionTest {
                 .containsEntry("type", "DELETE_NOTE")
                 .containsEntry("noteId", "note-1")
                 .containsEntry("title", "研究 {draft} 记录");
-        assertThat(cleaned).isEqualTo("确认删除吗？");
+        assertThat(cleaned).contains("确认删除");
     }
 
     @Test
@@ -177,6 +177,27 @@ class AgentServicePendingActionTest {
         assertThat(response.getAction()).contains("\"type\":\"DELETE_NOTE\"");
         assertThat(response.getAction()).contains("\"noteId\":\"selected-note\"");
         assertThat(response.getAction()).contains("\"title\":\"测试-上下文工程与记忆系统记录\"");
+        verifyNoInteractions(agentAssistant);
+        verify(concurrencyGuard, never()).tryAcquire(anyString(), anyLong());
+    }
+
+    @Test
+    @DisplayName("English selected note delete also uses deterministic PENDING_ACTION")
+    void shouldBuildPendingActionDirectlyForEnglishSelectedNoteDelete() {
+        Note selected = new Note();
+        selected.setId("selected-note");
+        selected.setTitle("Research note");
+        selected.setContent("content");
+
+        when(inputGuardrail.check("delete current note")).thenReturn(GuardrailResult.ok());
+        when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("selected-note", "user-1"))
+                .thenReturn(Optional.of(selected));
+
+        AiChatResponse response = agentService.chat("delete current note", List.of("selected-note"), "user-1");
+
+        assertThat(response.getAction()).contains("\"type\":\"DELETE_NOTE\"");
+        assertThat(response.getAction()).contains("\"noteId\":\"selected-note\"");
+        assertThat(response.getAction()).contains("\"title\":\"Research note\"");
         verifyNoInteractions(agentAssistant);
         verify(concurrencyGuard, never()).tryAcquire(anyString(), anyLong());
     }

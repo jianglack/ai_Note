@@ -6,9 +6,6 @@ import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.util.NoSuchElementException;
@@ -18,29 +15,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class MediaServiceOwnershipTest {
-
-    @Mock
-    private NoteMediaRepository mediaRepository;
-
-    @Mock
-    private NoteRepository noteRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
-    @Mock
-    private LangChain4jRagService ragService;
-
-    @Mock
-    private OcrService ocrService;
-
+    private NoteMediaRepository mediaRepository;    private NoteRepository noteRepository;    private SecurityUtils securityUtils;    private LangChain4jRagService ragService;    private OcrService ocrService;
     private MediaService mediaService;
 
     @BeforeEach
     void setUp() {
+        mediaRepository = mock(NoteMediaRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        ragService = mock(LangChain4jRagService.class);
+        ocrService = mock(OcrService.class);
         mediaService = new MediaService(mediaRepository, noteRepository, securityUtils, ragService, ocrService);
     }
 

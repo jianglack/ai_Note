@@ -51,6 +51,15 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
         """, nativeQuery = true)
     List<SemanticMemory> findSimilarByEmbedding(String userId, String embedding, double threshold, int limit);
 
+    @Modifying
+    @Transactional
+    @Query(value = """
+        UPDATE semantic_memories
+        SET embedding = cast(:embedding AS vector)
+        WHERE id = :id
+        """, nativeQuery = true)
+    void updateEmbedding(Long id, String embedding);
+
     /**
      * 统计用户的语义记忆数量
      */
@@ -78,6 +87,10 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     /**
      * 获取用户所有有 embedding 的记忆（用于批量衰减分数更新）
      */
-    @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.embedding IS NOT NULL")
+    @Query(value = """
+        SELECT * FROM semantic_memories
+        WHERE user_id = :userId
+          AND embedding IS NOT NULL
+        """, nativeQuery = true)
     List<SemanticMemory> findByUserIdWithEmbedding(String userId);
 }

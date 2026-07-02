@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class UserMemoryTest {
 
@@ -16,9 +16,8 @@ class UserMemoryTest {
 
         String planStepMemoryKey = "plan:df9aa9b1-1234-4567-8888-abcdef123456:step:1";
 
-        assertTrue(
-                column.length() >= planStepMemoryKey.length(),
-                "user_memories.user_id must store plan step memory keys, not only 36-char user ids"
-        );
+        assertThat(column.length())
+                .as("user_memories.user_id must store plan step memory keys, not only 36-char user ids")
+                .isGreaterThanOrEqualTo(planStepMemoryKey.length());
     }
 }

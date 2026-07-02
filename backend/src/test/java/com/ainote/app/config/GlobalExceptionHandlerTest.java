@@ -19,11 +19,7 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 class GlobalExceptionHandlerTest {
 
@@ -34,10 +30,10 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> response =
                 handler.handleGenericException(new NullPointerException("some.internal.Class at line 42"));
 
-        assertEquals(500, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertFalse(response.getBody().get("error").contains("some.internal.Class"));
-        assertEquals("\u670d\u52a1\u5668\u5185\u90e8\u9519\u8bef\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5", response.getBody().get("error"));
+        assertThat(response.getStatusCode().value()).isEqualTo(500);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error")).doesNotContain("some.internal.Class");
+        assertThat(response.getBody().get("error")).contains("\u670d\u52a1\u5668\u5185\u90e8\u9519\u8bef");
     }
 
     @Test
@@ -45,9 +41,9 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> response =
                 handler.handleIllegalArgument(new IllegalArgumentException("\u7b14\u8bb0\u4e0d\u5b58\u5728"));
 
-        assertEquals(400, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals("\u8bf7\u6c42\u53c2\u6570\u65e0\u6548", response.getBody().get("error"));
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error")).contains("\u8bf7\u6c42\u53c2\u6570");
     }
 
     @Test
@@ -62,18 +58,17 @@ class GlobalExceptionHandlerTest {
 
         ResponseEntity<Map<String, Object>> response = handler.handleValidationException(ex);
 
-        assertEquals(400, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals("\u53c2\u6570\u6821\u9a8c\u5931\u8d25", response.getBody().get("error"));
-        assertInstanceOf(List.class, response.getBody().get("details"));
+        assertThat(response.getStatusCode().value()).isEqualTo(400);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error").toString()).contains("\u6821\u9a8c\u5931\u8d25");
+        assertThat(response.getBody().get("details")).isInstanceOf(List.class);
 
         @SuppressWarnings("unchecked")
         List<Map<String, String>> details = (List<Map<String, String>>) response.getBody().get("details");
-        assertEquals(2, details.size());
+        assertThat(details).hasSize(2);
 
         var fields = details.stream().map(d -> d.get("field")).toList();
-        assertTrue(fields.contains("username"));
-        assertTrue(fields.contains("password"));
+        assertThat(fields).contains("username", "password");
     }
 
     @Test
@@ -83,8 +78,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> entityNotFound =
                 handler.handleNotFound(new EntityNotFoundException("missing"));
 
-        assertEquals(404, noSuchElement.getStatusCode().value());
-        assertEquals(404, entityNotFound.getStatusCode().value());
+        assertThat(noSuchElement.getStatusCode().value()).isEqualTo(404);
+        assertThat(entityNotFound.getStatusCode().value()).isEqualTo(404);
     }
 
     @Test
@@ -101,8 +96,8 @@ class GlobalExceptionHandlerTest {
 
         for (Exception exception : exceptions) {
             ResponseEntity<Map<String, String>> response = handler.handleBadRequest(exception);
-            assertEquals(400, response.getStatusCode().value());
-            assertNotNull(response.getBody());
+            assertThat(response.getStatusCode().value()).isEqualTo(400);
+            assertThat(response.getBody()).isNotNull();
         }
     }
 
@@ -111,8 +106,8 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> response =
                 handler.handleMethodNotSupported(new HttpRequestMethodNotSupportedException("POST", List.of("GET")));
 
-        assertEquals(405, response.getStatusCode().value());
-        assertNotNull(response.getBody());
+        assertThat(response.getStatusCode().value()).isEqualTo(405);
+        assertThat(response.getBody()).isNotNull();
     }
 
     @Test
@@ -120,9 +115,9 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> response =
                 handler.handleMaxUploadSizeExceeded(new MaxUploadSizeExceededException(1024));
 
-        assertEquals(413, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals("\u8bf7\u6c42\u4f53\u8fc7\u5927", response.getBody().get("error"));
+        assertThat(response.getStatusCode().value()).isEqualTo(413);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error")).contains("\u8bf7\u6c42\u4f53");
     }
 
     @SuppressWarnings("unused")

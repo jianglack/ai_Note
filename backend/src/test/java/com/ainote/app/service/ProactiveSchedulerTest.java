@@ -7,11 +7,7 @@ import com.ainote.app.repository.NotificationRepository;
 import com.ainote.app.repository.ScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -21,17 +17,16 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class ProactiveSchedulerTest {
-
-    @Mock private ScheduleRepository scheduleRepository;
-    @Mock private NotificationRepository notificationRepository;
-
+    private ScheduleRepository scheduleRepository;
+    private NotificationRepository notificationRepository;
     private ProactiveScheduler scheduler;
 
     @BeforeEach
     void setUp() {
+        scheduleRepository = mock(ScheduleRepository.class);
+        notificationRepository = mock(NotificationRepository.class);
         scheduler = new ProactiveScheduler(scheduleRepository, notificationRepository);
     }
 

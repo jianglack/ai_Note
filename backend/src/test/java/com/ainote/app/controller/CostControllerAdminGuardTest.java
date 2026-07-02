@@ -4,10 +4,7 @@ import com.ainote.app.repository.AgentTraceRepository;
 import com.ainote.app.security.AdminAccessGuard;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
@@ -16,20 +13,15 @@ import java.util.List;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class CostControllerAdminGuardTest {
-
-    @Mock
-    private AgentTraceRepository traceRepository;
-
-    @Mock
-    private AdminAccessGuard adminAccessGuard;
-
+    private AgentTraceRepository traceRepository;    private AdminAccessGuard adminAccessGuard;
     private CostController controller;
 
     @BeforeEach
     void setUp() {
+        traceRepository = mock(AgentTraceRepository.class);
+        adminAccessGuard = mock(AdminAccessGuard.class);
         controller = new CostController(traceRepository, adminAccessGuard);
     }
 

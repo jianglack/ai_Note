@@ -37,6 +37,16 @@ export default function WorkflowsView({ onClose }: { onClose: () => void }) {
   const pollIntervalsRef = useRef<Map<string, ReturnType<typeof setInterval>>>(new Map());
 
   useEffect(() => { loadFlows(); }, []);
+  useEffect(() => {
+    if (!showCreate && !showResult) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (showCreate) setShowCreate(false);
+      if (showResult) setShowResult(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showCreate, showResult]);
   useEffect(() => () => {
     pollIntervalsRef.current.forEach(interval => clearInterval(interval));
     pollIntervalsRef.current.clear();
@@ -228,7 +238,14 @@ export default function WorkflowsView({ onClose }: { onClose: () => void }) {
       {/* Create modal */}
       {showCreate && (
         <div className="lp-modal-bg" onClick={() => setShowCreate(false)}>
-          <div className="lp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+          <div
+            className="lp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Create workflow"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 520 }}
+          >
             <div className="lp-modal-head">
               <span style={{ fontWeight: 600 }}>创建工作流</span>
               <button className="feat-btn subtle small" onClick={() => setShowCreate(false)}>×</button>
@@ -281,7 +298,14 @@ export default function WorkflowsView({ onClose }: { onClose: () => void }) {
       {/* Run result modal */}
       {showResult && (
         <div className="lp-modal-bg" onClick={() => setShowResult(null)}>
-          <div className="lp-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 600, maxHeight: '80vh' }}>
+          <div
+            className="lp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Workflow run details"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: 600, maxHeight: '80vh' }}
+          >
             <div className="lp-modal-head">
               <span style={{ fontWeight: 600 }}>运行详情</span>
               <button className="feat-btn subtle small" onClick={() => setShowResult(null)}>×</button>

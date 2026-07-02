@@ -7,10 +7,9 @@ import org.springframework.security.access.AccessDeniedException;
 
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -23,7 +22,7 @@ class AdminAccessGuardTest {
         AdminAccessGuard guard = new AdminAccessGuard("user-1,user-2", securityUtils);
         when(securityUtils.getCurrentUserId()).thenReturn("user-1");
 
-        assertDoesNotThrow(guard::checkAdminAccess);
+        assertThatCode(guard::checkAdminAccess).doesNotThrowAnyException();
     }
 
     @Test
@@ -31,7 +30,7 @@ class AdminAccessGuardTest {
         AdminAccessGuard guard = new AdminAccessGuard("user-1,user-2", securityUtils);
         when(securityUtils.getCurrentUserId()).thenReturn("user-999");
 
-        assertThrows(AccessDeniedException.class, guard::checkAdminAccess);
+        assertThatThrownBy(guard::checkAdminAccess).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -39,7 +38,7 @@ class AdminAccessGuardTest {
         AdminAccessGuard guard = new AdminAccessGuard("", securityUtils);
         when(securityUtils.getCurrentUserId()).thenReturn("any-user");
 
-        assertThrows(AccessDeniedException.class, guard::checkAdminAccess);
+        assertThatThrownBy(guard::checkAdminAccess).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -47,7 +46,7 @@ class AdminAccessGuardTest {
         AdminAccessGuard guard = new AdminAccessGuard(null, securityUtils);
         when(securityUtils.getCurrentUserId()).thenReturn("any-user");
 
-        assertThrows(AccessDeniedException.class, guard::checkAdminAccess);
+        assertThatThrownBy(guard::checkAdminAccess).isInstanceOf(AccessDeniedException.class);
     }
 
     @Test
@@ -55,7 +54,7 @@ class AdminAccessGuardTest {
         AdminAccessGuard guard = new AdminAccessGuard(" user-1 , user-2 ", securityUtils);
         when(securityUtils.getCurrentUserId()).thenReturn("user-2");
 
-        assertDoesNotThrow(guard::checkAdminAccess);
+        assertThatCode(guard::checkAdminAccess).doesNotThrowAnyException();
     }
 
     @Test
@@ -64,8 +63,8 @@ class AdminAccessGuardTest {
         ResponseEntity<Map<String, String>> response =
                 handler.handleAccessDenied(new AccessDeniedException("\u6743\u9650\u4e0d\u8db3"));
 
-        assertEquals(403, response.getStatusCode().value());
-        assertNotNull(response.getBody());
-        assertEquals("\u6743\u9650\u4e0d\u8db3", response.getBody().get("error"));
+        assertThat(response.getStatusCode().value()).isEqualTo(403);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("error")).contains("\u6743\u9650");
     }
 }

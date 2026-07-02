@@ -2,11 +2,13 @@ package com.ainote.app.config;
 
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.cohere.CohereScoringModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiEmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.model.scoring.ScoringModel;
 import dev.langchain4j.rag.content.aggregator.ContentAggregator;
 import dev.langchain4j.rag.content.aggregator.ReRankingContentAggregator;
@@ -102,6 +104,29 @@ public class LangChain4jConfig {
         Retry retry = retryRegistry.retry("agent-model");
         log.info("Agent model wrapped with Retry + CircuitBreaker [agent-model], fallback: none");
         return new ResilientChatModel(primary, null, cb, retry, "agent-model");
+    }
+
+    @Bean
+    public StreamingChatModel streamingChatModel(
+            @Autowired(required = false) List<ChatModelListener> listeners
+    ) {
+        requireNonEmpty(deepseekApiKey, "DEEPSEEK_API_KEY");
+        log.info("Initializing streaming ChatModel (DeepSeek) with model: {}, baseUrl: {}",
+                deepseekModel, deepseekBaseUrl);
+        var builder = OpenAiStreamingChatModel.builder()
+                .baseUrl(deepseekBaseUrl)
+                .apiKey(deepseekApiKey)
+                .modelName(deepseekModel)
+                .temperature(deepseekTemperature)
+                .maxTokens(deepseekMaxTokens)
+                .timeout(Duration.ofSeconds(120))
+                .logRequests(logIo)
+                .logResponses(logIo);
+
+        if (listeners != null && !listeners.isEmpty()) {
+            builder.listeners(listeners);
+        }
+        return builder.build();
     }
 
     @Bean

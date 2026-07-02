@@ -107,9 +107,10 @@ export default function EditorPane() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // 编辑器内输入时不触发翻页
-      const tag = (e.target as HTMLElement).tagName;
+      const target = e.target instanceof HTMLElement ? e.target : null;
+      const tag = target?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if ((e.target as HTMLElement).closest('.tiptap-editor')) return;
+      if (target?.closest('.tiptap-editor')) return;
       if (e.key === 'ArrowLeft') goPage(-1);
       if (e.key === 'ArrowRight') goPage(1);
     };
@@ -327,6 +328,7 @@ export default function EditorPane() {
           filled
           onClick={() => ui.setIsAiChatOpen(!ui.isAiChatOpen)}
           title="AI 对话"
+          ariaLabel={ui.isAiChatOpen ? 'Close AI assistant' : 'Open AI assistant'}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
             <path d="M21 12a8 8 0 0 1-12 7l-5 1 1-4A8 8 0 1 1 21 12z" />
@@ -335,7 +337,7 @@ export default function EditorPane() {
 
         <div style={{ width: 8 }} />
 
-        <button className="paper-action-pill" onClick={() => ui.setIsExtractDialogOpen(true)} title="提取日程">
+        <button className="paper-action-pill" onClick={() => ui.setIsExtractDialogOpen(true)} title="提取日程" aria-label="Extract schedule">
           <CalendarDaysIcon style={{ width: 14, height: 14 }} />
           日程
         </button>
@@ -658,14 +660,14 @@ export default function EditorPane() {
 }
 
 /* ── Top icon button (action bar) ── */
-function TopIconBtn({ children, onClick, title, active, filled }: {
-  children: React.ReactNode; onClick: () => void; title: string; active?: boolean; filled?: boolean;
+function TopIconBtn({ children, onClick, title, active, filled, ariaLabel }: {
+  children: React.ReactNode; onClick: () => void; title: string; active?: boolean; filled?: boolean; ariaLabel?: string;
 }) {
   const isFilledActive = filled && active;
   return (
     <button
       onClick={onClick}
-      aria-label={title}
+      aria-label={ariaLabel ?? title}
       title={title}
       className={`paper-top-icon${active ? ' active' : ''}${isFilledActive ? ' filled' : ''}`}
     >

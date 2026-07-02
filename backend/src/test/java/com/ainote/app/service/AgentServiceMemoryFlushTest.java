@@ -21,9 +21,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
@@ -43,32 +40,43 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
 @DisplayName("AgentService memory deferred flush tests")
 class AgentServiceMemoryFlushTest {
-
-    @Mock private AgentAssistant agentAssistant;
-    @Mock private NoteRepository noteRepository;
-    @Mock private NoteService noteService;
-    @Mock private SecurityUtils securityUtils;
-    @Mock private UserMemoryRepository userMemoryRepository;
-    @Mock private ContextAssembler contextAssembler;
-    @Mock private ToolCallAuditor toolCallAuditor;
-    @Mock private ReliableChatMemoryStore reliableChatMemoryStore;
-    @Mock private MemoryExtractionService memoryExtractionService;
-    @Mock private Tracer tracer;
-    @Mock private com.ainote.app.agent.tools.ToolLoopDetector toolLoopDetector;
-    @Mock private ConcurrencyGuard concurrencyGuard;
-    @Mock private TokenBudget tokenBudget;
-    @Mock private InputGuardrail inputGuardrail;
-    @Mock private OutputGuardrail outputGuardrail;
-
+    private AgentAssistant agentAssistant;
+    private NoteRepository noteRepository;
+    private NoteService noteService;
+    private SecurityUtils securityUtils;
+    private UserMemoryRepository userMemoryRepository;
+    private ContextAssembler contextAssembler;
+    private ToolCallAuditor toolCallAuditor;
+    private ReliableChatMemoryStore reliableChatMemoryStore;
+    private MemoryExtractionService memoryExtractionService;
+    private Tracer tracer;
+    private com.ainote.app.agent.tools.ToolLoopDetector toolLoopDetector;
+    private ConcurrencyGuard concurrencyGuard;
+    private TokenBudget tokenBudget;
+    private InputGuardrail inputGuardrail;
+    private OutputGuardrail outputGuardrail;
     private AgentService agentService;
     private ExecutorService realExecutor;
 
     @BeforeEach
     void setUp() {
+        agentAssistant = mock(AgentAssistant.class);
+        noteRepository = mock(NoteRepository.class);
+        noteService = mock(NoteService.class);
+        securityUtils = mock(SecurityUtils.class);
+        userMemoryRepository = mock(UserMemoryRepository.class);
+        contextAssembler = mock(ContextAssembler.class);
+        toolCallAuditor = mock(ToolCallAuditor.class);
+        reliableChatMemoryStore = mock(ReliableChatMemoryStore.class);
+        memoryExtractionService = mock(MemoryExtractionService.class);
+        tracer = mock(Tracer.class);
+        toolLoopDetector = mock(com.ainote.app.agent.tools.ToolLoopDetector.class);
+        concurrencyGuard = mock(ConcurrencyGuard.class);
+        tokenBudget = mock(TokenBudget.class);
+        inputGuardrail = mock(InputGuardrail.class);
+        outputGuardrail = mock(OutputGuardrail.class);
         realExecutor = Executors.newSingleThreadExecutor();
         ObjectMapper objectMapper = new ObjectMapper();
         agentService = new AgentService(

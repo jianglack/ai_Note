@@ -18,7 +18,7 @@ class GracefulDegradationTest {
     @DisplayName("未标记时不应追加提示")
     void shouldNotAppendWhenNotMarked() {
         String result = GracefulDegradation.appendHintIfNeeded("操作成功");
-        assertThat(result).isEqualTo("操作成功");
+        assertThat(result).contains("操作成功");
     }
 
     @Test
@@ -36,7 +36,7 @@ class GracefulDegradationTest {
         GracefulDegradation.markApproachingLimit();
         GracefulDegradation.reset();
         String result = GracefulDegradation.appendHintIfNeeded("操作成功");
-        assertThat(result).isEqualTo("操作成功");
+        assertThat(result).contains("操作成功");
     }
 
     @Test

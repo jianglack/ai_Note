@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 public class NoteTest {
 
@@ -21,15 +21,15 @@ public class NoteTest {
     @Test
     @DisplayName("测试默认构造方法")
     void shouldCreateNoteWithDefaultConstructor() {
-        assertNotNull(note);
-        assertNull(note.getId());
-        assertNull(note.getTitle());
-        assertNull(note.getContent());
-        assertNull(note.getCreatedAt());
-        assertNull(note.getUpdatedAt());
-        assertNull(note.getDeletedAt());
-        assertNull(note.getFolderId());
-        assertTrue(note.getTags().isEmpty());
+        assertThat(note).isNotNull();
+        assertThat(note.getId()).isNull();
+        assertThat(note.getTitle()).isNull();
+        assertThat(note.getContent()).isNull();
+        assertThat(note.getCreatedAt()).isNull();
+        assertThat(note.getUpdatedAt()).isNull();
+        assertThat(note.getDeletedAt()).isNull();
+        assertThat(note.getFolderId()).isNull();
+        assertThat(note.getTags()).isEmpty();
     }
 
     @Test
@@ -48,13 +48,13 @@ public class NoteTest {
         note.setFolderId("folder-123");
 
         // 验证属性
-        assertEquals("note-123", note.getId());
-        assertEquals("Test Note", note.getTitle());
-        assertEquals("This is a test note", note.getContent());
-        assertEquals(createdAt, note.getCreatedAt());
-        assertEquals(updatedAt, note.getUpdatedAt());
-        assertEquals(deletedAt, note.getDeletedAt());
-        assertEquals("folder-123", note.getFolderId());
+        assertThat(note.getId()).isEqualTo("note-123");
+        assertThat(note.getTitle()).isEqualTo("Test Note");
+        assertThat(note.getContent()).isEqualTo("This is a test note");
+        assertThat(note.getCreatedAt()).isEqualTo(createdAt);
+        assertThat(note.getUpdatedAt()).isEqualTo(updatedAt);
+        assertThat(note.getDeletedAt()).isEqualTo(deletedAt);
+        assertThat(note.getFolderId()).isEqualTo("folder-123");
     }
 
     @Test
@@ -76,15 +76,15 @@ public class NoteTest {
         note.setTags(tags);
 
         // 验证标签
-        assertEquals(2, note.getTags().size());
-        assertEquals("tag-1", note.getTags().get(0).getId());
-        assertEquals("Tag 1", note.getTags().get(0).getName());
-        assertEquals("tag-2", note.getTags().get(1).getId());
-        assertEquals("Tag 2", note.getTags().get(1).getName());
+        assertThat(note.getTags()).hasSize(2);
+        assertThat(note.getTags().get(0).getId()).isEqualTo("tag-1");
+        assertThat(note.getTags().get(0).getName()).isEqualTo("Tag 1");
+        assertThat(note.getTags().get(1).getId()).isEqualTo("tag-2");
+        assertThat(note.getTags().get(1).getName()).isEqualTo("Tag 2");
 
         // 清空标签
         note.getTags().clear();
-        assertTrue(note.getTags().isEmpty());
+        assertThat(note.getTags()).isEmpty();
     }
 
     @Test
@@ -93,19 +93,19 @@ public class NoteTest {
         note.setId("note-123");
         note.setTitle("Test Note");
         String toString = note.toString();
-        assertNotNull(toString);
+        assertThat(toString).isNotNull();
     }
 
     @Test
     @DisplayName("测试空标签列表")
     void shouldHandleEmptyTagsList() {
         // 测试默认标签列表
-        assertNotNull(note.getTags());
-        assertTrue(note.getTags().isEmpty());
+        assertThat(note.getTags()).isNotNull();
+        assertThat(note.getTags()).isEmpty();
         
         // 测试设置空标签列表
         note.setTags(new ArrayList<>());
-        assertNotNull(note.getTags());
-        assertTrue(note.getTags().isEmpty());
+        assertThat(note.getTags()).isNotNull();
+        assertThat(note.getTags()).isEmpty();
     }
 }

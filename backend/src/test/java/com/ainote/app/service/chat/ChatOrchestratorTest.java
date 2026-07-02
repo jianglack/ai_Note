@@ -25,6 +25,7 @@ class ChatOrchestratorTest {
 
     private AgentChatStrategy agentStrategy;
     private ReadOnlyFallbackChatService fallbackStrategy;
+    private ReadOnlyStreamingChatService readOnlyStreamingChatService;
     private ChatMetrics chatMetrics;
     private InputGuardrail inputGuardrail;
     private ChatOrchestrator orchestrator;
@@ -33,6 +34,7 @@ class ChatOrchestratorTest {
     void setUp() {
         agentStrategy = Mockito.mock(AgentChatStrategy.class);
         fallbackStrategy = Mockito.mock(ReadOnlyFallbackChatService.class);
+        readOnlyStreamingChatService = Mockito.mock(ReadOnlyStreamingChatService.class);
         chatMetrics = Mockito.mock(ChatMetrics.class);
         inputGuardrail = Mockito.mock(InputGuardrail.class);
 
@@ -45,7 +47,7 @@ class ChatOrchestratorTest {
         when(inputGuardrail.check(anyString())).thenReturn(GuardrailResult.ok());
 
         orchestrator = new ChatOrchestrator(
-                agentStrategy, fallbackStrategy, registry, chatMetrics, inputGuardrail);
+                agentStrategy, fallbackStrategy, readOnlyStreamingChatService, registry, chatMetrics, inputGuardrail);
     }
 
     @Test
@@ -101,5 +103,62 @@ class ChatOrchestratorTest {
         assertThat(result.getChatMode()).isEqualTo("ERROR");
         assertThat(result.isDegraded()).isTrue();
         verify(chatMetrics).recordTotalFailure();
+    }
+
+    @Test
+    void streamUsesDirectReadOnlyStreamingWhenEligible() {
+        when(readOnlyStreamingChatService.canHandle("summarize", List.of()))
+                .thenReturn(true);
+        when(readOnlyStreamingChatService.chatStream(eq("summarize"), eq(List.of()), eq("u1"), Mockito.any()))
+                .thenAnswer(invocation -> {
+                    StreamCallback callback = invocation.getArgument(3);
+                    callback.onToken("ok");
+                    callback.onComplete(new AiChatResponse("ok", new HashMap<>()));
+                    return true;
+                });
+        CapturingCallback callback = new CapturingCallback();
+
+        orchestrator.chatStream("summarize", List.of(), "u1", callback);
+
+        assertThat(callback.tokens).contains("ok");
+        assertThat(callback.complete.getChatMode()).isNull();
+        verify(agentStrategy, never()).chatStream(anyString(), anyList(), anyString(), anyString(), Mockito.any());
+        verify(chatMetrics).recordSuccess(eq("DIRECT_STREAM"), anyLong());
+    }
+
+    @Test
+    void streamKeepsDestructiveRequestsOnAgentStrategy() {
+        when(readOnlyStreamingChatService.canHandle("delete current note", List.of("n1")))
+                .thenReturn(false);
+        CapturingCallback callback = new CapturingCallback();
+
+        orchestrator.chatStream("delete current note", List.of("n1"), "u1", callback);
+
+        verify(agentStrategy).chatStream(eq("delete current note"), eq(List.of("n1")), eq("u1"), anyString(), Mockito.any());
+        verify(readOnlyStreamingChatService, never())
+                .chatStream(anyString(), anyList(), anyString(), Mockito.any());
+    }
+
+    private static class CapturingCallback implements StreamCallback {
+        private final StringBuilder tokens = new StringBuilder();
+        private AiChatResponse complete;
+
+        @Override
+        public void onToken(String token) {
+            tokens.append(token);
+        }
+
+        @Override
+        public void onComplete(AiChatResponse response) {
+            complete = response;
+        }
+
+        @Override
+        public void onError(String errorMessage) {
+        }
+
+        @Override
+        public void onProgress(String step, String detail) {
+        }
     }
 }

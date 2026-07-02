@@ -19,13 +19,18 @@ frontend/*.log
 frontend/*.err.log
 frontend/*.tsbuildinfo
 frontend/dev/
+frontend/test-results/
+frontend/playwright-report/
+frontend/coverage/
 
 # audit docs — local only, NEVER publish (vulnerability roadmap; repo has public remote)
 AUDIT_REPORT.md
 FIX_PLAN.md
+VERIFICATION_REPORT.md
 
 # misc
 .DS_Store
+hf-tei-*/
 .env
 .env.*
 !.env.example
@@ -45,4 +50,5 @@ __pycache__/
 outputs/
 dev/
 source_files/
+.codex-run/
 

@@ -64,25 +64,49 @@ public class PlannerService {
     }
 
     public TaskPlan generatePlan(String query, List<String> noteIds, String userId) {
-        String noteContext = contextAssembler.assemble(query, noteIds, userId);
-        String timeContext = LocalDateTime.now().format(TIME_FMT);
-
-        String systemPrompt = promptTemplate
-                .replace("{{currentTime}}", timeContext)
-                .replace("{{noteContext}}", noteContext != null ? noteContext : "");
-
-        var chatRequest = ChatRequest.builder()
-                .messages(SystemMessage.from(systemPrompt), UserMessage.from(query))
-                .build();
-        var response = chatModel.chat(chatRequest);
-        String planJson = response.aiMessage().text().trim();
-
-        if (planJson.startsWith("```")) {
-            planJson = planJson.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
+        if (query == null || query.isBlank()) {
+            return persistFailedPlan(query, userId, "empty query");
         }
 
-        log.info("Planner LLM output: {}", planJson);
-        return parsePlanAndPersist(query, planJson, userId);
+        try {
+            String noteContext = contextAssembler.assemble(query, noteIds, userId);
+            String timeContext = LocalDateTime.now().format(TIME_FMT);
+
+            String systemPrompt = promptTemplate
+                    .replace("{{currentTime}}", timeContext)
+                    .replace("{{noteContext}}", noteContext != null ? noteContext : "");
+
+            var chatRequest = ChatRequest.builder()
+                    .messages(SystemMessage.from(systemPrompt), UserMessage.from(query))
+                    .build();
+            var response = chatModel.chat(chatRequest);
+            String planJson = response.aiMessage().text().trim();
+
+            if (planJson.startsWith("```")) {
+                planJson = planJson.replaceAll("^```(?:json)?\\s*", "").replaceAll("\\s*```$", "");
+            }
+
+            log.info("Planner LLM output: {}", planJson);
+            return parsePlanAndPersist(query, planJson, userId);
+        } catch (Exception e) {
+            log.warn("Planner failed for user {}: {}", userId, e.getMessage());
+            return persistFailedPlan(query, userId, e.getMessage());
+        }
+    }
+
+    private TaskPlan persistFailedPlan(String query, String userId, String reason) {
+        TaskPlan plan = new TaskPlan();
+        plan.setUserId(userId);
+        plan.setOriginalQuery(query != null ? query : "");
+        plan.setGoal(query != null ? query : "");
+        plan.setStatus(TaskPlan.STATUS_FAILED);
+        plan.setErrorMessage(reason);
+        try {
+            plan.setPlanJson(objectMapper.writeValueAsString(Map.of("error", reason != null ? reason : "planning failed")));
+        } catch (Exception ignored) {
+            plan.setPlanJson("{\"error\":\"planning failed\"}");
+        }
+        return planRepository.save(plan);
     }
 
     private TaskPlan parsePlanAndPersist(String query, String planJson, String userId) {

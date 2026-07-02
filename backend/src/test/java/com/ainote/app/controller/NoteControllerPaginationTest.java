@@ -5,9 +5,6 @@ import com.ainote.app.service.NoteService;
 import com.ainote.app.service.NoteVersionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -20,21 +17,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class NoteControllerPaginationTest {
-
-    @Mock
-    private NoteService noteService;
-
-    @Mock
-    private NoteVersionService noteVersionService;
-
+    private NoteService noteService;    private NoteVersionService noteVersionService;
     private NoteController controller;
     private Note note;
 
     @BeforeEach
     void setUp() {
+        noteService = mock(NoteService.class);
+        noteVersionService = mock(NoteVersionService.class);
         controller = new NoteController(noteService, noteVersionService);
         note = new Note();
         note.setId("note-1");

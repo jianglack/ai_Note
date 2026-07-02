@@ -8,10 +8,6 @@ import com.ainote.app.repository.TagRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.List;
 import java.util.Optional;
 
@@ -19,29 +15,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class BatchNoteServiceOwnershipTest {
-
-    @Mock
-    private NoteRepository noteRepository;
-
-    @Mock
-    private TagRepository tagRepository;
-
-    @Mock
-    private FolderRepository folderRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
-    @Mock
-    private KnowledgeGraphService knowledgeGraphService;
-
+    private NoteRepository noteRepository;    private TagRepository tagRepository;    private FolderRepository folderRepository;    private SecurityUtils securityUtils;    private KnowledgeGraphService knowledgeGraphService;
     private BatchNoteService batchNoteService;
 
     @BeforeEach
     void setUp() {
+        noteRepository = mock(NoteRepository.class);
+        tagRepository = mock(TagRepository.class);
+        folderRepository = mock(FolderRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        knowledgeGraphService = mock(KnowledgeGraphService.class);
         batchNoteService = new BatchNoteService(
                 noteRepository,
                 tagRepository,

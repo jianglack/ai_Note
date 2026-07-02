@@ -51,7 +51,7 @@ public class OcrService {
                 return CompletableFuture.completedFuture("");
             }
 
-            ITesseract tesseract = new Tesseract();
+            ITesseract tesseract = createTesseract();
             if (tessdataPath != null && !tessdataPath.isEmpty()) {
                 tesseract.setDatapath(tessdataPath);
             }
@@ -74,5 +74,9 @@ public class OcrService {
             log.error("Error during OCR for media {}: {}", mediaId, e.getMessage());
             return CompletableFuture.completedFuture("");
         }
+    }
+
+    protected ITesseract createTesseract() {
+        return new Tesseract();
     }
 }

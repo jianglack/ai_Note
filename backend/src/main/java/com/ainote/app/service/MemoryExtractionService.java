@@ -200,6 +200,7 @@ public class MemoryExtractionService {
                         existing.setTimesReinforced(existing.getTimesReinforced() + 1);
                         updateDecayScore(existing);
                         semanticMemoryRepository.save(existing);
+                        persistEmbedding(existing, contentEmbedding);
                         return new int[]{0, 0, 1};
                     }
                 }
@@ -230,6 +231,7 @@ public class MemoryExtractionService {
             mem.setLastReinforcedAt(LocalDateTime.now());
             updateDecayScore(mem);
             semanticMemoryRepository.save(mem);
+            persistEmbedding(mem, contentEmbedding);
             log.debug("Saved new semantic memory: [{}] {}", category, content);
             return new int[]{1, 0, 0};
 
@@ -263,6 +265,13 @@ public class MemoryExtractionService {
         }
         sb.append("]");
         return sb.toString();
+    }
+
+    private void persistEmbedding(SemanticMemory memory, float[] embedding) {
+        if (memory.getId() == null || embedding == null) {
+            return;
+        }
+        semanticMemoryRepository.updateEmbedding(memory.getId(), embeddingToString(embedding));
     }
 
     /**

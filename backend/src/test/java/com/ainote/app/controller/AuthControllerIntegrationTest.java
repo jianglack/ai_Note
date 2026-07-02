@@ -16,6 +16,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +25,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import com.ainote.app.security.SecurityUtils;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -88,7 +90,10 @@ public class AuthControllerIntegrationTest {
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("test-token"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("AINOTE_AUTH=test-token")))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=Lax")));
     }
 
     @Test
@@ -128,7 +133,10 @@ public class AuthControllerIntegrationTest {
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("test-token"))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"));
+                .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("AINOTE_AUTH=test-token")))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("SameSite=Lax")));
     }
 
     @Test
@@ -175,7 +183,9 @@ public class AuthControllerIntegrationTest {
 
         mockMvc.perform(MockMvcRequestBuilders.post("/api/auth/logout")
                 .header("Authorization", "Bearer test-token"))
-                .andExpect(MockMvcResultMatchers.status().isOk());
+                .andExpect(MockMvcResultMatchers.status().isOk())
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("AINOTE_AUTH=")))
+                .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("Max-Age=0")));
     }
 
     @Test

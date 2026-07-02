@@ -12,9 +12,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.HashMap;
@@ -36,27 +33,35 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("PlanExecutor recursion depth limit tests")
 class PlanExecutorRecursionTest {
-
-    @Mock private AgentService agentService;
-    @Mock private PlannerService plannerService;
-    @Mock private ReflectionService reflectionService;
-    @Mock private StepParamResolver paramResolver;
-    @Mock private PlanProgressEmitter progressEmitter;
-    @Mock private TaskPlanRepository planRepository;
-    @Mock private TaskStepRepository stepRepository;
-    @Mock private PlanStepCompletionRecorder stepCompletionRecorder;
-    @Mock private UserMemoryRepository userMemoryRepository;
-    @Mock private ExecutorService securityExecutor;
-    @Mock private AgentMetricsService metricsService;
-
+    private AgentService agentService;
+    private PlannerService plannerService;
+    private ReflectionService reflectionService;
+    private StepParamResolver paramResolver;
+    private PlanProgressEmitter progressEmitter;
+    private TaskPlanRepository planRepository;
+    private TaskStepRepository stepRepository;
+    private PlanStepCompletionRecorder stepCompletionRecorder;
+    private UserMemoryRepository userMemoryRepository;
+    private ExecutorService securityExecutor;
+    private AgentMetricsService metricsService;
     private PlanExecutor executor;
 
     @BeforeEach
     void setUp() {
+        agentService = mock(AgentService.class);
+        plannerService = mock(PlannerService.class);
+        reflectionService = mock(ReflectionService.class);
+        paramResolver = mock(StepParamResolver.class);
+        progressEmitter = mock(PlanProgressEmitter.class);
+        planRepository = mock(TaskPlanRepository.class);
+        stepRepository = mock(TaskStepRepository.class);
+        stepCompletionRecorder = mock(PlanStepCompletionRecorder.class);
+        userMemoryRepository = mock(UserMemoryRepository.class);
+        securityExecutor = mock(ExecutorService.class);
+        metricsService = mock(AgentMetricsService.class);
         executor = new PlanExecutor(
                 agentService, plannerService, reflectionService,
                 paramResolver, progressEmitter, planRepository,

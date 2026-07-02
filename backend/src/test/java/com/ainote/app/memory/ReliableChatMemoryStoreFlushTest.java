@@ -10,11 +10,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,19 +23,19 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("ReliableChatMemoryStore deferred flush tests")
 class ReliableChatMemoryStoreFlushTest {
-
-    @Mock private UserMemoryRepository memoryRepository;
-    @Mock private EpisodicMemoryRepository episodicMemoryRepository;
-    @Mock private MemoryExtractionService memoryExtractionService;
-
+    private UserMemoryRepository memoryRepository;
+    private EpisodicMemoryRepository episodicMemoryRepository;
+    private MemoryExtractionService memoryExtractionService;
     private ReliableChatMemoryStore store;
 
     @BeforeEach
     void setUp() {
+        memoryRepository = mock(UserMemoryRepository.class);
+        episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
+        memoryExtractionService = mock(MemoryExtractionService.class);
         store = new ReliableChatMemoryStore(
                 memoryRepository, episodicMemoryRepository,
                 new ObjectMapper(), memoryExtractionService);

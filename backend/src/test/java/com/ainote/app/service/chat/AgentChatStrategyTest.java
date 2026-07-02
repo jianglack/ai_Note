@@ -4,6 +4,7 @@ import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.service.AgentService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.HashMap;
@@ -66,6 +67,52 @@ class AgentChatStrategyTest {
         verify(agentService).chatStreamAlreadyChecked(
                 eq("query"), eq(List.of()), eq("user-1"), eq("req-1"),
                 any(AgentService.StreamCallback.class));
+    }
+
+    @Test
+    void chatStreamCompletesRejectedConcurrencyError() {
+        StreamCallback callback = Mockito.mock(StreamCallback.class);
+        ArgumentCaptor<AgentService.StreamCallback> streamCallbackCaptor =
+                ArgumentCaptor.forClass(AgentService.StreamCallback.class);
+
+        strategy.chatStream("query", List.of(), "user-1", "req-1", callback);
+        verify(agentService).chatStreamAlreadyChecked(
+                eq("query"), eq(List.of()), eq("user-1"), eq("req-1"),
+                streamCallbackCaptor.capture());
+
+        streamCallbackCaptor.getValue().onError("您有一个正在进行的请求，请等待完成后再试。");
+
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(callback).onToken(tokenCaptor.capture());
+        assertThat(tokenCaptor.getValue()).contains("正在进行");
+
+        ArgumentCaptor<AiChatResponse> responseCaptor = ArgumentCaptor.forClass(AiChatResponse.class);
+        verify(callback).onComplete(responseCaptor.capture());
+        assertThat(responseCaptor.getValue().getChatMode()).isEqualTo("REJECTED");
+        assertThat(responseCaptor.getValue().getContent()).contains("等待完成");
+    }
+
+    @Test
+    void chatStreamCompletesGlobalBusyErrorAsRejectedResponse() {
+        StreamCallback callback = Mockito.mock(StreamCallback.class);
+        ArgumentCaptor<AgentService.StreamCallback> streamCallbackCaptor =
+                ArgumentCaptor.forClass(AgentService.StreamCallback.class);
+
+        strategy.chatStream("query", List.of(), "user-1", "req-1", callback);
+        verify(agentService).chatStreamAlreadyChecked(
+                eq("query"), eq(List.of()), eq("user-1"), eq("req-1"),
+                streamCallbackCaptor.capture());
+
+        streamCallbackCaptor.getValue().onError("AGENT_BUSY: AI agent is busy. Please retry shortly.");
+
+        ArgumentCaptor<String> tokenCaptor = ArgumentCaptor.forClass(String.class);
+        verify(callback).onToken(tokenCaptor.capture());
+        assertThat(tokenCaptor.getValue()).contains("AGENT_BUSY");
+
+        ArgumentCaptor<AiChatResponse> responseCaptor = ArgumentCaptor.forClass(AiChatResponse.class);
+        verify(callback).onComplete(responseCaptor.capture());
+        assertThat(responseCaptor.getValue().getChatMode()).isEqualTo("REJECTED");
+        assertThat(responseCaptor.getValue().getContent()).contains("AGENT_BUSY");
     }
 
     @Test

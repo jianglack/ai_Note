@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import './auth.css';
@@ -29,20 +29,24 @@ export default function RegisterPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const register = useAuthStore((s) => s.register);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+
     setError('');
+    submittingRef.current = true;
     setLoading(true);
     try {
       await register(username, email, password);
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.message || '注册失败，请重试');
-    } finally {
+      submittingRef.current = false;
       setLoading(false);
+      setError(err.response?.data?.message || '注册失败，请重试');
     }
   };
 

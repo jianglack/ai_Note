@@ -6,27 +6,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 @SpringBootTest
 @ActiveProfiles("test")
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("Application startup")
+@RequiresDocker
 class AiNoteApplicationTest {
 
-    @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16")
-            .withDatabaseName("ainote_boot")
-            .withUsername("ainote")
-            .withPassword("ainote");
+    static final TestDatabaseProperties.Database database =
+            TestDatabaseProperties.database("pgvector/pgvector:pg16", "ainote_boot");
 
     @DynamicPropertySource
     static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", AiNoteApplicationTest::jdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("spring.datasource.url", database::jdbcUrl);
+        registry.add("spring.datasource.username", database::username);
+        registry.add("spring.datasource.password", database::password);
         registry.add("spring.flyway.enabled", () -> "true");
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "validate");
         registry.add("app.neo4j.enabled", () -> "false");
@@ -37,8 +31,4 @@ class AiNoteApplicationTest {
     void contextLoads() {
     }
 
-    private static String jdbcUrl() {
-        String url = postgres.getJdbcUrl();
-        return url.contains("?") ? url + "&stringtype=unspecified" : url + "?stringtype=unspecified";
-    }
 }

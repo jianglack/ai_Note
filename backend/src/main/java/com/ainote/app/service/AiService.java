@@ -26,7 +26,11 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.Month;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -34,6 +38,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class AiService {
@@ -47,6 +53,15 @@ public class AiService {
     private final UserMemoryRepository userMemoryRepository;
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
+    private static final DateTimeFormatter SCHEDULE_TIME_FORMAT =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss");
+    private static final Pattern ENGLISH_EXPLICIT_SCHEDULE = Pattern.compile(
+            "(?i)\\b(?:schedule|plan|arrange|set up)?\\s*(?:a|an|the)?\\s*"
+                    + "([A-Za-z][A-Za-z0-9 ,'-]{2,120}?)\\s+on\\s+"
+                    + "(January|February|March|April|May|June|July|August|September|October|November|December)\\s+"
+                    + "(\\d{1,2}),\\s*(\\d{4})\\s+at\\s+"
+                    + "(\\d{1,2})(?::(\\d{2}))?\\s*(AM|PM)?"
+                    + "(?:\\s+for\\s+(\\d+)\\s*(minute|minutes|hour|hours))?");
 
     public AiService(
             NoteService noteService,
@@ -194,10 +209,13 @@ public class AiService {
                     }
                 }
             }
-            return new ExtractedSchedule.ExtractResponse(schedules, noteId);
+            if (!schedules.isEmpty()) {
+                return new ExtractedSchedule.ExtractResponse(schedules, noteId);
+            }
+            return new ExtractedSchedule.ExtractResponse(parseExplicitScheduleFallback(plainText), noteId);
         } catch (Exception e) {
             log.error("Failed to extract schedules: {}", e.getMessage(), e);
-            return new ExtractedSchedule.ExtractResponse(List.of(), noteId);
+            return new ExtractedSchedule.ExtractResponse(parseExplicitScheduleFallback(plainText), noteId);
         }
     }
 
@@ -377,6 +395,91 @@ public class AiService {
         schedule.setConfidence(node.has("confidence") ? node.get("confidence").asDouble() : 0.9);
         schedule.setSource(node.has("source") ? node.get("source").asText() : title);
         return schedule;
+    }
+
+    private List<ExtractedSchedule> parseExplicitScheduleFallback(String plainText) {
+        Matcher matcher = ENGLISH_EXPLICIT_SCHEDULE.matcher(plainText);
+        List<ExtractedSchedule> schedules = new ArrayList<>();
+        while (matcher.find()) {
+            Month month = englishMonth(matcher.group(2));
+            int day = Integer.parseInt(matcher.group(3));
+            int year = Integer.parseInt(matcher.group(4));
+            int hour = Integer.parseInt(matcher.group(5));
+            int minute = matcher.group(6) != null ? Integer.parseInt(matcher.group(6)) : 0;
+            String meridiem = matcher.group(7);
+            if (meridiem != null) {
+                if ("PM".equalsIgnoreCase(meridiem) && hour < 12) {
+                    hour += 12;
+                } else if ("AM".equalsIgnoreCase(meridiem) && hour == 12) {
+                    hour = 0;
+                }
+            }
+
+            int durationMinutes = durationMinutes(matcher.group(8), matcher.group(9));
+            LocalDateTime start = LocalDateTime.of(
+                    LocalDate.of(year, month, day),
+                    LocalTime.of(hour, minute));
+            LocalDateTime end = start.plusMinutes(durationMinutes);
+            String source = sourceSentence(plainText, matcher.start(), matcher.end());
+
+            ExtractedSchedule schedule = new ExtractedSchedule();
+            schedule.setTitle(cleanFallbackTitle(matcher.group(1)));
+            schedule.setStartTime(start.format(SCHEDULE_TIME_FORMAT));
+            schedule.setEndTime(end.format(SCHEDULE_TIME_FORMAT));
+            schedule.setAllDay(false);
+            schedule.setRrule(null);
+            schedule.setConfidence(0.9);
+            schedule.setSource(source);
+            schedules.add(schedule);
+        }
+        return schedules;
+    }
+
+    private static Month englishMonth(String month) {
+        return switch (month.toLowerCase(Locale.ROOT)) {
+            case "january" -> Month.JANUARY;
+            case "february" -> Month.FEBRUARY;
+            case "march" -> Month.MARCH;
+            case "april" -> Month.APRIL;
+            case "may" -> Month.MAY;
+            case "june" -> Month.JUNE;
+            case "july" -> Month.JULY;
+            case "august" -> Month.AUGUST;
+            case "september" -> Month.SEPTEMBER;
+            case "october" -> Month.OCTOBER;
+            case "november" -> Month.NOVEMBER;
+            case "december" -> Month.DECEMBER;
+            default -> throw new IllegalArgumentException("Unsupported month: " + month);
+        };
+    }
+
+    private static int durationMinutes(String amount, String unit) {
+        if (amount == null || unit == null) {
+            return 60;
+        }
+        int value = Integer.parseInt(amount);
+        return unit.toLowerCase(Locale.ROOT).startsWith("hour") ? value * 60 : value;
+    }
+
+    private static String cleanFallbackTitle(String rawTitle) {
+        String title = rawTitle == null ? "" : rawTitle.replaceAll("\\s+", " ").trim();
+        title = title.replaceAll("(?i)\\s+with\\s+the\\s+.+$", "").trim();
+        return title.isBlank() ? "Scheduled item" : title;
+    }
+
+    private static String sourceSentence(String text, int start, int end) {
+        int left = Math.max(text.lastIndexOf('.', start), text.lastIndexOf('\n', start));
+        int rightPeriod = text.indexOf('.', end);
+        int rightBreak = text.indexOf('\n', end);
+        int right;
+        if (rightPeriod < 0) {
+            right = rightBreak < 0 ? text.length() : rightBreak;
+        } else if (rightBreak < 0) {
+            right = rightPeriod;
+        } else {
+            right = Math.min(rightPeriod, rightBreak);
+        }
+        return text.substring(left + 1, right).trim();
     }
 
     private String htmlToPlainText(String html) {

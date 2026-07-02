@@ -7,9 +7,6 @@ import com.ainote.app.util.PromptLoader;
 import dev.langchain4j.model.chat.ChatModel;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDateTime;
@@ -22,20 +19,22 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class NoteInsightServiceTest {
-
-    @Mock private NoteRepository noteRepository;
-    @Mock private NoteConceptRepository conceptRepository;
-    @Mock private ScheduleRepository scheduleRepository;
-    @Mock private ChatModel chatModel;
-    @Mock private PromptLoader promptLoader;
-
+    private NoteRepository noteRepository;
+    private NoteConceptRepository conceptRepository;
+    private ScheduleRepository scheduleRepository;
+    private ChatModel chatModel;
+    private PromptLoader promptLoader;
     private NoteInsightService service;
 
     @BeforeEach
     void setUp() {
+        noteRepository = mock(NoteRepository.class);
+        conceptRepository = mock(NoteConceptRepository.class);
+        scheduleRepository = mock(ScheduleRepository.class);
+        chatModel = mock(ChatModel.class);
+        promptLoader = mock(PromptLoader.class);
         service = new NoteInsightService(
                 noteRepository,
                 conceptRepository,

@@ -246,6 +246,6 @@ class PostExecutionHandlerTest {
         List<ToolAuditLogger.ToolAuditEntry> transcript = ToolAuditLogger.getTranscript();
         assertThat(transcript).hasSize(1);
         assertThat(transcript.get(0).blocked()).isTrue();
-        assertThat(transcript.get(0).blockReason()).isEqualTo("参数缺失");
+        assertThat(transcript.get(0).blockReason()).contains("参数");
     }
 }

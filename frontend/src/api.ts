@@ -66,14 +66,14 @@ export async function getNoteVersions(id: string): Promise<NoteVersion[]> {
   return res.data;
 }
 
-export async function searchNotes(query: string): Promise<Note[]> {
-  const res = await api.get(`/api/notes/search?q=${encodeURIComponent(query)}`);
+export async function searchNotes(query: string, signal?: AbortSignal): Promise<Note[]> {
+  const res = await api.get(`/api/notes/search?q=${encodeURIComponent(query)}`, { signal });
   return res.data;
 }
 
 // hybridSearch 使用相同的端点，因为后端的 /api/notes/search 已经实现了混合搜索
-export async function hybridSearch(query: string): Promise<Note[]> {
-  const res = await api.get(`/api/notes/search?q=${encodeURIComponent(query)}`);
+export async function hybridSearch(query: string, signal?: AbortSignal): Promise<Note[]> {
+  const res = await api.get(`/api/notes/search?q=${encodeURIComponent(query)}`, { signal });
   return res.data;
 }
 

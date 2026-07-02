@@ -10,10 +10,7 @@ import com.ainote.app.security.TokenService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -26,28 +23,25 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("AuthService 单元测试")
 class AuthServiceTest {
-
-    @Mock
     private UserRepository userRepository;
-    @Mock
     private PasswordEncoder passwordEncoder;
-    @Mock
     private JwtTokenProvider tokenProvider;
-    @Mock
     private AuthenticationManager authenticationManager;
-    @Mock
     private TokenService tokenService;
-
     private AuthService authService;
 
     private User testUser;
 
     @BeforeEach
     void setUp() {
+        userRepository = mock(UserRepository.class);
+        passwordEncoder = mock(PasswordEncoder.class);
+        tokenProvider = mock(JwtTokenProvider.class);
+        authenticationManager = mock(AuthenticationManager.class);
+        tokenService = mock(TokenService.class);
         authService = new AuthService(userRepository, passwordEncoder, tokenProvider,
                                        authenticationManager, tokenService);
 

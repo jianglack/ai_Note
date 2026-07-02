@@ -8,25 +8,19 @@ import java.sql.ResultSet;
 import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
-@Testcontainers(disabledWithoutDocker = true)
 @DisplayName("Flyway replay")
+@RequiresDocker
 class FlywayReplayIT {
 
-    @Container
-    static final PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("pgvector/pgvector:pg16")
-            .withDatabaseName("ainote_flyway_replay")
-            .withUsername("ainote")
-            .withPassword("ainote");
+    static final TestDatabaseProperties.Database database =
+            TestDatabaseProperties.database("pgvector/pgvector:pg16", "ainote_flyway_replay");
 
     @Test
     @DisplayName("replays every migration into a fresh pgvector database")
     void replaysEveryMigrationIntoFreshDatabase() throws Exception {
         Flyway flyway = Flyway.configure()
-                .dataSource(jdbcUrl(), postgres.getUsername(), postgres.getPassword())
+                .dataSource(database.jdbcUrl(), database.username(), database.password())
                 .locations("classpath:db/migration")
                 .load();
 
@@ -40,9 +34,9 @@ class FlywayReplayIT {
 
     private static void assertTaskPlansErrorMessageExists() throws Exception {
         try (var connection = DriverManager.getConnection(
-                jdbcUrl(),
-                postgres.getUsername(),
-                postgres.getPassword());
+                database.jdbcUrl(),
+                database.username(),
+                database.password());
              var statement = connection.prepareStatement("""
                      SELECT data_type
                      FROM information_schema.columns
@@ -56,8 +50,4 @@ class FlywayReplayIT {
         }
     }
 
-    private static String jdbcUrl() {
-        String url = postgres.getJdbcUrl();
-        return url.contains("?") ? url + "&stringtype=unspecified" : url + "?stringtype=unspecified";
-    }
 }

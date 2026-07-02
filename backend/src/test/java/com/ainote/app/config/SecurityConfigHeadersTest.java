@@ -20,4 +20,14 @@ class SecurityConfigHeadersTest {
                 .contains("frameOptions")
                 .contains("referrerPolicy");
     }
+
+    @Test
+    void configuresUnauthorizedAuthenticationEntryPoint() throws Exception {
+        String source = Files.readString(Path.of(
+                "src", "main", "java", "com", "ainote", "app", "config", "SecurityConfig.java"));
+
+        assertThat(source)
+                .contains("authenticationEntryPoint")
+                .contains("SC_UNAUTHORIZED");
+    }
 }

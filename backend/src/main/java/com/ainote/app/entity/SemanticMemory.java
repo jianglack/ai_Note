@@ -2,9 +2,6 @@ package com.ainote.app.entity;
 
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
-import org.hibernate.annotations.Array;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 /**
  * 语义记忆实体
@@ -63,9 +60,7 @@ public class SemanticMemory {
     /**
      * 记忆内容的 embedding 向量（1024维），用于语义去重
      */
-    @Column(columnDefinition = "vector(1024)")
-    @JdbcTypeCode(SqlTypes.VECTOR)
-    @Array(length = 1024)
+    @Transient
     private float[] embedding;
 
     /**

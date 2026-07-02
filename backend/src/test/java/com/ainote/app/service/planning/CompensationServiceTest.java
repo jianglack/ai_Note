@@ -10,11 +10,8 @@ import com.ainote.app.repository.TaskStepRepository;
 import com.ainote.app.service.AgentMetricsService;
 import com.ainote.app.service.AgentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
@@ -25,18 +22,24 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class CompensationServiceTest {
 
     private static final Path SOURCE_FILE = Path.of(
             "src", "main", "java", "com", "ainote", "app", "service", "planning", "CompensationService.java");
-
-    @Mock private AgentService agentService;
-    @Mock private TaskPlanRepository planRepository;
-    @Mock private TaskStepRepository stepRepository;
-    @Mock private SideEffectJournalRepository sideEffectJournalRepository;
-    @Mock private AgentMetricsService metricsService;
+    private AgentService agentService;
+    private TaskPlanRepository planRepository;
+    private TaskStepRepository stepRepository;
+    private SideEffectJournalRepository sideEffectJournalRepository;
+    private AgentMetricsService metricsService;
+    @BeforeEach
+    void setUpMocks() {
+        agentService = mock(AgentService.class);
+        planRepository = mock(TaskPlanRepository.class);
+        stepRepository = mock(TaskStepRepository.class);
+        sideEffectJournalRepository = mock(SideEffectJournalRepository.class);
+        metricsService = mock(AgentMetricsService.class);
+    }
 
     @Test
     void rollbackPlan_doesNotInferCompensationWhenJournalIsMissing() {

@@ -320,7 +320,25 @@
                     <limit>
                       <counter>LINE</counter>
                       <value>COVEREDRATIO</value>
-                      <minimum>0.58</minimum>
+                      <minimum>0.70</minimum>
+                    </limit>
+                  </limits>
+                </rule>
+                <rule>
+                  <element>PACKAGE</element>
+                  <includes>
+                    <include>com.ainote.app.agent</include>
+                    <include>com.ainote.app.agent.budget</include>
+                    <include>com.ainote.app.agent.guardrail</include>
+                    <include>com.ainote.app.agent.pending</include>
+                    <include>com.ainote.app.agent.pipeline</include>
+                    <include>com.ainote.app.agent.tools</include>
+                  </includes>
+                  <limits>
+                    <limit>
+                      <counter>LINE</counter>
+                      <value>COVEREDRATIO</value>
+                      <minimum>0.70</minimum>
                     </limit>
                   </limits>
                 </rule>

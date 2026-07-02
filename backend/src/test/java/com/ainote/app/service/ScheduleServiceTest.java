@@ -11,11 +11,7 @@ import com.ainote.app.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -24,20 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("ScheduleService 单元测试")
 class ScheduleServiceTest {
-
-    @Mock
     private ScheduleRepository scheduleRepository;
-    @Mock
     private NoteRepository noteRepository;
-    @Mock
     private UserRepository userRepository;
-    @Mock
     private KnowledgeGraphService knowledgeGraphService;
-
     private ScheduleService scheduleService;
 
     private User testUser;
@@ -45,6 +34,10 @@ class ScheduleServiceTest {
 
     @BeforeEach
     void setUp() {
+        scheduleRepository = mock(ScheduleRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        userRepository = mock(UserRepository.class);
+        knowledgeGraphService = mock(KnowledgeGraphService.class);
         scheduleService = new ScheduleService(scheduleRepository, noteRepository, userRepository, knowledgeGraphService);
 
         testUser = new User();

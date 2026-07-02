@@ -8,11 +8,7 @@ import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -21,24 +17,21 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("TagService 单元测试")
 class TagServiceTest {
-
-    @Mock
     private TagRepository tagRepository;
-    @Mock
     private NoteRepository noteRepository;
-    @Mock
     private KnowledgeGraphService knowledgeGraphService;
-    @Mock
     private SecurityUtils securityUtils;
-
     private TagService tagService;
 
     @BeforeEach
     void setUp() {
+        tagRepository = mock(TagRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        knowledgeGraphService = mock(KnowledgeGraphService.class);
+        securityUtils = mock(SecurityUtils.class);
         tagService = new TagService(tagRepository, noteRepository, knowledgeGraphService, securityUtils);
     }
 

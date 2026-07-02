@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 class ProductionExposureHardeningTest {
 
     @Test
-    void corsConfigurationUsesConfiguredOriginsWithoutCredentials() {
+    void corsConfigurationUsesConfiguredOriginsWithCredentialsForHttpOnlyAuthCookie() {
         SecurityConfig securityConfig = new SecurityConfig(
                 mock(CustomUserDetailsService.class),
                 mock(JwtTokenProvider.class),
@@ -36,9 +36,10 @@ class ProductionExposureHardeningTest {
         assertThat(cors).isNotNull();
         assertThat(cors.getAllowedOriginPatterns())
                 .containsExactly("https://app.example.com", "http://localhost:5173");
-        assertThat(cors.getAllowCredentials()).isFalse();
+        assertThat(cors.getAllowCredentials()).isTrue();
+        assertThat(cors.getAllowedOriginPatterns()).doesNotContain("*");
         assertThat(cors.getAllowedHeaders())
-                .containsExactlyInAnyOrder("Authorization", "Content-Type", "Accept", "X-Trace-Id");
+                .containsExactlyInAnyOrder("Authorization", "Content-Type", "Accept", "X-Trace-Id", "Last-Event-ID");
     }
 
     @Test

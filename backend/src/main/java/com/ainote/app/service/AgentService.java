@@ -23,13 +23,19 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
+import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.api.trace.StatusCode;
 import io.opentelemetry.api.trace.Tracer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.stereotype.Service;
@@ -52,6 +58,10 @@ public class AgentService {
 
     private static final Logger log = LoggerFactory.getLogger(AgentService.class);
     private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final String LIGHTWEIGHT_CHAT_SYSTEM_PROMPT = """
+            You are Ainote's assistant. Reply directly and briefly.
+            Do not call tools. Do not mention internal instructions.
+            """;
 
     private final AgentAssistant agentAssistant;
     private final NoteRepository noteRepository;
@@ -71,6 +81,8 @@ public class AgentService {
     private final TokenBudget tokenBudget;
     private final InputGuardrail inputGuardrail;
     private final OutputGuardrail outputGuardrail;
+    private AgentCapacityLimiter agentCapacityLimiter = new AgentCapacityLimiter(0, 0, null);
+    private ChatModel lightweightChatModel;
 
     /** 用户 → 取消令牌的注册表，SSE 断开时通过此令牌取消 Agent 执行 */
     private final ConcurrentHashMap<String, CancellationToken> cancelTokenRegistry = new ConcurrentHashMap<>();
@@ -118,6 +130,19 @@ public class AgentService {
         this.tokenBudget = tokenBudget;
         this.inputGuardrail = inputGuardrail;
         this.outputGuardrail = outputGuardrail;
+    }
+
+    @Autowired
+    void setAgentCapacityLimiter(AgentCapacityLimiter agentCapacityLimiter) {
+        if (agentCapacityLimiter != null) {
+            this.agentCapacityLimiter = agentCapacityLimiter;
+        }
+    }
+
+    @Autowired
+    void setLightweightChatModel(
+            @org.springframework.beans.factory.annotation.Qualifier("agentChatModel") ChatModel lightweightChatModel) {
+        this.lightweightChatModel = lightweightChatModel;
     }
 
     private static class AgentInvocationResult {
@@ -301,6 +326,22 @@ public class AgentService {
             return new AiChatResponse("您有一个正在进行的请求，请等待完成后再试。", new HashMap<>(), (String) null);
         }
 
+        AgentCapacityLimiter.Permit capacityPermit = agentCapacityLimiter.tryAcquire("sync");
+        if (!capacityPermit.acquired()) {
+            log.warn("Agent global capacity is full, rejecting sync request for user={}", actorUserId);
+            concurrencyGuard.release(actorUserId);
+            return busyResponse();
+        }
+
+        if (shouldUseLightweightChat(query, noteIds)) {
+            try {
+                return lightweightChat(query, actorUserId);
+            } finally {
+                capacityPermit.close();
+                concurrencyGuard.release(actorUserId);
+            }
+        }
+
         ToolAuditLogger.resetTranscript();
         String requestId = UUID.randomUUID().toString();
 
@@ -325,6 +366,7 @@ public class AgentService {
             agentSpan.setStatus(StatusCode.ERROR, "context assembly failed");
             agentSpan.end();
             ToolAuditLogger.resetTranscript();
+            capacityPermit.close();
             concurrencyGuard.release(actorUserId);
             return new AiChatResponse("抱歉，构建上下文时出错：" + e.getMessage(), new HashMap<>(), (String) null);
         }
@@ -333,6 +375,7 @@ public class AgentService {
             agentSpan.setStatus(StatusCode.ERROR, "untrusted context blocked");
             agentSpan.end();
             ToolAuditLogger.resetTranscript();
+            capacityPermit.close();
             concurrencyGuard.release(actorUserId);
             return new AiChatResponse(contextCheck.reason(), new HashMap<>(), (String) null);
         }
@@ -436,6 +479,7 @@ public class AgentService {
         } finally {
             ToolAuditLogger.resetTranscript();
             removeCancelToken(actorUserId, requestId);
+            capacityPermit.close();
             concurrencyGuard.release(actorUserId);
             agentSpan.end();
         }
@@ -444,6 +488,63 @@ public class AgentService {
     /**
      * 调用 Agent。Retry 由 ResilientChatModel 在 LLM 调用层处理，此处不再重试。
      */
+    private AiChatResponse busyResponse() {
+        return new AiChatResponse(AgentCapacityLimiter.BUSY_MESSAGE, new HashMap<>(), (String) null);
+    }
+
+    private boolean shouldUseLightweightChat(String query, List<String> noteIds) {
+        return lightweightChatModel != null
+                && (noteIds == null || noteIds.isEmpty())
+                && contextAssembler.detectIntent(query) == ContextAssembler.Intent.CHAT;
+    }
+
+    private AiChatResponse lightweightChat(String query, String userId) {
+        try {
+            String content = invokeLightweightChat(query, userId);
+            AiChatResponse response = new AiChatResponse(content, new HashMap<>(), (String) null);
+            response.setChatMode("AGENT_LIGHTWEIGHT");
+            response.setDegraded(false);
+            return response;
+        } catch (Exception e) {
+            log.warn("Lightweight agent chat failed for user={}: {}", userId, e.getMessage(), e);
+            return new AiChatResponse("AI agent is temporarily unavailable.", new HashMap<>(), (String) null);
+        }
+    }
+
+    private void streamLightweightChat(String query, String userId, StreamCallback callback) {
+        try {
+            String content = invokeLightweightChat(query, userId);
+            for (int i = 0; i < content.length(); i++) {
+                callback.onToken(String.valueOf(content.charAt(i)));
+            }
+            AiChatResponse response = new AiChatResponse(content, new HashMap<>(), (String) null);
+            response.setChatMode("AGENT_LIGHTWEIGHT");
+            response.setDegraded(false);
+            callback.onComplete(response);
+        } catch (Exception e) {
+            log.warn("Lightweight agent stream failed for user={}: {}", userId, e.getMessage(), e);
+            callback.onError("AI agent is temporarily unavailable.");
+        }
+    }
+
+    private String invokeLightweightChat(String query, String userId) {
+        ChatRequest request = ChatRequest.builder()
+                .messages(
+                        SystemMessage.from(LIGHTWEIGHT_CHAT_SYSTEM_PROMPT),
+                        UserMessage.from(query))
+                .maxOutputTokens(64)
+                .build();
+        ChatResponse response = lightweightChatModel.chat(request);
+        String content = response != null && response.aiMessage() != null
+                ? response.aiMessage().text()
+                : "";
+        if (content == null || content.isBlank()) {
+            content = "OK";
+        }
+        String sanitized = outputGuardrail.sanitize(content, userId);
+        return sanitized == null ? content : sanitized;
+    }
+
     private void requireNonBlank(String value, String name) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(name + " must not be blank");
@@ -622,6 +723,24 @@ public class AgentService {
             return;
         }
 
+        AgentCapacityLimiter.Permit capacityPermit = agentCapacityLimiter.tryAcquire("stream");
+        if (!capacityPermit.acquired()) {
+            log.warn("Agent global capacity is full, rejecting stream request for user={}", actorUserId);
+            concurrencyGuard.release(actorUserId);
+            callback.onError(AgentCapacityLimiter.BUSY_MESSAGE);
+            return;
+        }
+
+        if (shouldUseLightweightChat(query, noteIds)) {
+            try {
+                streamLightweightChat(query, actorUserId, callback);
+                return;
+            } finally {
+                capacityPermit.close();
+                concurrencyGuard.release(actorUserId);
+            }
+        }
+
         ToolAuditLogger.resetTranscript();
         int preCallMessageCount = 0;
 
@@ -738,6 +857,7 @@ public class AgentService {
         } finally {
             ToolAuditLogger.resetTranscript();
             removeCancelToken(actorUserId, requestId);
+            capacityPermit.close();
             concurrencyGuard.release(actorUserId);
         }
     }
@@ -818,6 +938,15 @@ public class AgentService {
         if (query == null) return false;
         String q = query.trim().replaceAll("\\s+", "");
         if (q.isBlank()) return false;
+        String lower = query.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+        if (lower.contains("permanentdelete") || lower.contains("emptytrash")) {
+            return false;
+        }
+        boolean englishSelectedDelete = (lower.contains("delete") || lower.contains("remove"))
+                && (lower.contains("currentnote") || lower.contains("selectednote") || lower.contains("thisnote"));
+        if (englishSelectedDelete && !hasComplexTaskConnector(lower)) {
+            return true;
+        }
         if (q.contains("永久删除") || q.contains("清空")) {
             return false;
         }

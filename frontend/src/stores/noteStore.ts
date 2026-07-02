@@ -2,6 +2,15 @@ import { create } from 'zustand';
 import type { Note, Folder } from '../api';
 import { loadNotesAndFolders } from '../services/noteData';
 
+function dedupeNotes(notes: Note[]): Note[] {
+  const seen = new Set<string>();
+  return notes.filter((note) => {
+    if (seen.has(note.id)) return false;
+    seen.add(note.id);
+    return true;
+  });
+}
+
 interface NoteState {
   notes: Note[];
   folders: Folder[];
@@ -34,17 +43,20 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   // setNotes 期望接收全量笔记列表：它会用新列表对账 selectedNote，
   // 找不到即视为该笔记已删除并置空。切勿传过滤/搜索子集（搜索结果走 ui.setSearchResults）。
   setNotes: (notes) =>
-    set((s) => ({
-      notes,
-      selectedNote: s.selectedNote
-        ? notes.find((note) => note.id === s.selectedNote?.id) ?? null
-        : null,
-    })),
+    set((s) => {
+      const uniqueNotes = dedupeNotes(notes);
+      return {
+        notes: uniqueNotes,
+        selectedNote: s.selectedNote
+          ? uniqueNotes.find((note) => note.id === s.selectedNote?.id) ?? null
+          : null,
+      };
+    }),
   setFolders: (folders) => set({ folders }),
   setSelectedNote: (note) => set({ selectedNote: note }),
   setTrashNotes: (notes) => set({ trashNotes: notes }),
 
-  addNote: (note) => set((s) => ({ notes: [note, ...s.notes] })),
+  addNote: (note) => set((s) => ({ notes: [note, ...s.notes.filter((existing) => existing.id !== note.id)] })),
   updateNoteInList: (updated) =>
     set((s) => ({
       notes: s.notes.map((n) => (n.id === updated.id ? updated : n)),
@@ -77,7 +89,7 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   loadData: async () => {
     try {
       const { notes, folders } = await loadNotesAndFolders();
-      set({ notes, folders });
+      set({ notes: dedupeNotes(notes), folders });
     } catch (err) {
       console.error('加载数据失败:', err);
     }

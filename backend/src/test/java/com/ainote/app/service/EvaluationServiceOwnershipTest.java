@@ -12,10 +12,6 @@ import com.ainote.app.security.SecurityUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -24,38 +20,21 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class EvaluationServiceOwnershipTest {
-
-    @Mock
-    private EvalDatasetRepository datasetRepository;
-
-    @Mock
-    private EvalItemRepository itemRepository;
-
-    @Mock
-    private EvalRunRepository runRepository;
-
-    @Mock
-    private EvalResultRepository resultRepository;
-
-    @Mock
-    private AgentTraceRepository agentTraceRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
-    @Mock
-    private LangChain4jRagService ragService;
-
-    @Mock
-    private AgentService agentService;
-
+    private EvalDatasetRepository datasetRepository;    private EvalItemRepository itemRepository;    private EvalRunRepository runRepository;    private EvalResultRepository resultRepository;    private AgentTraceRepository agentTraceRepository;    private SecurityUtils securityUtils;    private LangChain4jRagService ragService;    private AgentService agentService;
     private EvaluationService service;
 
     @BeforeEach
     void setUp() {
+        datasetRepository = mock(EvalDatasetRepository.class);
+        itemRepository = mock(EvalItemRepository.class);
+        runRepository = mock(EvalRunRepository.class);
+        resultRepository = mock(EvalResultRepository.class);
+        agentTraceRepository = mock(AgentTraceRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        ragService = mock(LangChain4jRagService.class);
+        agentService = mock(AgentService.class);
         service = new EvaluationService(
                 datasetRepository,
                 itemRepository,

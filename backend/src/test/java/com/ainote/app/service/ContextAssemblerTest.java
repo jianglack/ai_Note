@@ -9,9 +9,6 @@ import com.ainote.app.repository.SemanticMemoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -23,30 +20,27 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("ContextAssembler")
 class ContextAssemblerTest {
-
-    @Mock
     private NoteRepository noteRepository;
-    @Mock
     private FolderRepository folderRepository;
-    @Mock
     private LangChain4jRagService ragService;
-    @Mock
     private SemanticMemoryRepository semanticMemoryRepository;
-    @Mock
     private EpisodicMemoryRepository episodicMemoryRepository;
-    @Mock
     private JiTokenService jiTokenService;
-    @Mock
     private RagFeedbackService ragFeedbackService;
-
     private ContextAssembler contextAssembler;
 
     @BeforeEach
     void setUp() {
+        noteRepository = mock(NoteRepository.class);
+        folderRepository = mock(FolderRepository.class);
+        ragService = mock(LangChain4jRagService.class);
+        semanticMemoryRepository = mock(SemanticMemoryRepository.class);
+        episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
+        jiTokenService = mock(JiTokenService.class);
+        ragFeedbackService = mock(RagFeedbackService.class);
         contextAssembler = new ContextAssembler(
                 noteRepository,
                 folderRepository,

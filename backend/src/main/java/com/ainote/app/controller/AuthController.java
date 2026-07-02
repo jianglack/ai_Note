@@ -16,10 +16,15 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.Duration;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,6 +35,15 @@ public class AuthController {
     private final SecurityUtils securityUtils;
     private final PasswordResetService passwordResetService;
     private final AuthRateLimiter authRateLimiter;
+
+    @Value("${app.auth.cookie.secure:false}")
+    private boolean authCookieSecure;
+
+    @Value("${app.auth.cookie.same-site:Lax}")
+    private String authCookieSameSite;
+
+    @Value("${app.jwt.expiration:86400000}")
+    private long jwtExpirationMillis;
 
     public AuthController(AuthService authService, SecurityUtils securityUtils,
                           PasswordResetService passwordResetService,
@@ -45,7 +59,7 @@ public class AuthController {
                                                  HttpServletRequest servletRequest) {
         try {
             authRateLimiter.check("register", request.getEmail() + ":" + servletRequest.getRemoteAddr(), 5);
-            return ResponseEntity.ok(authService.register(request));
+            return withAuthCookie(authService.register(request));
         } catch (RateLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         } catch (RuntimeException e) {
@@ -58,7 +72,7 @@ public class AuthController {
                                               HttpServletRequest servletRequest) {
         try {
             authRateLimiter.check("login", request.getUsername() + ":" + servletRequest.getRemoteAddr(), 10);
-            return ResponseEntity.ok(authService.login(request));
+            return withAuthCookie(authService.login(request));
         } catch (RateLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         } catch (AuthenticationException e) {
@@ -73,7 +87,9 @@ public class AuthController {
         if (jwt != null) {
             authService.logout(jwt);
         }
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, expiredAuthCookie().toString())
+                .build();
     }
 
     @PostMapping("/reset-password")
@@ -108,5 +124,31 @@ public class AuthController {
         } catch (RateLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
+    }
+
+    private ResponseEntity<AuthResponse> withAuthCookie(AuthResponse response) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, authCookie(response.getToken()).toString())
+                .body(response);
+    }
+
+    private ResponseCookie authCookie(String token) {
+        return ResponseCookie.from(JwtAuthenticationFilter.AUTH_COOKIE_NAME, token)
+                .httpOnly(true)
+                .secure(authCookieSecure)
+                .sameSite(authCookieSameSite)
+                .path("/")
+                .maxAge(Duration.ofMillis(jwtExpirationMillis))
+                .build();
+    }
+
+    private ResponseCookie expiredAuthCookie() {
+        return ResponseCookie.from(JwtAuthenticationFilter.AUTH_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(authCookieSecure)
+                .sameSite(authCookieSameSite)
+                .path("/")
+                .maxAge(Duration.ZERO)
+                .build();
     }
 }

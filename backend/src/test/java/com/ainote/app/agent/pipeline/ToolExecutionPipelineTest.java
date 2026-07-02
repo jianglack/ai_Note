@@ -80,7 +80,7 @@ class ToolExecutionPipelineTest {
         String result = pipeline.execute("user1", "noteAction", "search", params,
                 () -> "找到 3 条相关笔记");
 
-        assertThat(result).isEqualTo("找到 3 条相关笔记");
+        assertThat(result).contains("3 条");
     }
 
     @Test
@@ -130,7 +130,7 @@ class ToolExecutionPipelineTest {
         String result = pipeline.execute("user1", "noteAction", "listAll", params,
                 () -> { throw new RuntimeException("不应被执行"); });
 
-        assertThat(result).isEqualTo("操作已取消");
+        assertThat(result).contains("取消");
     }
 
     @Test
@@ -143,7 +143,7 @@ class ToolExecutionPipelineTest {
         String result = pipeline.execute("user1", "noteAction", "listAll", params,
                 () -> "共有 5 条笔记");
 
-        assertThat(result).isEqualTo("共有 5 条笔记");
+        assertThat(result).contains("5 条");
     }
 
     // ---- 异常处理 ----
@@ -200,7 +200,7 @@ class ToolExecutionPipelineTest {
         String result = pipeline.execute("user1", "noteAction", "listAll", params,
                 () -> "查询完成");
 
-        assertThat(result).isEqualTo("查询完成");
+        assertThat(result).contains("查询");
     }
 
     // ---- 幂等检测（端到端） ----

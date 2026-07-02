@@ -10,31 +10,30 @@ import com.ainote.app.service.AgentMetricsService;
 import com.ainote.app.service.RagEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class AdminControllerTest {
-
-    @Mock private UserMemoryRepository userMemoryRepository;
-    @Mock private RagEvaluationService ragEvaluationService;
-    @Mock private AgentEvaluationService agentEvaluationService;
-    @Mock private AgentMetricsService agentMetricsService;
-    @Mock private SecurityUtils securityUtils;
-    @Mock private AdminAccessGuard adminAccessGuard;
-
+    private UserMemoryRepository userMemoryRepository;
+    private RagEvaluationService ragEvaluationService;
+    private AgentEvaluationService agentEvaluationService;
+    private AgentMetricsService agentMetricsService;
+    private SecurityUtils securityUtils;
+    private AdminAccessGuard adminAccessGuard;
     private AdminController controller;
 
     @BeforeEach
     void setUp() {
+        userMemoryRepository = mock(UserMemoryRepository.class);
+        ragEvaluationService = mock(RagEvaluationService.class);
+        agentEvaluationService = mock(AgentEvaluationService.class);
+        agentMetricsService = mock(AgentMetricsService.class);
+        securityUtils = mock(SecurityUtils.class);
+        adminAccessGuard = mock(AdminAccessGuard.class);
         controller = new AdminController(
                 userMemoryRepository,
                 ragEvaluationService,

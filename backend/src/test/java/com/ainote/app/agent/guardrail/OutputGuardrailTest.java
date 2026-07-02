@@ -40,19 +40,21 @@ class OutputGuardrailTest {
     @Test
     @DisplayName("sk 格式 API Key 应被脱敏")
     void shouldRedactSkApiKey() {
-        String text = "配置文件中发现 api_key=sk-abcdefghijklmnopqrstuvwxyz1234567890 请检查";
+        String key = "sk-" + "abcdefghijklmnopqrstuvwxyz1234567890";
+        String text = "配置文件中发现 api_key=" + key + " 请检查";
         String result = guardrail.sanitize(text, "user1");
         assertThat(result).contains("[REDACTED]");
-        assertThat(result).doesNotContain("sk-abcdefghijklmnopqrstuvwxyz1234567890");
+        assertThat(result).doesNotContain(key);
     }
 
     @Test
     @DisplayName("独立的 sk- 格式 Key 应被脱敏")
     void shouldRedactSkKey() {
-        String text = "密钥是 sk-aBcDeFgHiJkLmNoPqRsT12345678";
+        String key = "sk-" + "aBcDeFgHiJkLmNoPqRsT12345678";
+        String text = "密钥是 " + key;
         String result = guardrail.sanitize(text, "user1");
         assertThat(result).contains("[REDACTED]");
-        assertThat(result).doesNotContain("sk-aBcDeFgHiJkLmNoPqRsT12345678");
+        assertThat(result).doesNotContain(key);
     }
 
     // ---- Bearer Token 脱敏 ----
@@ -120,11 +122,12 @@ class OutputGuardrailTest {
     @Test
     @DisplayName("多种敏感信息混合应全部脱敏")
     void shouldRedactMultipleSensitivePatterns() {
-        String text = "API Key: sk-abcdefghijklmnopqrstuvwxyz1234\n"
+        String key = "sk-" + "abcdefghijklmnopqrstuvwxyz1234";
+        String text = "API Key: " + key + "\n"
                 + "数据库: jdbc://host:5432/db?user=admin\n"
                 + "正常文本不受影响";
         String result = guardrail.sanitize(text, "user1");
-        assertThat(result).doesNotContain("sk-abcdefghijklmnopqrstuvwxyz1234");
+        assertThat(result).doesNotContain(key);
         assertThat(result).doesNotContain("jdbc://host:5432");
         assertThat(result).contains("正常文本不受影响");
     }

@@ -17,10 +17,7 @@ import dev.langchain4j.store.embedding.filter.Filter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import java.util.List;
@@ -31,21 +28,18 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("LangChain4jRagService userId Filter tests")
 class LangChain4jRagServiceUserFilterTest {
-
-    @Mock private EmbeddingModel embeddingModel;
-    @Mock private EmbeddingStore<TextSegment> embeddingStore;
-    @Mock private NoteRepository noteRepository;
-    @Mock private SecurityUtils securityUtils;
-    @Mock private QueryRewritingService queryRewritingService;
-    @Mock private JdbcTemplate jdbcTemplate;
-    @Mock private StructureAwareDocumentSplitter splitter;
-    @Mock private ResilientLlmService resilientLlmService;
-    @Mock private NoteMediaRepository noteMediaRepository;
-
+    private EmbeddingModel embeddingModel;
+    private EmbeddingStore<TextSegment> embeddingStore;
+    private NoteRepository noteRepository;
+    private SecurityUtils securityUtils;
+    private QueryRewritingService queryRewritingService;
+    private JdbcTemplate jdbcTemplate;
+    private StructureAwareDocumentSplitter splitter;
+    private ResilientLlmService resilientLlmService;
+    private NoteMediaRepository noteMediaRepository;
     private LangChain4jRagService ragService;
 
     private static final String USER_ID = "user-abc";
@@ -54,6 +48,15 @@ class LangChain4jRagServiceUserFilterTest {
 
     @BeforeEach
     void setUp() {
+        embeddingModel = mock(EmbeddingModel.class);
+        embeddingStore = mock(EmbeddingStore.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        queryRewritingService = mock(QueryRewritingService.class);
+        jdbcTemplate = mock(JdbcTemplate.class);
+        splitter = mock(StructureAwareDocumentSplitter.class);
+        resilientLlmService = mock(ResilientLlmService.class);
+        noteMediaRepository = mock(NoteMediaRepository.class);
         ragService = new LangChain4jRagService(
                 embeddingModel, embeddingStore,
                 noteRepository, securityUtils,

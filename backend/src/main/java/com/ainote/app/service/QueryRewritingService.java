@@ -43,6 +43,15 @@ public class QueryRewritingService {
     @Value("${app.rag.query-rewriting.max-variants:3}")
     private int maxVariants;
 
+    @Value("${app.rag.query-rewriting.timeout-seconds:6}")
+    private int timeoutSeconds;
+
+    @Value("${app.rag.query-rewriting.max-tokens:160}")
+    private int maxTokens;
+
+    @Value("${app.rag.query-rewriting.skip-structured-keywords:true}")
+    private boolean skipStructuredKeywords;
+
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
@@ -60,6 +69,10 @@ public class QueryRewritingService {
             unless = "#result == null || #result.isEmpty()")
     public List<String> rewriteQuery(String originalQuery) {
         if (!enabled || originalQuery == null || originalQuery.isBlank()) {
+            return normalizeQueryVariants(originalQuery, List.of());
+        }
+
+        if (shouldSkipAiRewrite(originalQuery)) {
             return normalizeQueryVariants(originalQuery, List.of());
         }
 
@@ -101,6 +114,21 @@ public class QueryRewritingService {
         return result;
     }
 
+    boolean shouldSkipAiRewrite(String originalQuery) {
+        if (!skipStructuredKeywords || originalQuery == null) {
+            return false;
+        }
+        String trimmed = originalQuery.trim();
+        if (trimmed.length() <= 2) {
+            return true;
+        }
+        if (trimmed.length() > 80 || trimmed.contains(" ")) {
+            return false;
+        }
+        return trimmed.matches("[\\p{Alnum}._:/#-]+")
+                && trimmed.matches(".*[0-9._:/#-].*");
+    }
+
     private void addQueryVariant(List<String> result, String query, int limit) {
         if (result.size() >= limit || query == null || query.isBlank()) {
             return;
@@ -134,7 +162,7 @@ public class QueryRewritingService {
             ObjectNode requestBody = objectMapper.createObjectNode();
             requestBody.put("model", chatModel);
             requestBody.put("temperature", 0.3);
-            requestBody.put("max_tokens", 500);
+            requestBody.put("max_tokens", Math.max(32, maxTokens));
 
             ArrayNode messages = requestBody.putArray("messages");
             ObjectNode userMsg = messages.addObject();
@@ -145,7 +173,7 @@ public class QueryRewritingService {
                     .uri(URI.create(baseUrl + "/chat/completions"))
                     .header("Content-Type", "application/json")
                     .header("Authorization", "Bearer " + apiKey)
-                    .timeout(Duration.ofSeconds(30))
+                    .timeout(Duration.ofSeconds(Math.max(1, timeoutSeconds)))
                     .POST(HttpRequest.BodyPublishers.ofString(objectMapper.writeValueAsString(requestBody)))
                     .build();
 

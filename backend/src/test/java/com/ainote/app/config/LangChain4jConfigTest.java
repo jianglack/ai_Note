@@ -6,7 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class LangChain4jConfigTest {
 
@@ -15,10 +15,8 @@ class LangChain4jConfigTest {
         LangChain4jConfig config = new LangChain4jConfig();
         setField(config, "deepseekApiKey", "");
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> config.chatLanguageModel(null, null, null)
-        );
+        assertThatThrownBy(() -> config.chatLanguageModel(null, null, null))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -26,10 +24,17 @@ class LangChain4jConfigTest {
         LangChain4jConfig config = new LangChain4jConfig();
         setField(config, "deepseekApiKey", "");
 
-        assertThrows(
-                IllegalStateException.class,
-                () -> config.agentChatModel(null, null, null)
-        );
+        assertThatThrownBy(() -> config.agentChatModel(null, null, null))
+                .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void failFast_streamingChatModel_whenDeepseekKeyEmpty() {
+        LangChain4jConfig config = new LangChain4jConfig();
+        setField(config, "deepseekApiKey", "");
+
+        assertThatThrownBy(() -> config.streamingChatModel(null))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test
@@ -37,10 +42,8 @@ class LangChain4jConfigTest {
         LangChain4jConfig config = new LangChain4jConfig();
         setField(config, "deepseekApiKey", "");
 
-        assertThrows(
-                IllegalStateException.class,
-                config::deepSeekEmbeddingModel
-        );
+        assertThatThrownBy(config::deepSeekEmbeddingModel)
+                .isInstanceOf(IllegalStateException.class);
     }
 
     @Test

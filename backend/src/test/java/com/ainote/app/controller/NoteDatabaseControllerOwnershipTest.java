@@ -10,10 +10,6 @@ import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -22,26 +18,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class NoteDatabaseControllerOwnershipTest {
-
-    @Mock
-    private NoteDatabaseRepository dbRepository;
-
-    @Mock
-    private NoteDatabaseRowRepository rowRepository;
-
-    @Mock
-    private NoteRepository noteRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
+    private NoteDatabaseRepository dbRepository;    private NoteDatabaseRowRepository rowRepository;    private NoteRepository noteRepository;    private SecurityUtils securityUtils;
     private NoteDatabaseController controller;
 
     @BeforeEach
     void setUp() {
+        dbRepository = mock(NoteDatabaseRepository.class);
+        rowRepository = mock(NoteDatabaseRowRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
         controller = new NoteDatabaseController(dbRepository, rowRepository, noteRepository, securityUtils);
     }
 

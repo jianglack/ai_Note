@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useNoteStore } from '../stores/noteStore';
 import { useUiStore } from '../stores/uiStore';
 import {
@@ -20,6 +20,16 @@ import type { Note } from '../api';
 export function useNotes() {
   const store = useNoteStore();
   const ui = useUiStore();
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
+  const searchSeqRef = useRef(0);
+
+  useEffect(() => () => {
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+    }
+    searchAbortRef.current?.abort();
+  }, []);
 
   const loadData = useCallback(async () => {
     try {
@@ -124,22 +134,43 @@ export function useNotes() {
     }
   }, [store, ui]);
 
-  const handleSearch = useCallback(async (query: string) => {
+  const handleSearch = useCallback((query: string) => {
     ui.setSearchQuery(query);
+    if (searchTimerRef.current) {
+      clearTimeout(searchTimerRef.current);
+      searchTimerRef.current = null;
+    }
+    searchAbortRef.current?.abort();
+    const seq = ++searchSeqRef.current;
+
     if (!query.trim()) {
       ui.clearSearch();
       return;
     }
 
-    try {
-      ui.setIsSearching(true);
-      const results = await hybridSearch(query);
-      ui.setSearchResults(results);
-      ui.setStatus(`Found ${results.length} matching notes`);
-    } catch (err) {
-      ui.setStatus(`Search failed: ${(err as Error).message}`);
-      ui.setSearchResults([]);
-    }
+    ui.setIsSearching(true);
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
+
+    searchTimerRef.current = setTimeout(async () => {
+      try {
+        const results = await hybridSearch(query, controller.signal);
+        if (controller.signal.aborted || seq !== searchSeqRef.current) return;
+        ui.setSearchResults(results);
+        ui.setStatus(`Found ${results.length} matching notes`);
+      } catch (err) {
+        if (controller.signal.aborted || seq !== searchSeqRef.current) return;
+        ui.setStatus(`Search failed: ${(err as Error).message}`);
+        ui.setSearchResults([]);
+      } finally {
+        if (seq === searchSeqRef.current) {
+          ui.setIsSearching(false);
+        }
+        if (searchAbortRef.current === controller) {
+          searchAbortRef.current = null;
+        }
+      }
+    }, 300);
   }, [ui]);
 
   const handleOpenTrash = useCallback(async () => {

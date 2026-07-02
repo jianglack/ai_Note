@@ -13,7 +13,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * RerankingService 测试
@@ -40,8 +40,8 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("Java 多线程", candidates, 2);
         
-        assertEquals(2, reranked.size());
-        assertEquals("note-3", reranked.get(0).getId());
+        assertThat(reranked).hasSize(2);
+        assertThat(reranked.get(0).getId()).isEqualTo("note-3");
     }
 
     @Test
@@ -54,8 +54,8 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("Java", candidates, 2);
         
-        assertEquals(2, reranked.size());
-        assertEquals("note-2", reranked.get(0).getId());
+        assertThat(reranked).hasSize(2);
+        assertThat(reranked.get(0).getId()).isEqualTo("note-2");
     }
 
     @Test
@@ -69,8 +69,8 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("Java", candidates, 2);
         
-        assertEquals(2, reranked.size());
-        assertEquals("note-2", reranked.get(0).getId());
+        assertThat(reranked).hasSize(2);
+        assertThat(reranked.get(0).getId()).isEqualTo("note-2");
     }
 
     @Test
@@ -86,7 +86,7 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("Java", candidates, 3);
         
-        assertEquals(3, reranked.size());
+        assertThat(reranked).hasSize(3);
     }
 
     @Test
@@ -96,7 +96,7 @@ class RerankingServiceTest {
         
         List<Note> reranked = rerankingService.rerank("Java", candidates, 5);
         
-        assertTrue(reranked.isEmpty());
+        assertThat(reranked).isEmpty();
     }
 
     @Test
@@ -108,7 +108,7 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("", candidates, 5);
         
-        assertEquals(1, reranked.size());
+        assertThat(reranked).hasSize(1);
     }
 
     @Test
@@ -124,10 +124,10 @@ class RerankingServiceTest {
         
         var stats = rerankingService.getStats(original, reranked, "simple");
         
-        assertEquals(3, stats.originalCount());
-        assertEquals(2, stats.rerankedCount());
-        assertEquals("simple", stats.method());
-        assertTrue(stats.reductionPercentage() > 0);
+        assertThat(stats.originalCount()).isEqualTo(3);
+        assertThat(stats.rerankedCount()).isEqualTo(2);
+        assertThat(stats.method()).isEqualTo("simple");
+        assertThat(stats.reductionPercentage()).isPositive();
     }
 
     @Test
@@ -141,8 +141,8 @@ class RerankingServiceTest {
 
         List<Note> reranked = rerankingService.rerank("Java Python", candidates, 3);
         
-        assertEquals(3, reranked.size());
-        assertEquals("note-3", reranked.get(0).getId());
+        assertThat(reranked).hasSize(3);
+        assertThat(reranked.get(0).getId()).isEqualTo("note-3");
     }
 
     private Note createNote(String id, String title, String content) {

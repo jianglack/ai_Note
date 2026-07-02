@@ -16,6 +16,7 @@ import com.ainote.app.model.RagFeedbackRequest;
 import com.ainote.app.repository.AgentTraceRepository;
 import com.ainote.app.security.SecurityUtils;
 import com.ainote.app.service.AiService;
+import com.ainote.app.service.chat.ChatMetrics;
 import com.ainote.app.service.chat.ChatOrchestrator;
 import com.ainote.app.service.chat.StreamCallback;
 import io.swagger.v3.oas.annotations.Operation;
@@ -34,6 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -46,6 +48,12 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 @RestController
 @RequestMapping("/api/ai")
@@ -66,19 +74,93 @@ public class AiController {
     private final com.ainote.app.service.AgentService agentService;
     private final com.ainote.app.service.LangChain4jRagService ragService;
     private final ChatOrchestrator chatOrchestrator;
+    private final SseEmitterFactory sseEmitterFactory;
+    private final ChatMetrics chatMetrics;
+    private final ScheduledExecutorService heartbeatScheduler;
 
     @Value("${app.agent.timeout-seconds:300}")
-    private int agentTimeoutSeconds;
+    private int agentTimeoutSeconds = 300;
 
+    @Value("${app.sse.retry-ms:3000}")
+    private long sseRetryMillis = 3000;
+
+    @Value("${app.sse.heartbeat-interval-seconds:15}")
+    private long sseHeartbeatIntervalSeconds = 15;
+
+    @Autowired
     public AiController(AiService aiService, SecurityUtils securityUtils,
                         AgentTraceRepository traceRepository, ObjectMapper objectMapper,
-                        @Qualifier("securityExecutor") ExecutorService executorService,
+                        @Qualifier("sseExecutor") ExecutorService executorService,
+                        @Qualifier("sseHeartbeatScheduler") ScheduledExecutorService heartbeatScheduler,
                         com.ainote.app.service.RagFeedbackService ragFeedbackService,
                         com.ainote.app.service.SmartSuggestionService smartSuggestionService,
                         com.ainote.app.repository.NoteRepository noteRepository,
                         com.ainote.app.service.AgentService agentService,
                         com.ainote.app.service.LangChain4jRagService ragService,
-                        ChatOrchestrator chatOrchestrator) {
+                        ChatOrchestrator chatOrchestrator,
+                        ChatMetrics chatMetrics) {
+        this(aiService, securityUtils, traceRepository, objectMapper, executorService,
+                ragFeedbackService, smartSuggestionService, noteRepository, agentService,
+                ragService, chatOrchestrator, SseEmitter::new, chatMetrics, heartbeatScheduler);
+    }
+
+    AiController(AiService aiService, SecurityUtils securityUtils,
+                 AgentTraceRepository traceRepository, ObjectMapper objectMapper,
+                 ExecutorService executorService,
+                 com.ainote.app.service.RagFeedbackService ragFeedbackService,
+                 com.ainote.app.service.SmartSuggestionService smartSuggestionService,
+                 com.ainote.app.repository.NoteRepository noteRepository,
+                 com.ainote.app.service.AgentService agentService,
+                 com.ainote.app.service.LangChain4jRagService ragService,
+                 ChatOrchestrator chatOrchestrator) {
+        this(aiService, securityUtils, traceRepository, objectMapper, executorService,
+                ragFeedbackService, smartSuggestionService, noteRepository, agentService,
+                ragService, chatOrchestrator, SseEmitter::new, null, null);
+    }
+
+    AiController(AiService aiService, SecurityUtils securityUtils,
+                 AgentTraceRepository traceRepository, ObjectMapper objectMapper,
+                 ExecutorService executorService,
+                 com.ainote.app.service.RagFeedbackService ragFeedbackService,
+                 com.ainote.app.service.SmartSuggestionService smartSuggestionService,
+                 com.ainote.app.repository.NoteRepository noteRepository,
+                 com.ainote.app.service.AgentService agentService,
+                 com.ainote.app.service.LangChain4jRagService ragService,
+                 ChatOrchestrator chatOrchestrator,
+                 SseEmitterFactory sseEmitterFactory) {
+        this(aiService, securityUtils, traceRepository, objectMapper, executorService,
+                ragFeedbackService, smartSuggestionService, noteRepository, agentService,
+                ragService, chatOrchestrator, sseEmitterFactory, null, null);
+    }
+
+    AiController(AiService aiService, SecurityUtils securityUtils,
+                 AgentTraceRepository traceRepository, ObjectMapper objectMapper,
+                 ExecutorService executorService,
+                 com.ainote.app.service.RagFeedbackService ragFeedbackService,
+                 com.ainote.app.service.SmartSuggestionService smartSuggestionService,
+                 com.ainote.app.repository.NoteRepository noteRepository,
+                 com.ainote.app.service.AgentService agentService,
+                 com.ainote.app.service.LangChain4jRagService ragService,
+                 ChatOrchestrator chatOrchestrator,
+                 SseEmitterFactory sseEmitterFactory,
+                 ChatMetrics chatMetrics) {
+        this(aiService, securityUtils, traceRepository, objectMapper, executorService,
+                ragFeedbackService, smartSuggestionService, noteRepository, agentService,
+                ragService, chatOrchestrator, sseEmitterFactory, chatMetrics, null);
+    }
+
+    AiController(AiService aiService, SecurityUtils securityUtils,
+                 AgentTraceRepository traceRepository, ObjectMapper objectMapper,
+                 ExecutorService executorService,
+                 com.ainote.app.service.RagFeedbackService ragFeedbackService,
+                 com.ainote.app.service.SmartSuggestionService smartSuggestionService,
+                 com.ainote.app.repository.NoteRepository noteRepository,
+                 com.ainote.app.service.AgentService agentService,
+                 com.ainote.app.service.LangChain4jRagService ragService,
+                 ChatOrchestrator chatOrchestrator,
+                 SseEmitterFactory sseEmitterFactory,
+                 ChatMetrics chatMetrics,
+                 ScheduledExecutorService heartbeatScheduler) {
         this.aiService = aiService;
         this.securityUtils = securityUtils;
         this.traceRepository = traceRepository;
@@ -90,6 +172,9 @@ public class AiController {
         this.agentService = agentService;
         this.ragService = ragService;
         this.chatOrchestrator = chatOrchestrator;
+        this.sseEmitterFactory = sseEmitterFactory;
+        this.chatMetrics = chatMetrics;
+        this.heartbeatScheduler = heartbeatScheduler;
     }
 
     long calculateSseTimeoutMillis() {
@@ -136,17 +221,39 @@ public class AiController {
     @PostMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     @Operation(summary = "AI 流式对话", description = "与 AI 进行流式对话，实时返回响应内容（SSE）")
     public SseEmitter chatStream(@Valid @RequestBody AiChatRequest request) {
-        SseEmitter emitter = new SseEmitter(calculateSseTimeoutMillis());
+        return openChatStream(request, "post");
+    }
+
+    @GetMapping(value = "/chat/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @Operation(summary = "AI EventSource 流式对话", description = "使用 GET 形式订阅 AI 流式对话，兼容标准 EventSource")
+    public SseEmitter chatStreamEventSource(
+            @RequestParam String query,
+            @RequestParam(required = false) List<String> noteIds) {
+        if (query == null || query.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "query is required");
+        }
+        AiChatRequest request = new AiChatRequest();
+        request.setQuery(query);
+        request.setMessage(query);
+        request.setNoteIds(noteIds == null ? List.of() : noteIds);
+        return openChatStream(request, "eventsource");
+    }
+
+    private SseEmitter openChatStream(AiChatRequest request, String transport) {
+        SseEmitter emitter = sseEmitterFactory.create(calculateSseTimeoutMillis());
 
         // securityExecutor 自动传播 SecurityContext，无需手动 set/clear
         String userId = securityUtils.getCurrentUserId();
 
-        // 创建取消令牌，SSE 断开/超时时自动取消
         String requestId = UUID.randomUUID().toString();
         CancellationToken cancelToken = agentService.createCancelToken(userId, requestId);
-        emitter.onCompletion(() -> cancelToken.cancel());
-        emitter.onTimeout(() -> cancelToken.cancel());
-        emitter.onError(e -> cancelToken.cancel());
+        SseStreamContext streamContext = new SseStreamContext(requestId, cancelToken);
+        emitter.onCompletion(() -> cancelStream(streamContext, "client_completion"));
+        emitter.onTimeout(() -> cancelStream(streamContext, "timeout"));
+        emitter.onError(e -> cancelStream(streamContext, "client_error"));
+        recordStreamOpened(transport);
+        sendHeartbeat(emitter, streamContext);
+        scheduleHeartbeat(emitter, streamContext);
 
         try {
             executorService.execute(() -> {
@@ -154,61 +261,156 @@ public class AiController {
                     chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, requestId, new StreamCallback() {
                         @Override
                         public void onToken(String token) {
-                            try {
-                                emitter.send(SseEmitter.event()
-                                        .name("token")
-                                        .data(token));
-                            } catch (IOException e) {
-                                emitter.completeWithError(e);
-                            }
+                            sendEvent(emitter, streamContext, "token", token, null);
                         }
 
                         @Override
                         public void onComplete(AiChatResponse response) {
-                            try {
-                                emitter.send(SseEmitter.event()
-                                        .name("complete")
-                                        .data(response));
-                                emitter.complete();
-                            } catch (IOException e) {
-                                emitter.completeWithError(e);
+                            if (sendEvent(emitter, streamContext, "complete", response, null)) {
+                                completeStream(emitter, streamContext, "complete");
                             }
                         }
 
                         @Override
                         public void onError(String error) {
-                            try {
-                                emitter.send(SseEmitter.event()
-                                        .name("error")
-                                        .data(error));
-                                emitter.complete();
-                            } catch (IOException e) {
-                                emitter.completeWithError(e);
+                            if (sendEvent(emitter, streamContext, "error", error, null)) {
+                                completeStream(emitter, streamContext, "error");
                             }
                         }
 
                         @Override
                         public void onProgress(String step, String detail) {
-                            try {
-                                Map<String, String> progress = Map.of("step", step, "detail", detail);
-                                emitter.send(SseEmitter.event()
-                                        .name("progress")
-                                        .data(progress, MediaType.APPLICATION_JSON));
-                            } catch (IOException e) {
-                                // 忽略：客户端可能已断开
-                            }
+                            Map<String, String> progress = new LinkedHashMap<>();
+                            progress.put("step", step);
+                            progress.put("detail", detail);
+                            sendEvent(emitter, streamContext, "progress", progress, MediaType.APPLICATION_JSON);
                         }
                     });
                 } catch (Exception e) {
-                    emitter.completeWithError(e);
+                    completeStreamWithError(emitter, streamContext, e, "orchestrator_error");
                 }
             });
         } catch (RejectedExecutionException e) {
             agentService.cancelRequest(userId, requestId);
+            recordStreamRejected(transport);
+            completeStreamWithError(emitter, streamContext, e, "rejected");
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "AI stream is busy", e);
         }
 
         return emitter;
+    }
+
+    private void scheduleHeartbeat(SseEmitter emitter, SseStreamContext streamContext) {
+        if (heartbeatScheduler == null || sseHeartbeatIntervalSeconds <= 0 || streamContext.closed.get()) {
+            return;
+        }
+        ScheduledFuture<?> future = heartbeatScheduler.scheduleAtFixedRate(
+                () -> sendHeartbeat(emitter, streamContext),
+                sseHeartbeatIntervalSeconds,
+                sseHeartbeatIntervalSeconds,
+                TimeUnit.SECONDS);
+        streamContext.heartbeatFuture.set(future);
+        if (streamContext.closed.get()) {
+            future.cancel(false);
+        }
+    }
+
+    private boolean sendHeartbeat(SseEmitter emitter, SseStreamContext streamContext) {
+        return sendEvent(emitter, streamContext, "heartbeat", "ping", null);
+    }
+
+    private boolean sendEvent(SseEmitter emitter, SseStreamContext streamContext,
+                              String eventName, Object data, MediaType mediaType) {
+        if (streamContext.closed.get()) {
+            return false;
+        }
+        SseEmitter.SseEventBuilder event = SseEmitter.event()
+                .id(streamContext.nextEventId())
+                .reconnectTime(sseRetryMillis)
+                .name(eventName);
+        if (mediaType == null) {
+            event.data(data);
+        } else {
+            event.data(data, mediaType);
+        }
+        synchronized (streamContext.sendLock) {
+            if (streamContext.closed.get()) {
+                return false;
+            }
+            try {
+                emitter.send(event);
+                recordStreamEvent(eventName);
+                return true;
+            } catch (IOException | IllegalStateException e) {
+                recordStreamSendError(e instanceof IOException ? "io" : "illegal_state");
+                completeStreamWithError(emitter, streamContext, e, "send_error");
+                return false;
+            }
+        }
+    }
+
+    private void completeStream(SseEmitter emitter, SseStreamContext streamContext, String reason) {
+        if (streamContext.closed.compareAndSet(false, true)) {
+            cancelHeartbeat(streamContext);
+            streamContext.cancelToken.cancel();
+            recordStreamClosed(reason);
+            emitter.complete();
+        }
+    }
+
+    private void completeStreamWithError(SseEmitter emitter, SseStreamContext streamContext,
+                                         Throwable error, String reason) {
+        if (streamContext.closed.compareAndSet(false, true)) {
+            cancelHeartbeat(streamContext);
+            streamContext.cancelToken.cancel();
+            recordStreamClosed(reason);
+            emitter.completeWithError(error);
+        }
+    }
+
+    private void cancelStream(SseStreamContext streamContext, String reason) {
+        if (streamContext.closed.compareAndSet(false, true)) {
+            cancelHeartbeat(streamContext);
+            streamContext.cancelToken.cancel();
+            recordStreamClosed(reason);
+        }
+    }
+
+    private void cancelHeartbeat(SseStreamContext streamContext) {
+        ScheduledFuture<?> future = streamContext.heartbeatFuture.getAndSet(null);
+        if (future != null) {
+            future.cancel(false);
+        }
+    }
+
+    private void recordStreamOpened(String transport) {
+        if (chatMetrics != null) {
+            chatMetrics.recordStreamOpened(transport);
+        }
+    }
+
+    private void recordStreamEvent(String eventName) {
+        if (chatMetrics != null) {
+            chatMetrics.recordStreamEvent(eventName);
+        }
+    }
+
+    private void recordStreamClosed(String reason) {
+        if (chatMetrics != null) {
+            chatMetrics.recordStreamClosed(reason);
+        }
+    }
+
+    private void recordStreamSendError(String reason) {
+        if (chatMetrics != null) {
+            chatMetrics.recordStreamSendError(reason);
+        }
+    }
+
+    private void recordStreamRejected(String transport) {
+        if (chatMetrics != null) {
+            chatMetrics.recordStreamRejected(transport);
+        }
     }
 
     @GetMapping("/spirit/greeting")
@@ -551,4 +753,27 @@ public class AiController {
         }
         return dot / (Math.sqrt(normA) * Math.sqrt(normB) + 1e-10);
     }
+
+    private static final class SseStreamContext {
+        private final String requestId;
+        private final CancellationToken cancelToken;
+        private final AtomicBoolean closed = new AtomicBoolean(false);
+        private final AtomicLong eventSequence = new AtomicLong(0);
+        private final AtomicReference<ScheduledFuture<?>> heartbeatFuture = new AtomicReference<>();
+        private final Object sendLock = new Object();
+
+        private SseStreamContext(String requestId, CancellationToken cancelToken) {
+            this.requestId = requestId;
+            this.cancelToken = cancelToken;
+        }
+
+        private String nextEventId() {
+            return requestId + "-" + eventSequence.incrementAndGet();
+        }
+    }
+}
+
+@FunctionalInterface
+interface SseEmitterFactory {
+    SseEmitter create(long timeoutMillis);
 }

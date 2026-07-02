@@ -22,6 +22,11 @@ class JsonbMappingTest {
         assertJsonType(SideEffectJournal.class, "rollbackResult");
     }
 
+    @Test
+    void agentTraceToolsCalledUsesJsonJdbcType() throws Exception {
+        assertJsonType(AgentTrace.class, "toolsCalled");
+    }
+
     private void assertJsonType(Class<?> entityClass, String fieldName) throws Exception {
         JdbcTypeCode jdbcTypeCode = entityClass.getDeclaredField(fieldName).getAnnotation(JdbcTypeCode.class);
 

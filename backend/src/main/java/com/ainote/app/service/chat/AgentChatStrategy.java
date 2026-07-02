@@ -4,6 +4,7 @@ import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.service.AgentService;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -20,10 +21,14 @@ public class AgentChatStrategy implements ChatStrategy {
             "\u5185\u90e8\u9519\u8bef"
     );
     private static final Set<String> REJECTION_KEYWORDS = Set.of(
+            "AGENT_BUSY",
+            "AI agent is busy",
             "REQUEST_REJECTED_BY_GUARDRAIL",
             "\u68c0\u6d4b\u5230\u4e0d\u5b89\u5168",
             "\u8bf7\u52ff\u8f93\u5165",
-            "\u65e0\u6cd5\u6267\u884c\u8be5\u64cd\u4f5c"
+            "\u65e0\u6cd5\u6267\u884c\u8be5\u64cd\u4f5c",
+            "\u6b63\u5728\u8fdb\u884c",
+            "\u7b49\u5f85\u5b8c\u6210"
     );
 
     private final AgentService agentService;
@@ -73,6 +78,14 @@ public class AgentChatStrategy implements ChatStrategy {
 
                     @Override
                     public void onError(String error) {
+                        if (looksLikeRejection(error)) {
+                            callback.onToken(error);
+                            AiChatResponse response = new AiChatResponse(error, new HashMap<>());
+                            response.setChatMode("REJECTED");
+                            response.setDegraded(false);
+                            callback.onComplete(response);
+                            return;
+                        }
                         throw new ChatStrategyException("AGENT_STREAM_ERROR", error, null);
                     }
 
@@ -93,9 +106,13 @@ public class AgentChatStrategy implements ChatStrategy {
             return true;
         }
         String content = response.getContent();
-        if (REJECTION_KEYWORDS.stream().anyMatch(content::contains)) {
+        if (looksLikeRejection(content)) {
             return false;
         }
         return FAILURE_KEYWORDS.stream().anyMatch(content::contains);
+    }
+
+    private boolean looksLikeRejection(String content) {
+        return content != null && REJECTION_KEYWORDS.stream().anyMatch(content::contains);
     }
 }

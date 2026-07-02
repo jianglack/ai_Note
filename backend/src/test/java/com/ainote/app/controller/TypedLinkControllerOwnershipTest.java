@@ -8,10 +8,6 @@ import com.ainote.app.repository.TypedLinkRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -20,23 +16,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class TypedLinkControllerOwnershipTest {
-
-    @Mock
-    private TypedLinkRepository typedLinkRepository;
-
-    @Mock
-    private NoteRepository noteRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
+    private TypedLinkRepository typedLinkRepository;    private NoteRepository noteRepository;    private SecurityUtils securityUtils;
     private TypedLinkController controller;
 
     @BeforeEach
     void setUp() {
+        typedLinkRepository = mock(TypedLinkRepository.class);
+        noteRepository = mock(NoteRepository.class);
+        securityUtils = mock(SecurityUtils.class);
         controller = new TypedLinkController(typedLinkRepository, noteRepository, securityUtils);
     }
 

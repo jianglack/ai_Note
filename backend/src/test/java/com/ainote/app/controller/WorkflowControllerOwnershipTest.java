@@ -8,10 +8,6 @@ import com.ainote.app.security.SecurityUtils;
 import com.ainote.app.service.WorkflowExecutionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -20,26 +16,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class WorkflowControllerOwnershipTest {
-
-    @Mock
-    private AiWorkflowRepository workflowRepository;
-
-    @Mock
-    private AiWorkflowRunRepository runRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
-    @Mock
-    private WorkflowExecutionService workflowExecutionService;
-
+    private AiWorkflowRepository workflowRepository;    private AiWorkflowRunRepository runRepository;    private SecurityUtils securityUtils;    private WorkflowExecutionService workflowExecutionService;
     private WorkflowController controller;
 
     @BeforeEach
     void setUp() {
+        workflowRepository = mock(AiWorkflowRepository.class);
+        runRepository = mock(AiWorkflowRunRepository.class);
+        securityUtils = mock(SecurityUtils.class);
+        workflowExecutionService = mock(WorkflowExecutionService.class);
         controller = new WorkflowController(workflowRepository, runRepository, securityUtils, workflowExecutionService);
     }
 

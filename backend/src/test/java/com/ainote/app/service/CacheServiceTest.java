@@ -3,9 +3,6 @@ package com.ainote.app.service;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
@@ -13,20 +10,17 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 @DisplayName("CacheService 单元测试")
 class CacheServiceTest {
-
-    @Mock
     private RedisTemplate<String, Object> redisTemplate;
-    @Mock
     private ValueOperations<String, Object> valueOperations;
-
     private CacheService cacheService;
 
     @BeforeEach
     void setUp() {
+        redisTemplate = mock(RedisTemplate.class);
+        valueOperations = mock(ValueOperations.class);
         cacheService = new CacheService(redisTemplate);
         lenient().when(redisTemplate.opsForValue()).thenReturn(valueOperations);
     }

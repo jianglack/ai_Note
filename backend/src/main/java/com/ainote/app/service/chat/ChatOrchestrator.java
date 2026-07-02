@@ -20,6 +20,7 @@ public class ChatOrchestrator {
 
     private final ChatStrategy agentStrategy;
     private final ChatStrategy fallbackStrategy;
+    private final ReadOnlyStreamingChatService readOnlyStreamingChatService;
     private final CircuitBreaker circuitBreaker;
     private final ChatMetrics chatMetrics;
     private final InputGuardrail inputGuardrail;
@@ -27,11 +28,13 @@ public class ChatOrchestrator {
     public ChatOrchestrator(
             AgentChatStrategy agentStrategy,
             ReadOnlyFallbackChatService fallbackStrategy,
+            ReadOnlyStreamingChatService readOnlyStreamingChatService,
             CircuitBreakerRegistry circuitBreakerRegistry,
             ChatMetrics chatMetrics,
             InputGuardrail inputGuardrail) {
         this.agentStrategy = agentStrategy;
         this.fallbackStrategy = fallbackStrategy;
+        this.readOnlyStreamingChatService = readOnlyStreamingChatService;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("agent-chat");
         this.chatMetrics = chatMetrics;
         this.inputGuardrail = inputGuardrail;
@@ -102,6 +105,23 @@ public class ChatOrchestrator {
             chatMetrics.recordCircuitOpen();
             fallbackStrategy.chatStream(query, noteIds, userId, callback);
             return;
+        }
+
+        if (readOnlyStreamingChatService.canHandle(query, noteIds)) {
+            long startTime = System.currentTimeMillis();
+            try {
+                boolean handled = readOnlyStreamingChatService.chatStream(query, noteIds, userId, callback);
+                long latency = System.currentTimeMillis() - startTime;
+                if (handled) {
+                    chatMetrics.recordSuccess("DIRECT_STREAM", latency);
+                    return;
+                }
+                chatMetrics.recordFallback("DIRECT_STREAM_FAILURE", latency);
+            } catch (Exception e) {
+                long latency = System.currentTimeMillis() - startTime;
+                log.warn("Direct read-only stream failed, routing to agent. latency={}ms", latency, e);
+                chatMetrics.recordFallback("DIRECT_STREAM_FAILURE", latency);
+            }
         }
 
         TokenTrackingCallback trackingCallback = new TokenTrackingCallback(callback);

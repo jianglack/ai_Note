@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import api from '../services/api';
 
@@ -9,10 +9,13 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const submittingRef = useRef(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
     setError('');
 
     if (!username || !email || !newPassword || !confirmPassword) {
@@ -31,6 +34,8 @@ export default function ResetPasswordPage() {
     }
 
     try {
+      submittingRef.current = true;
+      setLoading(true);
       await api.post('/api/auth/reset-password', {
         username,
         email,
@@ -41,6 +46,8 @@ export default function ResetPasswordPage() {
         navigate('/login');
       }, 2000);
     } catch (err) {
+      submittingRef.current = false;
+      setLoading(false);
       setError('用户名或邮箱不正确');
     }
   };
@@ -166,6 +173,7 @@ export default function ResetPasswordPage() {
 
             <button
               type="submit"
+              disabled={loading}
               style={{
                 width: '100%',
                 padding: '12px',
@@ -175,10 +183,10 @@ export default function ResetPasswordPage() {
                 borderRadius: '4px',
                 fontSize: '16px',
                 fontWeight: 500,
-                cursor: 'pointer'
+                cursor: loading ? 'not-allowed' : 'pointer'
               }}
             >
-              重置密码
+              {loading ? '重置中...' : '重置密码'}
             </button>
 
             <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '14px' }}>

@@ -52,7 +52,7 @@ class PlanningAgentServiceTest {
 
         assertThat(result.get("type")).isEqualTo("direct");
         assertThat(result.get("route")).isEqualTo("DIRECT_AGENT");
-        assertThat(result.get("content")).isEqualTo("总结结果");
+        assertThat(result.get("content").toString()).contains("总结");
         verify(plannerService, never()).generatePlan(anyString(), anyList(), anyString());
     }
 

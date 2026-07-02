@@ -9,20 +9,25 @@ import com.ainote.app.service.planning.LlmTaskRouterService;
 import com.ainote.app.service.planning.PlanProgressEmitter;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 @RestController
 @RequestMapping("/api/ai")
 public class PlanController {
 
+    private static final int MAX_CONCURRENT_SMART_CHAT = 8;
+
     private final PlanningAgentService planningService;
     private final PlanProgressEmitter progressEmitter;
     private final SecurityUtils securityUtils;
     private final LlmTaskRouterService taskRouter;
+    private final Semaphore smartChatPermits = new Semaphore(MAX_CONCURRENT_SMART_CHAT);
 
     public PlanController(PlanningAgentService planningService,
                           PlanProgressEmitter progressEmitter,
@@ -36,9 +41,17 @@ public class PlanController {
 
     @PostMapping("/smart-chat")
     public ResponseEntity<?> smartChat(@Valid @RequestBody PlanSmartChatRequest request) {
+        if (!smartChatPermits.tryAcquire()) {
+            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                    .body(Map.of("error", "AGENT_BUSY", "message", "AI agent is busy"));
+        }
         String userId = securityUtils.getCurrentUserId();
-        return ResponseEntity.ok(planningService.smartChat(
-                request.getQuery(), request.getNoteIds(), userId, Boolean.TRUE.equals(request.getForcePlan())));
+        try {
+            return ResponseEntity.ok(planningService.smartChat(
+                    request.getQuery(), request.getNoteIds(), userId, Boolean.TRUE.equals(request.getForcePlan())));
+        } finally {
+            smartChatPermits.release();
+        }
     }
 
     @PostMapping("/route")

@@ -6,10 +6,6 @@ import com.ainote.app.repository.CanvasRepository;
 import com.ainote.app.security.SecurityUtils;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.Mock;
-import org.mockito.junit.jupiter.MockitoExtension;
-
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -17,20 +13,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
-@ExtendWith(MockitoExtension.class)
+import static org.mockito.Mockito.mock;
 class CanvasControllerOwnershipTest {
-
-    @Mock
-    private CanvasRepository canvasRepository;
-
-    @Mock
-    private SecurityUtils securityUtils;
-
+    private CanvasRepository canvasRepository;    private SecurityUtils securityUtils;
     private CanvasController controller;
 
     @BeforeEach
     void setUp() {
+        canvasRepository = mock(CanvasRepository.class);
+        securityUtils = mock(SecurityUtils.class);
         controller = new CanvasController(canvasRepository, securityUtils);
     }
 

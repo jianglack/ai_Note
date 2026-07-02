@@ -11,10 +11,15 @@ server:
 spring:
   profiles:
     active: dev
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 10MB
+  jpa:
+    open-in-view: false
 
 # SpringDoc OpenAPI 配置
 springdoc:
@@ -53,10 +58,29 @@ app:
     secret: ${JWT_SECRET:}
     expiration: ${JWT_EXPIRATION:86400000}
     issuer: ${JWT_ISSUER:ainote}
+  auth:
+    cookie:
+      secure: ${AUTH_COOKIE_SECURE:false}
+      same-site: ${AUTH_COOKIE_SAME_SITE:Lax}
+  async:
+    security:
+      pool-size: ${AGENT_EXECUTOR_POOL_SIZE:8}
+      queue-capacity: ${AGENT_EXECUTOR_QUEUE_CAPACITY:200}
+    sse:
+      pool-size: ${SSE_EXECUTOR_POOL_SIZE:128}
+      queue-capacity: ${SSE_EXECUTOR_QUEUE_CAPACITY:512}
+      keep-alive-seconds: ${SSE_EXECUTOR_KEEP_ALIVE_SECONDS:30}
   chat:
     top-k: 5
     max-context-chars: 2000
     max-memory-tokens: 32000
+    direct-stream:
+      enabled: ${CHAT_DIRECT_STREAM_ENABLED:true}
+      max-tokens: ${CHAT_DIRECT_STREAM_MAX_TOKENS:512}
+      timeout-seconds: ${CHAT_DIRECT_STREAM_TIMEOUT_SECONDS:120}
+  sse:
+    retry-ms: ${SSE_RETRY_MS:3000}
+    heartbeat-interval-seconds: ${SSE_HEARTBEAT_INTERVAL_SECONDS:15}
   embedding:
     max-retry: 3
     dimension: 1024
@@ -85,6 +109,9 @@ app:
     query-rewriting:
       enabled: true
       strategy: expand
+      timeout-seconds: ${RAG_QUERY_REWRITE_TIMEOUT_SECONDS:6}
+      max-tokens: ${RAG_QUERY_REWRITE_MAX_TOKENS:160}
+      skip-structured-keywords: ${RAG_QUERY_REWRITE_SKIP_STRUCTURED_KEYWORDS:true}
     reranking:
       enabled: true
       use-cohere: false
@@ -100,7 +127,7 @@ app:
     embedding-model: ${DEEPSEEK_EMBEDDING_MODEL:${DEEPSEEK_MODEL:deepseek-chat}}
     embedding-base-url: ${DEEPSEEK_EMBEDDING_BASE_URL:${DEEPSEEK_BASE_URL:https://api.deepseek.com/v1}}
     temperature: 0.2
-    max-tokens: 16000
+    max-tokens: ${DEEPSEEK_MAX_TOKENS:16000}
   # Web Search 配置
   web-search:
     api-key: ${SEARCH_API_KEY:}
@@ -119,6 +146,9 @@ app:
     enabled: true
     max-tool-invocations: 30
     timeout-seconds: 300
+    capacity:
+      max-concurrent: ${AGENT_MAX_CONCURRENT:8}
+      acquire-timeout-ms: ${AGENT_CAPACITY_ACQUIRE_TIMEOUT_MS:100}
     tool-loop-max-repeated: 5
     max-tokens-per-request: 50000
     warn-tokens-threshold: 40000

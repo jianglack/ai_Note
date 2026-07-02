@@ -39,4 +39,39 @@ public class ChatMetrics {
     public void recordTotalFailure() {
         meterRegistry.counter("chat.total.failure").increment();
     }
+
+    public void recordStreamOpened(String transport) {
+        meterRegistry.counter("chat.streams.opened", "transport", normalizeTag(transport)).increment();
+    }
+
+    public void recordStreamEvent(String event) {
+        meterRegistry.counter("chat.stream.events", "event", normalizeTag(event)).increment();
+    }
+
+    public void recordStreamClosed(String reason) {
+        meterRegistry.counter("chat.streams.closed", "reason", normalizeTag(reason)).increment();
+    }
+
+    public void recordStreamSendError(String reason) {
+        meterRegistry.counter("chat.stream.send.errors", "reason", normalizeTag(reason)).increment();
+    }
+
+    public void recordStreamRejected(String transport) {
+        meterRegistry.counter("chat.streams.rejected", "transport", normalizeTag(transport)).increment();
+    }
+
+    public void recordAgentCapacityRequest(String mode, String result, long waitedMs) {
+        String normalizedMode = normalizeTag(mode);
+        String normalizedResult = normalizeTag(result);
+        meterRegistry.counter("chat.agent.capacity.requests",
+                "mode", normalizedMode,
+                "result", normalizedResult).increment();
+        meterRegistry.timer("chat.agent.capacity.wait",
+                "mode", normalizedMode,
+                "result", normalizedResult).record(Math.max(0, waitedMs), TimeUnit.MILLISECONDS);
+    }
+
+    private String normalizeTag(String value) {
+        return value == null || value.isBlank() ? "unknown" : value;
+    }
 }
