@@ -223,7 +223,7 @@ describe('frontend stability guards', () => {
   it('labels EditorPane action and paginated toolbar buttons', () => {
     const editorPane = read('src/components/EditorPane.tsx');
 
-    assert.match(editorPane, /aria-label={title}/);
+    assert.match(editorPane, /aria-label=\{ariaLabel \?\? title\}/);
     assert.match(editorPane, /aria-label="Open AI assistant"/);
     assert.match(editorPane, /aria-label="Editor page toolbar"/);
     assert.match(editorPane, /role="toolbar"/);
