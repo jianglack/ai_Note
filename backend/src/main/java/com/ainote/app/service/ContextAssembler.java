@@ -1,5 +1,6 @@
 package com.ainote.app.service;
 
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.entity.Folder;
 import com.ainote.app.entity.Note;
 import com.ainote.app.entity.SemanticMemory;
@@ -50,6 +51,7 @@ public class ContextAssembler {
     private final EpisodicMemoryRepository episodicMemoryRepository;
     private final JiTokenService jiTokenService;
     private final RagFeedbackService ragFeedbackService;
+    private final MemoryProperties memoryProperties;
 
     @Value("${app.context.note-max-chars:800}")
     private int noteMaxChars;
@@ -84,7 +86,8 @@ public class ContextAssembler {
                             SemanticMemoryRepository semanticMemoryRepository,
                             EpisodicMemoryRepository episodicMemoryRepository,
                             JiTokenService jiTokenService,
-                            RagFeedbackService ragFeedbackService) {
+                            RagFeedbackService ragFeedbackService,
+                            MemoryProperties memoryProperties) {
         this.noteRepository = noteRepository;
         this.folderRepository = folderRepository;
         this.ragService = ragService;
@@ -92,6 +95,7 @@ public class ContextAssembler {
         this.episodicMemoryRepository = episodicMemoryRepository;
         this.jiTokenService = jiTokenService;
         this.ragFeedbackService = ragFeedbackService;
+        this.memoryProperties = memoryProperties;
     }
 
     /**
@@ -115,6 +119,9 @@ public class ContextAssembler {
     public String assemble(String query, List<String> noteIds, String userId) {
         Intent intent = detectIntent(query);
         log.info("Detected intent: {} for query: '{}'", intent, query);
+        logMemoryContext("assemble_start", userId,
+                "intent=" + intent,
+                "query_chars=" + (query == null ? 0 : query.length()));
 
         StringBuilder context = new StringBuilder();
         int usedTokens = 0;
@@ -124,7 +131,13 @@ public class ContextAssembler {
             String semantic = truncateToTokenBudget(buildSemanticMemory(userId), budgetSemanticMemory);
             context.append(semantic);
             String result = context.toString();
-            log.info("Context assembled (CHAT): {} chars, ~{} tokens", result.length(), estimateTokens(result));
+            int estimatedTokens = estimateTokens(result);
+            log.info("Context assembled (CHAT): {} chars, ~{} tokens", result.length(), estimatedTokens);
+            logMemoryContext("assembled", userId,
+                    "intent=" + intent,
+                    "context_chars=" + result.length(),
+                    "estimated_tokens=" + estimatedTokens,
+                    "budget_tokens=" + totalBudgetTokens);
             return result;
         }
 
@@ -165,6 +178,11 @@ public class ContextAssembler {
 
         String result = context.toString();
         log.info("Context assembled (STANDARD): {} chars, ~{} tokens (budget: {})", result.length(), usedTokens, totalBudgetTokens);
+        logMemoryContext("assembled", userId,
+                "intent=" + intent,
+                "context_chars=" + result.length(),
+                "estimated_tokens=" + usedTokens,
+                "budget_tokens=" + totalBudgetTokens);
         return result;
     }
 
@@ -173,6 +191,9 @@ public class ContextAssembler {
         try {
             long noteCount = noteRepository.countByUserIdAndDeletedAtIsNull(userId);
             List<Folder> folders = folderRepository.findByUserId(userId);
+            logMemoryContext("user_overview_built", userId,
+                    "note_count=" + noteCount,
+                    "folder_count=" + folders.size());
 
             overview.append("<user_overview>\n");
             overview.append("  <statistics>\n");
@@ -239,6 +260,9 @@ public class ContextAssembler {
         }
 
         notes.append("</selected_notes>\n\n");
+        logMemoryContext("selected_notes_injected", userId,
+                "selected_count=" + Math.max(0, index - 1),
+                "requested_count=" + noteIds.size());
         return notes.toString();
     }
 
@@ -246,7 +270,11 @@ public class ContextAssembler {
         try {
             double effectiveThreshold = ragFeedbackService.getAdaptiveThreshold();
             List<com.ainote.app.model.Note> results = ragService.searchWithMinScore(query, 5, effectiveThreshold, userId);
-            if (results.isEmpty()) return "";
+            int resultCount = results == null ? 0 : results.size();
+            logMemoryContext("rag_retrieved", userId,
+                    "result_count=" + resultCount,
+                    "min_score=" + effectiveThreshold);
+            if (results == null || results.isEmpty()) return "";
 
             StringBuilder rag = new StringBuilder();
             rag.append("<rag_context role=\"reference_only\" operation_target=\"false\">\n");
@@ -391,6 +419,9 @@ public class ContextAssembler {
         try {
             List<SemanticMemory> memories = semanticMemoryRepository
                     .findTopByUserId(userId, PageRequest.of(0, 10));
+            logMemoryContext("semantic_retrieved", userId,
+                    "memory_count=" + memories.size(),
+                    "top_k=10");
 
             if (memories.isEmpty()) return "";
 
@@ -402,6 +433,10 @@ public class ContextAssembler {
                 sb.append("</").append(mem.getCategory()).append(">\n");
             }
             sb.append("</user_memory>\n\n");
+            logMemoryContext("semantic_injected", userId,
+                    "memory_count=" + memories.size(),
+                    "estimated_tokens=" + estimateTokens(sb.toString()),
+                    "budget_tokens=" + budgetSemanticMemory);
             return sb.toString();
         } catch (Exception e) {
             log.warn("Failed to build semantic memory context", e);
@@ -413,6 +448,9 @@ public class ContextAssembler {
         try {
             List<EpisodicMemory> episodes = episodicMemoryRepository
                     .findRecentByUserId(userId, PageRequest.of(0, 3));
+            logMemoryContext("episodic_retrieved", userId,
+                    "memory_count=" + episodes.size(),
+                    "top_k=3");
 
             if (episodes.isEmpty()) return "";
 
@@ -424,10 +462,34 @@ public class ContextAssembler {
                 sb.append("</session>\n");
             }
             sb.append("</recent_sessions>\n\n");
+            logMemoryContext("episodic_injected", userId,
+                    "memory_count=" + episodes.size(),
+                    "estimated_tokens=" + estimateTokens(sb.toString()),
+                    "budget_tokens=" + budgetEpisodicMemory);
             return sb.toString();
         } catch (Exception e) {
             log.warn("Failed to build episodic memory context", e);
             return "";
         }
+    }
+
+    private void logMemoryContext(String event, String userId, String... fields) {
+        if (!memoryProperties.getAudit().isEnabled()) {
+            return;
+        }
+        StringBuilder message = new StringBuilder()
+                .append("memory_context_event=").append(event)
+                .append(" user_id=").append(userId)
+                .append(" orchestrator_enabled=").append(memoryProperties.getOrchestrator().isEnabled())
+                .append(" retrieval_mode=").append(retrievalModeForLog())
+                .append(" audit_enabled=").append(memoryProperties.getAudit().isEnabled());
+        for (String field : fields) {
+            message.append(' ').append(field);
+        }
+        log.info(message.toString());
+    }
+
+    private String retrievalModeForLog() {
+        return memoryProperties.getRetrieval().getMode().name().toLowerCase(Locale.ROOT);
     }
 }

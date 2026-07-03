@@ -9,6 +9,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.entity.SemanticMemory;
 import com.ainote.app.repository.EpisodicMemoryRepository;
 import com.ainote.app.repository.SemanticMemoryRepository;
@@ -25,7 +28,9 @@ import dev.langchain4j.model.output.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 class MemoryExtractionServiceTest {
@@ -36,6 +41,7 @@ class MemoryExtractionServiceTest {
     private EpisodicMemoryRepository episodicMemoryRepository;
     private UserMemoryRepository userMemoryRepository;
     private PromptLoader promptLoader;
+    private MemoryProperties memoryProperties;
     private MemoryExtractionService service;
 
     @BeforeEach
@@ -46,8 +52,9 @@ class MemoryExtractionServiceTest {
         episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
         userMemoryRepository = mock(UserMemoryRepository.class);
         promptLoader = mock(PromptLoader.class);
+        memoryProperties = new MemoryProperties();
         service = new MemoryExtractionService(chatModel, embeddingModel, semanticMemoryRepository,
-                episodicMemoryRepository, userMemoryRepository, promptLoader, new ObjectMapper());
+                episodicMemoryRepository, userMemoryRepository, promptLoader, new ObjectMapper(), memoryProperties);
 
         when(promptLoader.load("semantic-extraction.txt")).thenReturn("extract memories");
         when(embeddingModel.embed(any(String.class)))
@@ -113,6 +120,55 @@ class MemoryExtractionServiceTest {
         service.extractSemanticMemoryAsync("user-1", "hello", "hi");
 
         verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
+    }
+
+    @Test
+    void refreshDecayScoresUsesConfiguredHalfLife() {
+        memoryProperties.setDecayHalfLifeDays(10.0);
+        SemanticMemory memory = new SemanticMemory();
+        memory.setUserId("user-1");
+        memory.setCategory("preference");
+        memory.setContent("likes detailed plans");
+        memory.setConfidence(1.0);
+        memory.setTimesReinforced(1);
+        memory.setLastReinforcedAt(LocalDateTime.now().minusDays(30).minusMinutes(1));
+        when(semanticMemoryRepository.findByUserId("user-1")).thenReturn(List.of(memory));
+
+        service.refreshDecayScores("user-1");
+
+        assertThat(memory.getDecayScore()).isEqualTo(0.25);
+        verify(semanticMemoryRepository).saveAll(List.of(memory));
+    }
+
+    @Test
+    void extractSemanticMemoryWritesStructuredAuditLogWhenEnabled() {
+        when(chatModel.chat(any(ChatRequest.class)))
+                .thenReturn(chatResponse("""
+                        [
+                          {"category":"preference","content":"likes markdown","confidence":0.9}
+                        ]
+                        """));
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(MemoryExtractionService.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            service.extractSemanticMemoryAsync("user-1", "I like markdown", "noted");
+
+            assertThat(appender.list)
+                    .anySatisfy(event -> assertThat(event.getFormattedMessage())
+                            .contains("memory_event=semantic_extraction")
+                            .contains("user_id=user-1")
+                            .contains("audit_enabled=true")
+                            .contains("candidate_count=1")
+                            .contains("saved_count=1")
+                            .contains("reinforced_count=0")
+                            .contains("conflict_updated_count=0"));
+        } finally {
+            logger.detachAppender(appender);
+        }
     }
 
     private static ChatResponse chatResponse(String text) {

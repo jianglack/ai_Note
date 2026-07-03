@@ -1,6 +1,11 @@
 package com.ainote.app.service;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
+import com.ainote.app.config.MemoryProperties;
+import com.ainote.app.entity.EpisodicMemory;
 import com.ainote.app.entity.Note;
+import com.ainote.app.entity.SemanticMemory;
 import com.ainote.app.entity.User;
 import com.ainote.app.repository.EpisodicMemoryRepository;
 import com.ainote.app.repository.FolderRepository;
@@ -9,6 +14,7 @@ import com.ainote.app.repository.SemanticMemoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDateTime;
@@ -16,6 +22,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,6 +37,7 @@ class ContextAssemblerTest {
     private EpisodicMemoryRepository episodicMemoryRepository;
     private JiTokenService jiTokenService;
     private RagFeedbackService ragFeedbackService;
+    private MemoryProperties memoryProperties;
     private ContextAssembler contextAssembler;
 
     @BeforeEach
@@ -41,6 +49,7 @@ class ContextAssemblerTest {
         episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
         jiTokenService = mock(JiTokenService.class);
         ragFeedbackService = mock(RagFeedbackService.class);
+        memoryProperties = new MemoryProperties();
         contextAssembler = new ContextAssembler(
                 noteRepository,
                 folderRepository,
@@ -48,7 +57,8 @@ class ContextAssemblerTest {
                 semanticMemoryRepository,
                 episodicMemoryRepository,
                 jiTokenService,
-                ragFeedbackService
+                ragFeedbackService,
+                memoryProperties
         );
 
         ReflectionTestUtils.setField(contextAssembler, "noteMaxChars", 800);
@@ -155,5 +165,70 @@ class ContextAssemblerTest {
                 org.mockito.ArgumentMatchers.anyInt(),
                 org.mockito.ArgumentMatchers.anyDouble(),
                 org.mockito.ArgumentMatchers.anyString());
+    }
+
+    @Test
+    void legacyRetrievalModeUsesExistingRepositoriesAndLogsCounts() {
+        SemanticMemory preference = new SemanticMemory();
+        preference.setCategory("preference");
+        preference.setContent("likes detailed plans");
+        SemanticMemory style = new SemanticMemory();
+        style.setCategory("style");
+        style.setContent("prefers Chinese responses");
+
+        EpisodicMemory episode = new EpisodicMemory();
+        episode.setSessionSummary("Discussed memory system optimization.");
+        episode.setCreatedAt(LocalDateTime.now());
+
+        when(semanticMemoryRepository.findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any()))
+                .thenReturn(List.of(preference, style));
+        when(episodicMemoryRepository.findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any()))
+                .thenReturn(List.of(episode));
+        when(noteRepository.countByUserIdAndDeletedAtIsNull("user-1")).thenReturn(0L);
+        when(folderRepository.findByUserId("user-1")).thenReturn(List.of());
+        when(ragFeedbackService.getAdaptiveThreshold()).thenReturn(0.7);
+        when(ragService.searchWithMinScore(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(List.of());
+
+        ch.qos.logback.classic.Logger logger =
+                (ch.qos.logback.classic.Logger) LoggerFactory.getLogger(ContextAssembler.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+
+        try {
+            String context = contextAssembler.assemble("write an implementation plan", List.of(), "user-1");
+
+            assertThat(context).contains("<user_memory>");
+            assertThat(context).contains("likes detailed plans");
+            assertThat(context).contains("<recent_sessions>");
+            assertThat(context).contains("Discussed memory system optimization.");
+            verify(semanticMemoryRepository)
+                    .findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+            verify(episodicMemoryRepository)
+                    .findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+            assertThat(appender.list)
+                    .anySatisfy(event -> assertThat(event.getFormattedMessage())
+                            .contains("memory_context_event=semantic_retrieved")
+                            .contains("user_id=user-1")
+                            .contains("retrieval_mode=legacy")
+                            .contains("memory_count=2"));
+            assertThat(appender.list)
+                    .anySatisfy(event -> assertThat(event.getFormattedMessage())
+                            .contains("memory_context_event=episodic_retrieved")
+                            .contains("user_id=user-1")
+                            .contains("memory_count=1"));
+            assertThat(appender.list)
+                    .anySatisfy(event -> assertThat(event.getFormattedMessage())
+                            .contains("memory_context_event=assembled")
+                            .contains("intent=STANDARD")
+                            .contains("retrieval_mode=legacy")
+                            .contains("estimated_tokens="));
+        } finally {
+            logger.detachAppender(appender);
+        }
     }
 }

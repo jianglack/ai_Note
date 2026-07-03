@@ -1,5 +1,6 @@
 package com.ainote.app.service;
 
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.entity.EpisodicMemory;
 import com.ainote.app.entity.SemanticMemory;
 import com.ainote.app.entity.UserMemory;
@@ -20,7 +21,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +30,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -54,9 +55,6 @@ public class MemoryExtractionService {
     /** 每用户最大语义记忆条数 */
     private static final int MAX_MEMORIES_PER_USER = 50;
 
-    /** 时间衰减半衰期（天）：30天不被印证则分数衰减一半 */
-    private static final double DECAY_HALF_LIFE_DAYS = 30.0;
-
     private final ChatModel chatModel;
     private final EmbeddingModel embeddingModel;
     private final SemanticMemoryRepository semanticMemoryRepository;
@@ -64,12 +62,7 @@ public class MemoryExtractionService {
     private final UserMemoryRepository userMemoryRepository;
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
-
-    @Value("${app.memory.max-per-user:50}")
-    private int maxMemoriesPerUser;
-
-    @Value("${app.memory.similarity-threshold:0.85}")
-    private double similarityThreshold;
+    private final MemoryProperties memoryProperties;
 
     public MemoryExtractionService(
             ChatModel chatModel,
@@ -78,7 +71,8 @@ public class MemoryExtractionService {
             EpisodicMemoryRepository episodicMemoryRepository,
             UserMemoryRepository userMemoryRepository,
             PromptLoader promptLoader,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            MemoryProperties memoryProperties) {
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
         this.semanticMemoryRepository = semanticMemoryRepository;
@@ -86,6 +80,7 @@ public class MemoryExtractionService {
         this.userMemoryRepository = userMemoryRepository;
         this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
+        this.memoryProperties = memoryProperties;
         log.info("MemoryExtractionService initialized (fuzzy dedup + decay + capacity management)");
     }
 
@@ -94,6 +89,16 @@ public class MemoryExtractionService {
      */
     @Async("securityExecutor")
     public void extractSemanticMemoryAsync(String userId, String userMessage, String aiResponse) {
+        long startedAt = System.nanoTime();
+        if (!memoryProperties.getCapture().isEnabled()) {
+            logExtractionResult(userId, "skipped", 0, 0, 0, 0, startedAt, "capture_disabled");
+            return;
+        }
+
+        int candidateCount = 0;
+        int saved = 0;
+        int reinforced = 0;
+        int conflictUpdated = 0;
         try {
             log.debug("Starting semantic memory extraction for user: {}", userId);
 
@@ -109,6 +114,7 @@ public class MemoryExtractionService {
 
             if (result == null || result.isBlank()) {
                 log.debug("No semantic memory extracted for user: {}", userId);
+                logExtractionResult(userId, "succeeded", 0, 0, 0, 0, startedAt, "blank_response");
                 return;
             }
 
@@ -119,12 +125,11 @@ public class MemoryExtractionService {
 
             if (extracted.isEmpty()) {
                 log.debug("Empty extraction result for user: {}", userId);
+                logExtractionResult(userId, "succeeded", 0, 0, 0, 0, startedAt, "empty_candidates");
                 return;
             }
 
-            int saved = 0;
-            int reinforced = 0;
-            int conflictUpdated = 0;
+            candidateCount = extracted.size();
 
             for (Map<String, Object> item : extracted) {
                 String category = (String) item.get("category");
@@ -145,9 +150,12 @@ public class MemoryExtractionService {
 
             log.info("Semantic extraction for user: {}, new: {}, reinforced: {}, conflict-updated: {}, total extracted: {}",
                     userId, saved, reinforced, conflictUpdated, extracted.size());
+            logExtractionResult(userId, "succeeded", candidateCount, saved, reinforced, conflictUpdated, startedAt, "completed");
 
         } catch (Exception e) {
             log.warn("Semantic memory extraction failed for user: {}: {}", userId, e.getMessage());
+            logExtractionResult(userId, "failed", candidateCount, saved, reinforced, conflictUpdated, startedAt,
+                    e.getClass().getSimpleName());
         }
     }
 
@@ -172,7 +180,7 @@ public class MemoryExtractionService {
                 // Step 2: 向量相似度搜索
                 String embeddingStr = embeddingToString(contentEmbedding);
                 List<SemanticMemory> similar = semanticMemoryRepository
-                        .findSimilarByEmbedding(userId, embeddingStr, similarityThreshold, 3);
+                        .findSimilarByEmbedding(userId, embeddingStr, similarityThreshold(), 3);
 
                 if (!similar.isEmpty()) {
                     SemanticMemory existing = similar.get(0);
@@ -188,6 +196,7 @@ public class MemoryExtractionService {
                         updateDecayScore(existing);
                         semanticMemoryRepository.save(existing);
                         log.debug("Reinforced semantic memory (embedding match): {}", content);
+                        logMemoryWrite(userId, "reinforced", category);
                         return new int[]{0, 1, 0};
                     } else {
                         // 语义相似但内容有变化 → conflict update（用新内容覆盖）
@@ -201,6 +210,7 @@ public class MemoryExtractionService {
                         updateDecayScore(existing);
                         semanticMemoryRepository.save(existing);
                         persistEmbedding(existing, contentEmbedding);
+                        logMemoryWrite(userId, "conflict_updated", category);
                         return new int[]{0, 0, 1};
                     }
                 }
@@ -216,6 +226,7 @@ public class MemoryExtractionService {
                     mem.setLastReinforcedAt(LocalDateTime.now());
                     updateDecayScore(mem);
                     semanticMemoryRepository.save(mem);
+                    logMemoryWrite(userId, "reinforced", mem.getCategory());
                     return new int[]{0, 1, 0};
                 }
             }
@@ -233,6 +244,7 @@ public class MemoryExtractionService {
             semanticMemoryRepository.save(mem);
             persistEmbedding(mem, contentEmbedding);
             log.debug("Saved new semantic memory: [{}] {}", category, content);
+            logMemoryWrite(userId, "created", category);
             return new int[]{1, 0, 0};
 
         } catch (Exception e) {
@@ -320,7 +332,7 @@ public class MemoryExtractionService {
             if (daysSince < 0) daysSince = 0;
         }
 
-        double decay = 1.0 / (1.0 + daysSince / DECAY_HALF_LIFE_DAYS);
+        double decay = 1.0 / (1.0 + daysSince / decayHalfLifeDays());
         double reinforceFactor = Math.log(reinforced + 1) / Math.log(2); // log2(n+1)
         double score = confidence * reinforceFactor * decay;
 
@@ -346,7 +358,7 @@ public class MemoryExtractionService {
      */
     private void evictIfOverCapacity(String userId) {
         long count = semanticMemoryRepository.countByUserId(userId);
-        int limit = maxMemoriesPerUser > 0 ? maxMemoriesPerUser : MAX_MEMORIES_PER_USER;
+        int limit = memoryProperties.getMaxPerUser() > 0 ? memoryProperties.getMaxPerUser() : MAX_MEMORIES_PER_USER;
 
         if (count <= limit) return;
 
@@ -365,6 +377,55 @@ public class MemoryExtractionService {
      * 生成情节摘要（会话过期时调用）
      * 升级：生成摘要后同步触发语义记忆提取
      */
+    private double similarityThreshold() {
+        return memoryProperties.getSimilarityThreshold() > 0
+                ? memoryProperties.getSimilarityThreshold()
+                : SIMILARITY_THRESHOLD;
+    }
+
+    private double decayHalfLifeDays() {
+        return memoryProperties.getDecayHalfLifeDays() > 0
+                ? memoryProperties.getDecayHalfLifeDays()
+                : 30.0;
+    }
+
+    private void logExtractionResult(String userId,
+                                     String status,
+                                     int candidateCount,
+                                     int savedCount,
+                                     int reinforcedCount,
+                                     int conflictUpdatedCount,
+                                     long startedAt,
+                                     String reason) {
+        if (!memoryProperties.getAudit().isEnabled()) {
+            return;
+        }
+        long durationMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        log.info("memory_event=semantic_extraction user_id={} status={} reason={} attempted=true " +
+                        "orchestrator_enabled={} capture_enabled={} capture_mode={} audit_enabled={} " +
+                        "candidate_count={} saved_count={} reinforced_count={} conflict_updated_count={} duration_ms={}",
+                userId,
+                status,
+                reason,
+                memoryProperties.getOrchestrator().isEnabled(),
+                memoryProperties.getCapture().isEnabled(),
+                memoryProperties.getCapture().getMode().name().toLowerCase(Locale.ROOT),
+                memoryProperties.getAudit().isEnabled(),
+                candidateCount,
+                savedCount,
+                reinforcedCount,
+                conflictUpdatedCount,
+                durationMs);
+    }
+
+    private void logMemoryWrite(String userId, String action, String category) {
+        if (!memoryProperties.getAudit().isEnabled()) {
+            return;
+        }
+        log.info("memory_event=semantic_memory_write user_id={} action={} category={} audit_enabled={}",
+                userId, action, category, memoryProperties.getAudit().isEnabled());
+    }
+
     public void generateEpisodicSummary(String userId) {
         try {
             List<UserMemory> memories = userMemoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId);

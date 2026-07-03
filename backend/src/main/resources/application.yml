@@ -138,6 +138,15 @@ app:
     language: chi_sim+eng
   # 记忆系统配置
   memory:
+    orchestrator:
+      enabled: ${MEMORY_ORCHESTRATOR_ENABLED:false}
+    capture:
+      enabled: ${MEMORY_CAPTURE_ENABLED:true}
+      mode: ${MEMORY_CAPTURE_MODE:legacy}
+    retrieval:
+      mode: ${MEMORY_RETRIEVAL_MODE:legacy}
+    audit:
+      enabled: ${MEMORY_AUDIT_ENABLED:true}
     max-per-user: 50                 # 每用户最大语义记忆条数
     similarity-threshold: 0.85       # 语义去重阈值（cosine similarity）
     decay-half-life-days: 30         # 衰减半衰期（天）
