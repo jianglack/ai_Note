@@ -14,6 +14,7 @@ public class MemoryProperties {
     private Capture capture = new Capture();
     private Retrieval retrieval = new Retrieval();
     private Audit audit = new Audit();
+    private ChatHistory chatHistory = new ChatHistory();
 
     public enum CaptureMode {
         LEGACY,
@@ -23,6 +24,11 @@ public class MemoryProperties {
     public enum RetrievalMode {
         LEGACY,
         QUERY_RELEVANT
+    }
+
+    public enum ChatHistoryWriteMode {
+        APPEND,
+        LEGACY_REWRITE
     }
 
     public static class Orchestrator {
@@ -82,6 +88,18 @@ public class MemoryProperties {
         }
     }
 
+    public static class ChatHistory {
+        private ChatHistoryWriteMode writeMode = ChatHistoryWriteMode.APPEND;
+
+        public ChatHistoryWriteMode getWriteMode() {
+            return writeMode;
+        }
+
+        public void setWriteMode(ChatHistoryWriteMode writeMode) {
+            this.writeMode = writeMode == null ? ChatHistoryWriteMode.APPEND : writeMode;
+        }
+    }
+
     public int getMaxPerUser() {
         return maxPerUser;
     }
@@ -136,5 +154,13 @@ public class MemoryProperties {
 
     public void setAudit(Audit audit) {
         this.audit = audit == null ? new Audit() : audit;
+    }
+
+    public ChatHistory getChatHistory() {
+        return chatHistory;
+    }
+
+    public void setChatHistory(ChatHistory chatHistory) {
+        this.chatHistory = chatHistory == null ? new ChatHistory() : chatHistory;
     }
 }

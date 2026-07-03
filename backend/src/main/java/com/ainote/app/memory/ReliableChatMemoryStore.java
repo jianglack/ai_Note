@@ -1,5 +1,6 @@
 package com.ainote.app.memory;
 
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.entity.UserMemory;
 import com.ainote.app.repository.EpisodicMemoryRepository;
 import com.ainote.app.repository.UserMemoryRepository;
@@ -42,19 +43,23 @@ public class ReliableChatMemoryStore implements ChatMemoryStore {
     private final UserMemoryRepository memoryRepository;
     @SuppressWarnings("unused")
     private final EpisodicMemoryRepository episodicMemoryRepository;
+    private final MemoryProperties memoryProperties;
     private final ObjectMapper objectMapper;
     private final com.ainote.app.service.MemoryExtractionService memoryExtractionService;
 
     public ReliableChatMemoryStore(
             UserMemoryRepository memoryRepository,
             EpisodicMemoryRepository episodicMemoryRepository,
+            MemoryProperties memoryProperties,
             ObjectMapper objectMapper,
             @Lazy com.ainote.app.service.MemoryExtractionService memoryExtractionService) {
         this.memoryRepository = memoryRepository;
         this.episodicMemoryRepository = episodicMemoryRepository;
+        this.memoryProperties = memoryProperties;
         this.objectMapper = objectMapper;
         this.memoryExtractionService = memoryExtractionService;
-        log.info("ReliableChatMemoryStore initialized (batch write + sequence_number + deferred flush)");
+        log.info("ReliableChatMemoryStore initialized (writeMode={} + sequence_number + deferred flush)",
+                memoryProperties.getChatHistory().getWriteMode());
     }
 
     @Override
@@ -117,18 +122,20 @@ public class ReliableChatMemoryStore implements ChatMemoryStore {
     }
 
     private void doPersistMessages(String userId, List<ChatMessage> messages) {
+        List<ChatMessage> newMessages = messages == null ? List.of() : messages;
         List<UserMemory> oldMemories = memoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId);
-        int oldUserMsgCount = (int) oldMemories.stream()
-                .filter(m -> TYPE_USER.equals(m.getMessageType()))
-                .count();
-        int newUserMsgCount = (int) messages.stream()
-                .filter(m -> m instanceof UserMessage)
-                .count();
+        maybeTriggerEpisodicSummaryForTrimmed(userId, oldMemories, newMessages);
 
-        if (oldUserMsgCount > newUserMsgCount && oldUserMsgCount >= 3) {
-            triggerEpisodicSummaryForTrimmed(userId, oldMemories, messages);
+        if (memoryProperties.getChatHistory().getWriteMode()
+                == MemoryProperties.ChatHistoryWriteMode.LEGACY_REWRITE) {
+            doRewriteMessages(userId, newMessages);
+            return;
         }
 
+        doAppendMessages(userId, oldMemories, newMessages);
+    }
+
+    private void doRewriteMessages(String userId, List<ChatMessage> messages) {
         memoryRepository.deleteByUserId(userId);
 
         List<UserMemory> batch = new ArrayList<>(messages.size());
@@ -141,7 +148,117 @@ public class ReliableChatMemoryStore implements ChatMemoryStore {
         }
 
         memoryRepository.saveAll(batch);
-        log.debug("Batch saved {} messages for user: {} (full rewrite)", batch.size(), userId);
+        log.debug("Batch saved {} messages for user: {} (legacy full rewrite)", batch.size(), userId);
+    }
+
+    private void doAppendMessages(String userId, List<UserMemory> oldMemories, List<ChatMessage> newMessages) {
+        List<ChatMessage> existingMessages = oldMemories.stream()
+                .map(this::toChatMessage)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+        int overlap = findSuffixPrefixOverlap(existingMessages, newMessages);
+        if (overlap >= newMessages.size()) {
+            log.debug("No new chat messages to append for user: {} (overlap={})", userId, overlap);
+            return;
+        }
+
+        List<ChatMessage> appendMessages = newMessages.subList(overlap, newMessages.size());
+        int nextSequenceNumber = nextSequenceNumber(oldMemories);
+        List<UserMemory> batch = new ArrayList<>(appendMessages.size());
+        for (int i = 0; i < appendMessages.size(); i++) {
+            UserMemory memory = toUserMemory(userId, appendMessages.get(i));
+            if (memory != null) {
+                memory.setSequenceNumber(nextSequenceNumber + i);
+                batch.add(memory);
+            }
+        }
+
+        if (batch.isEmpty()) {
+            log.debug("No persistable chat messages to append for user: {}", userId);
+            return;
+        }
+
+        memoryRepository.saveAll(batch);
+        log.debug("Appended {} messages for user: {} (overlap={}, existing={})",
+                batch.size(), userId, overlap, existingMessages.size());
+    }
+
+    private void maybeTriggerEpisodicSummaryForTrimmed(
+            String userId,
+            List<UserMemory> oldMemories,
+            List<ChatMessage> newMessages) {
+        int oldUserMsgCount = (int) oldMemories.stream()
+                .filter(m -> TYPE_USER.equals(m.getMessageType()))
+                .count();
+        int newUserMsgCount = (int) newMessages.stream()
+                .filter(m -> m instanceof UserMessage)
+                .count();
+
+        if (oldUserMsgCount > newUserMsgCount && oldUserMsgCount >= 3) {
+            triggerEpisodicSummaryForTrimmed(userId, oldMemories, newMessages);
+        }
+    }
+
+    private int findSuffixPrefixOverlap(List<ChatMessage> existingMessages, List<ChatMessage> incomingMessages) {
+        int max = Math.min(existingMessages.size(), incomingMessages.size());
+        for (int length = max; length > 0; length--) {
+            boolean matches = true;
+            int existingStart = existingMessages.size() - length;
+            for (int i = 0; i < length; i++) {
+                if (!sameMessage(existingMessages.get(existingStart + i), incomingMessages.get(i))) {
+                    matches = false;
+                    break;
+                }
+            }
+            if (matches) {
+                return length;
+            }
+        }
+        return 0;
+    }
+
+    private int nextSequenceNumber(List<UserMemory> oldMemories) {
+        return oldMemories.stream()
+                .map(UserMemory::getSequenceNumber)
+                .filter(Objects::nonNull)
+                .max(Integer::compareTo)
+                .map(max -> max + 1)
+                .orElse(oldMemories.size());
+    }
+
+    private boolean sameMessage(ChatMessage left, ChatMessage right) {
+        return messageSignature(left).equals(messageSignature(right));
+    }
+
+    private String messageSignature(ChatMessage message) {
+        if (message instanceof UserMessage userMsg) {
+            return TYPE_USER + "\u001f" + nullSafe(userMsg.singleText());
+        }
+        if (message instanceof AiMessage aiMsg) {
+            String toolRequests = "";
+            if (aiMsg.hasToolExecutionRequests()) {
+                toolRequests = aiMsg.toolExecutionRequests().stream()
+                        .map(req -> nullSafe(req.id()) + "\u001d"
+                                + nullSafe(req.name()) + "\u001d"
+                                + nullSafe(req.arguments()))
+                        .collect(Collectors.joining("\u001e"));
+            }
+            return TYPE_AI + "\u001f" + nullSafe(aiMsg.text()) + "\u001f" + toolRequests;
+        }
+        if (message instanceof SystemMessage sysMsg) {
+            return TYPE_SYSTEM + "\u001f" + nullSafe(sysMsg.text());
+        }
+        if (message instanceof ToolExecutionResultMessage toolMsg) {
+            return TYPE_TOOL_EXECUTION + "\u001f"
+                    + nullSafe(toolMsg.id()) + "\u001f"
+                    + nullSafe(toolMsg.toolName()) + "\u001f"
+                    + nullSafe(toolMsg.text());
+        }
+        return message.getClass().getName() + "\u001f" + message;
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 
     @Transactional

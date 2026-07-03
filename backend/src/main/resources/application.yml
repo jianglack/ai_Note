@@ -147,6 +147,8 @@ app:
       mode: ${MEMORY_RETRIEVAL_MODE:legacy}
     audit:
       enabled: ${MEMORY_AUDIT_ENABLED:true}
+    chat-history:
+      write-mode: ${MEMORY_CHAT_HISTORY_WRITE_MODE:append}
     max-per-user: 50                 # 每用户最大语义记忆条数
     similarity-threshold: 0.85       # 语义去重阈值（cosine similarity）
     decay-half-life-days: 30         # 衰减半衰期（天）
