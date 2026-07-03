@@ -52,6 +52,8 @@ class AgentServiceMemoryFlushTest {
     private ToolCallAuditor toolCallAuditor;
     private ReliableChatMemoryStore reliableChatMemoryStore;
     private MemoryExtractionService memoryExtractionService;
+    private MemoryOrchestrator memoryOrchestrator;
+    private MemoryProperties memoryProperties;
     private Tracer tracer;
     private com.ainote.app.agent.tools.ToolLoopDetector toolLoopDetector;
     private ConcurrencyGuard concurrencyGuard;
@@ -72,6 +74,8 @@ class AgentServiceMemoryFlushTest {
         toolCallAuditor = mock(ToolCallAuditor.class);
         reliableChatMemoryStore = mock(ReliableChatMemoryStore.class);
         memoryExtractionService = mock(MemoryExtractionService.class);
+        memoryOrchestrator = mock(MemoryOrchestrator.class);
+        memoryProperties = new MemoryProperties();
         tracer = mock(Tracer.class);
         toolLoopDetector = mock(com.ainote.app.agent.tools.ToolLoopDetector.class);
         concurrencyGuard = mock(ConcurrencyGuard.class);
@@ -85,7 +89,7 @@ class AgentServiceMemoryFlushTest {
                 userMemoryRepository, objectMapper, new PendingActionRegistry(objectMapper),
                 realExecutor, contextAssembler,
                 toolCallAuditor, reliableChatMemoryStore, memoryExtractionService,
-                mock(MemoryOrchestrator.class), new MemoryProperties(),
+                memoryOrchestrator, memoryProperties,
                 tracer, toolLoopDetector, concurrencyGuard, tokenBudget,
                 inputGuardrail, outputGuardrail);
         ReflectionTestUtils.setField(agentService, "agentTimeoutSeconds", 30);
@@ -172,6 +176,30 @@ class AgentServiceMemoryFlushTest {
         assertThat(isActiveOnExecutorThread)
                 .as("DeferredMemoryState must be cleared even when Agent throws")
                 .isFalse();
+    }
+
+    @Test
+    void policyCaptureUsesOrchestratorWhenAbFlagEnabled() {
+        memoryProperties.getCapture().setMode(MemoryProperties.CaptureMode.POLICY);
+        memoryProperties.getOrchestrator().setEnabled(true);
+        stubSuccessfulAgentResponse("ok");
+
+        agentService.chat("记住，我希望详细回答", List.of(), "user-1");
+
+        verify(memoryOrchestrator).captureAfterTurn("user-1", "记住，我希望详细回答", "ok");
+        verify(memoryExtractionService, never()).extractSemanticMemoryAsync(anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void policyCaptureFallsBackToLegacyWhenOrchestratorAbFlagDisabled() {
+        memoryProperties.getCapture().setMode(MemoryProperties.CaptureMode.POLICY);
+        memoryProperties.getOrchestrator().setEnabled(false);
+        stubSuccessfulAgentResponse("ok");
+
+        agentService.chat("记住，我希望详细回答", List.of(), "user-1");
+
+        verify(memoryOrchestrator, never()).captureAfterTurn(anyString(), anyString(), anyString());
+        verify(memoryExtractionService).extractSemanticMemoryAsync("user-1", "记住，我希望详细回答", "ok");
     }
 
     private void stubSuccessfulAgentResponse(String content) {

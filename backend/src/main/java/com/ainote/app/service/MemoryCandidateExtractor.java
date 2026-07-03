@@ -20,8 +20,8 @@ public class MemoryCandidateExtractor {
             return List.of();
         }
 
-        String category = inferCategory(content);
         boolean correction = isCorrection(userMessage);
+        String category = correction ? "preference" : inferCategory(content);
         double confidence = Math.max(decision.baseConfidence(), correction ? 0.9 : 0.0);
         return List.of(new MemoryCandidate(
                 category,

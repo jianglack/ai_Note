@@ -992,7 +992,11 @@ public class AgentService {
     }
 
     private void captureLongTermMemory(String userId, String query, String cleanResponse) {
-        if (memoryProperties.getCapture().getMode() == MemoryProperties.CaptureMode.POLICY) {
+        if (!memoryProperties.getCapture().isEnabled()) {
+            return;
+        }
+        if (memoryProperties.getOrchestrator().isEnabled()
+                && memoryProperties.getCapture().getMode() == MemoryProperties.CaptureMode.POLICY) {
             memoryOrchestrator.captureAfterTurn(userId, query, cleanResponse);
             return;
         }

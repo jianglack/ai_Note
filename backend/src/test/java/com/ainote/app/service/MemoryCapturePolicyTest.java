@@ -39,6 +39,16 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void correctedPreferenceShouldBeAllowedForSupersedeFlow() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest("user-1", "以后不要简短，我要完整详细方案。", "好的"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE);
+        assertThat(decision.reason()).contains("correction");
+    }
+
+    @Test
     void selectedNoteAndRagReferenceContentShouldNotBecomeUserProfile() {
         MemoryCapturePolicy.CaptureDecision selectedNoteDecision = policy.evaluate(
                 new MemoryCapturePolicy.CaptureRequest("user-1", "总结这篇笔记", "这篇笔记说作者喜欢 Rust"));

@@ -34,6 +34,9 @@ public class MemoryCapturePolicy {
         if (isExplicitRemember(compact)) {
             return CaptureDecision.allow(DecisionType.ALLOW_EXPLICIT, "explicit_memory", 0.95);
         }
+        if (looksLikePreferenceCorrection(compact)) {
+            return CaptureDecision.allow(DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE, "correction_preference", 0.85);
+        }
         if (looksLikePreference(compact)) {
             return CaptureDecision.allow(DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE, "implicit_preference", 0.65);
         }
@@ -60,6 +63,15 @@ public class MemoryCapturePolicy {
                 || compact.contains("prefer")
                 || compact.contains("like")
                 || compact.contains("iwantyouto");
+    }
+
+    private boolean looksLikePreferenceCorrection(String compact) {
+        return compact.contains("以后不要")
+                || compact.contains("不再")
+                || compact.contains("改为")
+                || compact.contains("nolonger")
+                || compact.contains("instead")
+                || compact.contains("rather");
     }
 
     private boolean isForgetRequest(String compact) {

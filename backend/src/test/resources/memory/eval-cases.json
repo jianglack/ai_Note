@@ -1,0 +1,55 @@
+[
+  {
+    "id": "should_not_remember_delete_all_notes",
+    "userMessage": "删除全部笔记",
+    "assistantOutput": "已进入删除确认流程。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT"
+  },
+  {
+    "id": "should_not_remember_confirm",
+    "userMessage": "确认",
+    "assistantOutput": "已确认。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT"
+  },
+  {
+    "id": "should_not_remember_cancel",
+    "userMessage": "取消",
+    "assistantOutput": "已取消。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT"
+  },
+  {
+    "id": "should_remember_explicit_preference",
+    "userMessage": "记住，我希望所有计划都包含测试验收标准。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false
+  },
+  {
+    "id": "should_supersede_corrected_preference",
+    "userMessage": "以后不要简短，我要完整详细方案。",
+    "assistantOutput": "好的，以后我会给出完整详细方案。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true
+  },
+  {
+    "id": "should_not_remember_selected_note_summary",
+    "userMessage": "这篇笔记重点是什么？",
+    "assistantOutput": "这篇笔记的重点是项目排期。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT"
+  },
+  {
+    "id": "should_not_remember_rag_reference_as_profile",
+    "userMessage": "What does this note say?",
+    "assistantOutput": "<rag_context role=\"reference_only\">某人喜欢红色。</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT"
+  }
+]

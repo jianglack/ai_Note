@@ -139,12 +139,12 @@ app:
   # 记忆系统配置
   memory:
     orchestrator:
-      enabled: ${MEMORY_ORCHESTRATOR_ENABLED:false}
+      enabled: ${MEMORY_ORCHESTRATOR_ENABLED:true}
     capture:
       enabled: ${MEMORY_CAPTURE_ENABLED:true}
-      mode: ${MEMORY_CAPTURE_MODE:legacy}
+      mode: ${MEMORY_CAPTURE_MODE:policy}
     retrieval:
-      mode: ${MEMORY_RETRIEVAL_MODE:legacy}
+      mode: ${MEMORY_RETRIEVAL_MODE:query_relevant}
     audit:
       enabled: ${MEMORY_AUDIT_ENABLED:true}
     chat-history:
