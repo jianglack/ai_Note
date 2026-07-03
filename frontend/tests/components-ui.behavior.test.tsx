@@ -8,9 +8,13 @@ const apiMocks = vi.hoisted(() => ({
   getWorkflows: vi.fn(),
   createWorkflow: vi.fn(),
   deleteWorkflow: vi.fn(),
+  deleteMemory: vi.fn(),
+  exportMemories: vi.fn(),
+  getMemories: vi.fn(),
   toggleWorkflow: vi.fn(),
   runWorkflow: vi.fn(),
   getWorkflowRuns: vi.fn(),
+  updateMemory: vi.fn(),
 }));
 
 const dialogMocks = vi.hoisted(() => ({
@@ -22,9 +26,13 @@ vi.mock('../src/api', () => ({
   getWorkflows: apiMocks.getWorkflows,
   createWorkflow: apiMocks.createWorkflow,
   deleteWorkflow: apiMocks.deleteWorkflow,
+  deleteMemory: apiMocks.deleteMemory,
+  exportMemories: apiMocks.exportMemories,
+  getMemories: apiMocks.getMemories,
   toggleWorkflow: apiMocks.toggleWorkflow,
   runWorkflow: apiMocks.runWorkflow,
   getWorkflowRuns: apiMocks.getWorkflowRuns,
+  updateMemory: apiMocks.updateMemory,
 }));
 
 vi.mock('../src/services/dialogService', () => ({

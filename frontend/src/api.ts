@@ -459,6 +459,81 @@ export async function clearChatMemory(): Promise<void> {
   await api.delete('/api/ai/chat/history');
 }
 
+export type MemoryStatus = 'active' | 'disabled' | 'deleted' | 'retracted' | 'superseded';
+
+export type MemoryRecord = {
+  id: number;
+  type: string;
+  memoryType: string | null;
+  category: string | null;
+  content: string;
+  confidence: number | null;
+  source: string | null;
+  scope: string | null;
+  status: MemoryStatus | string;
+  sourceTraceId: string | null;
+  sourceMessageIds: string | null;
+  sourceToolCallId: string | null;
+  evidenceExcerpt: string | null;
+  lastAccessedAt: string | null;
+  accessCount: number | null;
+  supersedesId: number | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type MemoryListResponse = {
+  items: MemoryRecord[];
+  nextCursor: string | null;
+};
+
+export type MemoryListParams = {
+  type?: string;
+  status?: MemoryStatus | string;
+  query?: string;
+  cursor?: string | null;
+};
+
+export type MemoryUpdatePayload = {
+  content?: string;
+  status?: MemoryStatus;
+  memoryType?: string;
+  scope?: string;
+  confidence?: number;
+  reason?: string;
+};
+
+export async function getMemories(params: MemoryListParams = {}): Promise<MemoryListResponse> {
+  const res = await api.get('/api/memories', {
+    params: {
+      type: params.type || undefined,
+      status: params.status || undefined,
+      query: params.query || undefined,
+      cursor: params.cursor || undefined,
+    },
+  });
+  return res.data;
+}
+
+export async function updateMemory(id: number, payload: MemoryUpdatePayload): Promise<MemoryRecord> {
+  const res = await api.patch(`/api/memories/${id}`, payload);
+  return res.data;
+}
+
+export async function deleteMemory(id: number): Promise<void> {
+  await api.delete(`/api/memories/${id}`);
+}
+
+export async function forgetMemories(payload: { memoryIds?: number[]; query?: string; reason?: string }): Promise<{ deletedCount: number }> {
+  const res = await api.post('/api/memories/forget', payload);
+  return res.data;
+}
+
+export async function exportMemories(): Promise<MemoryListResponse> {
+  const res = await api.get('/api/memories/export');
+  return res.data;
+}
+
 export async function saveChatMessages(userMessage: string, aiReply: string): Promise<void> {
   await api.post('/api/ai/chat/save', { userMessage, aiReply });
 }

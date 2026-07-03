@@ -1,0 +1,351 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  CheckCircleIcon,
+  EyeSlashIcon,
+  MagnifyingGlassIcon,
+  TrashIcon,
+} from '@heroicons/react/24/outline';
+import {
+  deleteMemory,
+  exportMemories,
+  getMemories,
+  updateMemory,
+  type MemoryListParams,
+  type MemoryRecord,
+  type MemoryStatus,
+} from '../api';
+import { askConfirm } from '../services/dialogService';
+import { useToastStore } from '../stores/toastStore';
+
+const TYPE_OPTIONS = [
+  { value: '', label: '全部类型' },
+  { value: 'preference', label: '偏好' },
+  { value: 'style', label: '风格' },
+  { value: 'fact', label: '事实' },
+  { value: 'procedure', label: '流程' },
+  { value: 'project_context', label: '项目上下文' },
+];
+
+const STATUS_OPTIONS = [
+  { value: '', label: '全部状态' },
+  { value: 'active', label: 'active' },
+  { value: 'disabled', label: 'disabled' },
+  { value: 'deleted', label: 'deleted' },
+  { value: 'retracted', label: 'retracted' },
+  { value: 'superseded', label: 'superseded' },
+];
+
+function formatDate(value: string | null) {
+  if (!value) return '未知';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatConfidence(value: number | null) {
+  if (value === null || value === undefined) return 'n/a';
+  return `${Math.round(value * 100)}%`;
+}
+
+function downloadMemoryExport(payload: unknown) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `ainote-memories-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+}
+
+export default function MemoryControlPanel() {
+  const addToast = useToastStore(state => state.addToast);
+  const [memories, setMemories] = useState<MemoryRecord[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [request, setRequest] = useState<MemoryListParams>({ type: '', status: '', query: '' });
+  const [typeFilter, setTypeFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [queryInput, setQueryInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busyMemoryId, setBusyMemoryId] = useState<number | null>(null);
+  const [exporting, setExporting] = useState(false);
+
+  const activeCount = useMemo(
+    () => memories.filter(memory => memory.status === 'active' || !memory.status).length,
+    [memories],
+  );
+
+  const loadMemories = useCallback(async (options: { cursor?: string | null; append?: boolean } = {}) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await getMemories({
+        ...request,
+        cursor: options.cursor ?? undefined,
+      });
+      setMemories(current => options.append ? [...current, ...response.items] : response.items);
+      setNextCursor(response.nextCursor);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '记忆列表加载失败';
+      setError(message);
+      addToast({ type: 'failed', title: '记忆加载失败', message });
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast, request]);
+
+  useEffect(() => {
+    void loadMemories();
+  }, [loadMemories]);
+
+  const applyFilters = (next: MemoryListParams = {
+    type: typeFilter,
+    status: statusFilter,
+    query: queryInput.trim(),
+  }) => {
+    setRequest(next);
+  };
+
+  const handleStatusChange = (value: string) => {
+    setStatusFilter(value);
+    applyFilters({ type: typeFilter, status: value, query: queryInput.trim() });
+  };
+
+  const handleTypeChange = (value: string) => {
+    setTypeFilter(value);
+    applyFilters({ type: value, status: statusFilter, query: queryInput.trim() });
+  };
+
+  const toggleMemoryStatus = async (memory: MemoryRecord) => {
+    const nextStatus: MemoryStatus = memory.status === 'disabled' ? 'active' : 'disabled';
+    setBusyMemoryId(memory.id);
+    try {
+      const updated = await updateMemory(memory.id, {
+        status: nextStatus,
+        reason: `user ${nextStatus === 'active' ? 'enabled' : 'disabled'} memory from control panel`,
+      });
+      setMemories(current => current.map(item => item.id === updated.id ? updated : item));
+      addToast({
+        type: 'success',
+        title: nextStatus === 'active' ? '记忆已启用' : '记忆已禁用',
+      });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '记忆状态更新失败';
+      addToast({ type: 'failed', title: '记忆状态更新失败', message });
+    } finally {
+      setBusyMemoryId(null);
+    }
+  };
+
+  const deleteMemoryItem = async (memory: MemoryRecord) => {
+    const confirmed = await askConfirm({
+      title: '删除这条记忆？',
+      message: '删除后它不会再进入模型上下文，审计事件会保留。',
+      confirmLabel: '删除',
+      cancelLabel: '取消',
+      danger: true,
+    });
+    if (!confirmed) return;
+
+    setBusyMemoryId(memory.id);
+    try {
+      await deleteMemory(memory.id);
+      setMemories(current => current.filter(item => item.id !== memory.id));
+      addToast({ type: 'success', title: '记忆已删除' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '记忆删除失败';
+      addToast({ type: 'failed', title: '记忆删除失败', message });
+    } finally {
+      setBusyMemoryId(null);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      const payload = await exportMemories();
+      downloadMemoryExport(payload);
+      addToast({ type: 'success', title: '记忆导出已生成' });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '记忆导出失败';
+      addToast({ type: 'failed', title: '记忆导出失败', message });
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  return (
+    <section className="memory-control-panel">
+      <div className="memory-panel-header">
+        <div>
+          <h1 className="settings-page-title">AI 记忆</h1>
+          <p className="settings-page-desc">
+            查看、禁用、删除和导出长期记忆。删除或禁用后的记忆不会进入模型上下文。
+          </p>
+        </div>
+        <button
+          type="button"
+          className="memory-icon-button"
+          aria-label="导出记忆"
+          title="导出记忆"
+          onClick={handleExport}
+          disabled={exporting}
+        >
+          <ArrowDownTrayIcon aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="memory-toolbar">
+        <label className="memory-search">
+          <MagnifyingGlassIcon aria-hidden="true" />
+          <input
+            aria-label="搜索记忆"
+            value={queryInput}
+            onChange={event => setQueryInput(event.target.value)}
+            onKeyDown={event => {
+              if (event.key === 'Enter') applyFilters();
+            }}
+            placeholder="搜索内容、证据或来源"
+          />
+        </label>
+        <select
+          className="memory-select"
+          aria-label="记忆类型"
+          value={typeFilter}
+          onChange={event => handleTypeChange(event.target.value)}
+        >
+          {TYPE_OPTIONS.map(option => (
+            <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <select
+          className="memory-select"
+          aria-label="记忆状态"
+          value={statusFilter}
+          onChange={event => handleStatusChange(event.target.value)}
+        >
+          {STATUS_OPTIONS.map(option => (
+            <option key={option.value || 'all'} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          className="memory-secondary-button"
+          onClick={() => applyFilters()}
+          aria-label="搜索记忆"
+        >
+          搜索
+        </button>
+        <button
+          type="button"
+          className="memory-icon-button"
+          onClick={() => void loadMemories()}
+          aria-label="刷新记忆"
+          title="刷新记忆"
+          disabled={loading}
+        >
+          <ArrowPathIcon aria-hidden="true" />
+        </button>
+      </div>
+
+      <div className="memory-summary" aria-live="polite">
+        <span>{memories.length} 条可见记忆</span>
+        <span>{activeCount} 条 active</span>
+        {loading && <span>加载中</span>}
+        {error && <span className="memory-error">{error}</span>}
+      </div>
+
+      {memories.length === 0 && !loading ? (
+        <div className="memory-empty">暂无符合条件的长期记忆。</div>
+      ) : (
+        <ul className="memory-list">
+          {memories.map(memory => {
+            const canToggle = memory.status === 'active' || memory.status === 'disabled' || !memory.status;
+            const toggledOff = memory.status === 'disabled';
+            return (
+              <li className="memory-list-item" key={memory.id}>
+                <div className="memory-item-main">
+                  <div className="memory-item-topline">
+                    <span className="memory-chip">{memory.memoryType || memory.category || memory.type}</span>
+                    <span className={`memory-status memory-status-${memory.status || 'active'}`}>
+                      {memory.status || 'active'}
+                    </span>
+                    <span className="memory-muted">confidence {formatConfidence(memory.confidence)}</span>
+                  </div>
+                  <p className="memory-content">{memory.content}</p>
+                  {memory.evidenceExcerpt && (
+                    <blockquote className="memory-evidence">{memory.evidenceExcerpt}</blockquote>
+                  )}
+                  <dl className="memory-meta">
+                    <div>
+                      <dt>来源</dt>
+                      <dd>{memory.source || 'unknown'}</dd>
+                    </div>
+                    <div>
+                      <dt>Trace</dt>
+                      <dd>{memory.sourceTraceId || 'n/a'}</dd>
+                    </div>
+                    <div>
+                      <dt>范围</dt>
+                      <dd>{memory.scope || 'global'}</dd>
+                    </div>
+                    <div>
+                      <dt>更新</dt>
+                      <dd>{formatDate(memory.updatedAt || memory.createdAt)}</dd>
+                    </div>
+                    <div>
+                      <dt>使用</dt>
+                      <dd>{memory.accessCount ?? 0}</dd>
+                    </div>
+                  </dl>
+                </div>
+                <div className="memory-actions">
+                  <button
+                    type="button"
+                    className="memory-icon-button"
+                    aria-label={`${toggledOff ? '启用' : '禁用'}记忆 ${memory.id}`}
+                    title={toggledOff ? '启用记忆' : '禁用记忆'}
+                    disabled={!canToggle || busyMemoryId === memory.id}
+                    onClick={() => void toggleMemoryStatus(memory)}
+                  >
+                    {toggledOff ? <CheckCircleIcon aria-hidden="true" /> : <EyeSlashIcon aria-hidden="true" />}
+                  </button>
+                  <button
+                    type="button"
+                    className="memory-icon-button danger"
+                    aria-label={`删除记忆 ${memory.id}`}
+                    title="删除记忆"
+                    disabled={busyMemoryId === memory.id || memory.status === 'deleted'}
+                    onClick={() => void deleteMemoryItem(memory)}
+                  >
+                    <TrashIcon aria-hidden="true" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {nextCursor && (
+        <button
+          type="button"
+          className="memory-secondary-button memory-load-more"
+          onClick={() => void loadMemories({ cursor: nextCursor, append: true })}
+          disabled={loading}
+        >
+          加载更多
+        </button>
+      )}
+    </section>
+  );
+}

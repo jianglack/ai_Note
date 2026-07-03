@@ -1,9 +1,10 @@
 import { useState } from 'react';
+import MemoryControlPanel from './MemoryControlPanel';
 import { useUiStore } from '../stores/uiStore';
 import { useToastStore } from '../stores/toastStore';
 import './SettingsPage.css';
 
-type TabId = 'ai';
+type TabId = 'ai' | 'memory';
 type ModelMode = 'fast' | 'balance' | 'deep';
 
 type AiSettingsState = {
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS: AiSettingsState = {
 
 const TABS: { id: TabId; label: string; icon: string; accent?: boolean }[] = [
   { id: 'ai', label: 'AI · 墨子', icon: '✦', accent: true },
+  { id: 'memory', label: 'AI 记忆', icon: '◉' },
 ];
 
 function loadAiSettings(): AiSettingsState {
@@ -229,6 +231,7 @@ export default function SettingsPage() {
 
         <main className="settings-main">
           {tab === 'ai' && <AiSettings />}
+          {tab === 'memory' && <MemoryControlPanel />}
         </main>
       </div>
     </div>
