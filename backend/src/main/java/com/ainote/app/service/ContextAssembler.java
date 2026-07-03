@@ -51,6 +51,7 @@ public class ContextAssembler {
     private final EpisodicMemoryRepository episodicMemoryRepository;
     private final JiTokenService jiTokenService;
     private final RagFeedbackService ragFeedbackService;
+    private final MemoryRetrievalService memoryRetrievalService;
     private final MemoryProperties memoryProperties;
 
     @Value("${app.context.note-max-chars:800}")
@@ -87,6 +88,7 @@ public class ContextAssembler {
                             EpisodicMemoryRepository episodicMemoryRepository,
                             JiTokenService jiTokenService,
                             RagFeedbackService ragFeedbackService,
+                            MemoryRetrievalService memoryRetrievalService,
                             MemoryProperties memoryProperties) {
         this.noteRepository = noteRepository;
         this.folderRepository = folderRepository;
@@ -95,6 +97,7 @@ public class ContextAssembler {
         this.episodicMemoryRepository = episodicMemoryRepository;
         this.jiTokenService = jiTokenService;
         this.ragFeedbackService = ragFeedbackService;
+        this.memoryRetrievalService = memoryRetrievalService;
         this.memoryProperties = memoryProperties;
     }
 
@@ -123,12 +126,19 @@ public class ContextAssembler {
                 "intent=" + intent,
                 "query_chars=" + (query == null ? 0 : query.length()));
 
+        boolean selectedNoteFocused = isSelectedNoteFocused(query, noteIds);
         StringBuilder context = new StringBuilder();
         int usedTokens = 0;
+        MemoryRetrievalService.MemoryRetrievalResult memoryRetrievalResult = null;
+        if (isQueryRelevantRetrieval() && !selectedNoteFocused) {
+            memoryRetrievalResult = retrieveMemoryForQuery(userId, query);
+        }
 
         // CHAT: 仅语义记忆
         if (intent == Intent.CHAT) {
-            String semantic = truncateToTokenBudget(buildSemanticMemory(userId), budgetSemanticMemory);
+            String semantic = selectedNoteFocused
+                    ? skipLongTermMemory(userId, "selected_note_focus")
+                    : truncateToTokenBudget(buildSemanticMemory(userId, memoryRetrievalResult), budgetSemanticMemory);
             context.append(semantic);
             String result = context.toString();
             int estimatedTokens = estimateTokens(result);
@@ -144,12 +154,16 @@ public class ContextAssembler {
         // STANDARD: 统一完整上下文，让 Agent 自行判断该执行、建议还是查询
 
         // 优先级 1：语义记忆（用户偏好/事实）
-        String semantic = truncateToTokenBudget(buildSemanticMemory(userId), budgetSemanticMemory);
+        String semantic = selectedNoteFocused
+                ? skipLongTermMemory(userId, "selected_note_focus")
+                : truncateToTokenBudget(buildSemanticMemory(userId, memoryRetrievalResult), budgetSemanticMemory);
         context.append(semantic);
         usedTokens += estimateTokens(semantic);
 
         // 优先级 2：情节记忆（最近会话摘要）
-        String episodic = truncateToTokenBudget(buildEpisodicMemory(userId), budgetEpisodicMemory);
+        String episodic = selectedNoteFocused
+                ? ""
+                : truncateToTokenBudget(buildEpisodicMemory(userId, memoryRetrievalResult), budgetEpisodicMemory);
         context.append(episodic);
         usedTokens += estimateTokens(episodic);
 
@@ -307,6 +321,10 @@ public class ContextAssembler {
         return !isSelectedNoteFocusedQuery(query);
     }
 
+    private boolean isSelectedNoteFocused(String query, List<String> noteIds) {
+        return noteIds != null && !noteIds.isEmpty() && isSelectedNoteFocusedQuery(query);
+    }
+
     private boolean isSelectedNoteFocusedQuery(String query) {
         String normalized = normalizeReferenceText(query);
         if (normalized.isBlank()) {
@@ -415,13 +433,22 @@ public class ContextAssembler {
                 .replace("'", "&apos;");
     }
 
-    private String buildSemanticMemory(String userId) {
+    private String buildSemanticMemory(String userId, MemoryRetrievalService.MemoryRetrievalResult retrievalResult) {
         try {
-            List<SemanticMemory> memories = semanticMemoryRepository
-                    .findTopByUserId(userId, PageRequest.of(0, 10));
+            List<SemanticMemory> memories;
+            String strategy;
+            if (retrievalResult != null) {
+                memories = retrievalResult.semanticMemories();
+                strategy = "query_relevant";
+            } else {
+                memories = semanticMemoryRepository
+                        .findTopByUserId(userId, PageRequest.of(0, 10));
+                strategy = "legacy";
+            }
             logMemoryContext("semantic_retrieved", userId,
                     "memory_count=" + memories.size(),
-                    "top_k=10");
+                    "top_k=10",
+                    "strategy=" + strategy);
 
             if (memories.isEmpty()) return "";
 
@@ -444,13 +471,27 @@ public class ContextAssembler {
         }
     }
 
-    private String buildEpisodicMemory(String userId) {
+    private String skipLongTermMemory(String userId, String reason) {
+        logMemoryContext("long_term_memory_skipped", userId, "reason=" + reason);
+        return "";
+    }
+
+    private String buildEpisodicMemory(String userId, MemoryRetrievalService.MemoryRetrievalResult retrievalResult) {
         try {
-            List<EpisodicMemory> episodes = episodicMemoryRepository
-                    .findRecentByUserId(userId, PageRequest.of(0, 3));
+            List<EpisodicMemory> episodes;
+            String strategy;
+            if (retrievalResult != null) {
+                episodes = retrievalResult.episodicMemories();
+                strategy = "query_relevant";
+            } else {
+                episodes = episodicMemoryRepository
+                        .findRecentByUserId(userId, PageRequest.of(0, 3));
+                strategy = "legacy";
+            }
             logMemoryContext("episodic_retrieved", userId,
                     "memory_count=" + episodes.size(),
-                    "top_k=3");
+                    "top_k=3",
+                    "strategy=" + strategy);
 
             if (episodes.isEmpty()) return "";
 
@@ -491,5 +532,20 @@ public class ContextAssembler {
 
     private String retrievalModeForLog() {
         return memoryProperties.getRetrieval().getMode().name().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isQueryRelevantRetrieval() {
+        return memoryProperties.getRetrieval().getMode() == MemoryProperties.RetrievalMode.QUERY_RELEVANT;
+    }
+
+    private MemoryRetrievalService.MemoryRetrievalResult retrieveMemoryForQuery(String userId, String query) {
+        try {
+            return memoryRetrievalService.retrieveForQuery(userId, query, 10, 3);
+        } catch (Exception e) {
+            log.warn("Failed to retrieve query-relevant memory", e);
+            logMemoryContext("query_relevant_retrieval_failed", userId,
+                    "query_chars=" + (query == null ? 0 : query.length()));
+            return MemoryRetrievalService.MemoryRetrievalResult.empty();
+        }
     }
 }

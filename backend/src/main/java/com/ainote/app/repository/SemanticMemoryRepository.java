@@ -13,6 +13,23 @@ import java.util.List;
 @Repository
 public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, Long> {
 
+    interface MemorySimilarityView {
+        Long getId();
+        Double getSemanticSimilarity();
+    }
+
+    record MemorySimilarity(Long id, Double semanticSimilarity) implements MemorySimilarityView {
+        @Override
+        public Long getId() {
+            return id;
+        }
+
+        @Override
+        public Double getSemanticSimilarity() {
+            return semanticSimilarity;
+        }
+    }
+
     /**
      * 获取用户的语义记忆，按衰减分数排序（decay_score 由应用层定期更新），取 top N
      */
@@ -38,6 +55,40 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     java.util.Optional<SemanticMemory> findByIdAndUserId(Long id, String userId);
 
     List<SemanticMemory> findByUserIdAndIdIn(String userId, List<Long> ids);
+
+    @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.id IN :ids " +
+           "AND (m.status IS NULL OR m.status = 'active')")
+    List<SemanticMemory> findActiveByUserIdAndIdIn(String userId, List<Long> ids);
+
+    @Query(value = """
+        SELECT id AS id,
+               (1 - (embedding <=> cast(:embedding AS vector))) AS "semanticSimilarity"
+        FROM semantic_memories
+        WHERE user_id = :userId
+          AND (status IS NULL OR status = 'active')
+          AND embedding IS NOT NULL
+          AND (expires_at IS NULL OR expires_at > NOW())
+          AND (1 - (embedding <=> cast(:embedding AS vector))) > :threshold
+        ORDER BY embedding <=> cast(:embedding AS vector) ASC
+        LIMIT :limit
+        """, nativeQuery = true)
+    List<MemorySimilarityView> findRelevantSemanticMatches(String userId,
+                                                           String embedding,
+                                                           double threshold,
+                                                           int limit);
+
+    @Query("""
+           SELECT m FROM SemanticMemory m
+           WHERE m.userId = :userId
+             AND (m.status IS NULL OR m.status = 'active')
+             AND (m.expiresAt IS NULL OR m.expiresAt > CURRENT_TIMESTAMP)
+             AND (
+                  m.memoryType IN ('preference', 'style', 'procedure', 'procedural', 'project_context')
+                  OR m.category IN ('preference', 'style', 'habit', 'fact')
+             )
+           ORDER BY COALESCE(m.decayScore, 0) DESC, m.updatedAt DESC, m.createdAt DESC
+           """)
+    List<SemanticMemory> findRetrievalFallback(String userId, Pageable pageable);
 
     /**
      * 获取用户某分类的所有语义记忆

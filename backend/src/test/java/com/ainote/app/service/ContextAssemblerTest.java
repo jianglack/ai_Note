@@ -37,6 +37,7 @@ class ContextAssemblerTest {
     private EpisodicMemoryRepository episodicMemoryRepository;
     private JiTokenService jiTokenService;
     private RagFeedbackService ragFeedbackService;
+    private MemoryRetrievalService memoryRetrievalService;
     private MemoryProperties memoryProperties;
     private ContextAssembler contextAssembler;
 
@@ -49,6 +50,7 @@ class ContextAssemblerTest {
         episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
         jiTokenService = mock(JiTokenService.class);
         ragFeedbackService = mock(RagFeedbackService.class);
+        memoryRetrievalService = mock(MemoryRetrievalService.class);
         memoryProperties = new MemoryProperties();
         contextAssembler = new ContextAssembler(
                 noteRepository,
@@ -58,6 +60,7 @@ class ContextAssemblerTest {
                 episodicMemoryRepository,
                 jiTokenService,
                 ragFeedbackService,
+                memoryRetrievalService,
                 memoryProperties
         );
 
@@ -168,6 +171,50 @@ class ContextAssemblerTest {
     }
 
     @Test
+    void currentNoteQuestionShouldNotInjectUnrelatedLongTermMemory() {
+        User user = new User();
+        user.setId("user-1");
+
+        Note selected = new Note();
+        selected.setId("selected-note");
+        selected.setTitle("Release Notes");
+        selected.setContent("<p>Selected note content only.</p>");
+        selected.setUser(user);
+        selected.setCreatedAt(LocalDateTime.now());
+        selected.setUpdatedAt(LocalDateTime.now());
+
+        SemanticMemory unrelatedPreference = new SemanticMemory();
+        unrelatedPreference.setCategory("preference");
+        unrelatedPreference.setContent("always mention unrelated database preferences");
+
+        EpisodicMemory unrelatedEpisode = new EpisodicMemory();
+        unrelatedEpisode.setSessionSummary("Old discussion about unrelated RAG tuning.");
+        unrelatedEpisode.setCreatedAt(LocalDateTime.now().minusDays(3));
+
+        when(semanticMemoryRepository.findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any()))
+                .thenReturn(List.of(unrelatedPreference));
+        when(episodicMemoryRepository.findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any()))
+                .thenReturn(List.of(unrelatedEpisode));
+        when(noteRepository.countByUserIdAndDeletedAtIsNull("user-1")).thenReturn(1L);
+        when(folderRepository.findByUserId("user-1")).thenReturn(List.of());
+        when(noteRepository.findByIdAndUserIdWithTagsAndFolder("selected-note", "user-1"))
+                .thenReturn(Optional.of(selected));
+
+        String context = contextAssembler.assemble(
+                "Summarize this note",
+                List.of("selected-note"),
+                "user-1"
+        );
+
+        assertThat(context).contains("Release Notes");
+        assertThat(context).contains("Selected note content only");
+        assertThat(context).doesNotContain("always mention unrelated database preferences");
+        assertThat(context).doesNotContain("Old discussion about unrelated RAG tuning");
+        verify(semanticMemoryRepository, never()).findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+        verify(episodicMemoryRepository, never()).findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+    }
+
+    @Test
     void legacyRetrievalModeUsesExistingRepositoriesAndLogsCounts() {
         SemanticMemory preference = new SemanticMemory();
         preference.setCategory("preference");
@@ -230,5 +277,46 @@ class ContextAssemblerTest {
         } finally {
             logger.detachAppender(appender);
         }
+    }
+
+    @Test
+    void queryRelevantRetrievalModeUsesMemoryRetrievalServiceInsteadOfLegacyTopN() {
+        memoryProperties.getRetrieval().setMode(MemoryProperties.RetrievalMode.QUERY_RELEVANT);
+
+        SemanticMemory preference = new SemanticMemory();
+        preference.setCategory("preference");
+        preference.setContent("prefers selected note summaries without unrelated memory drift");
+
+        EpisodicMemory episode = new EpisodicMemory();
+        episode.setSessionSummary("Discussed selected-note summary isolation.");
+        episode.setCreatedAt(LocalDateTime.now());
+
+        when(memoryRetrievalService.retrieveForQuery(
+                org.mockito.ArgumentMatchers.eq("user-1"),
+                org.mockito.ArgumentMatchers.eq("summarize this note"),
+                org.mockito.ArgumentMatchers.eq(10),
+                org.mockito.ArgumentMatchers.eq(3)
+        )).thenReturn(new MemoryRetrievalService.MemoryRetrievalResult(
+                List.of(preference),
+                List.of(episode)
+        ));
+        when(noteRepository.countByUserIdAndDeletedAtIsNull("user-1")).thenReturn(0L);
+        when(folderRepository.findByUserId("user-1")).thenReturn(List.of());
+        when(ragFeedbackService.getAdaptiveThreshold()).thenReturn(0.7);
+        when(ragService.searchWithMinScore(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyString()))
+                .thenReturn(List.of());
+
+        String context = contextAssembler.assemble("summarize this note", List.of(), "user-1");
+
+        assertThat(context).contains("<user_memory>");
+        assertThat(context).contains("prefers selected note summaries without unrelated memory drift");
+        assertThat(context).contains("<recent_sessions>");
+        assertThat(context).contains("Discussed selected-note summary isolation.");
+        verify(memoryRetrievalService).retrieveForQuery("user-1", "summarize this note", 10, 3);
+        verify(semanticMemoryRepository, never()).findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+        verify(episodicMemoryRepository, never()).findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
     }
 }
