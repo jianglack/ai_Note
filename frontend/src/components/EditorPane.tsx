@@ -806,24 +806,25 @@ function PaginatedToolbar({ editor, timeStr }: { editor: Editor | null; timeStr:
 
 /* Quick chip icons */
 function QuickChipIcon({ name }: { name: string }) {
-  const s = { width: 12, height: 12, flexShrink: 0 } as const;
+  const s = { width: 12, height: 12, style: { flexShrink: 0 } } as const;
+  const svgProps = { width: s.width, height: s.height, style: s.style } as const;
   switch (name) {
     case 'sparkle':
-      return <svg {...s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
+      return <svg {...svgProps} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round">
         <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/>
       </svg>;
     case 'todo':
-      return <svg {...s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      return <svg {...svgProps} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="5" width="6" height="6" rx="1"/><path d="m4.5 8 1.2 1.2L7.5 7.4"/><rect x="3" y="14" width="6" height="6" rx="1"/><path d="M12 8h10M12 17h10"/>
       </svg>;
     case 'quote':
-      return <svg {...s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M5 6h4l-1 6H5zM14 6h4l-1 6h-3z"/></svg>;
+      return <svg {...svgProps} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M5 6h4l-1 6H5zM14 6h4l-1 6h-3z"/></svg>;
     case 'image':
-      return <svg {...s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      return <svg {...svgProps} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 11h18"/>
       </svg>;
     case 'code':
-      return <svg {...s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      return <svg {...svgProps} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
         <path d="m8 8-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>
       </svg>;
     default: return null;

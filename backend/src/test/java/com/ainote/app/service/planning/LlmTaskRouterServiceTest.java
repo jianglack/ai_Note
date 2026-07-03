@@ -27,7 +27,10 @@ class LlmTaskRouterServiceTest {
         assertThat(prompt)
                 .contains("DIRECT_AGENT")
                 .contains("PLANNED_TASK")
-                .contains("JSON");
+                .contains("JSON")
+                .contains("单步危险操作")
+                .contains("PENDING_ACTION")
+                .contains("删除全部活动笔记");
     }
 
     @Test

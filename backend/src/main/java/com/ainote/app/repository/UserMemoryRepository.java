@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,6 +27,18 @@ public interface UserMemoryRepository extends JpaRepository<UserMemory, Long> {
      */
     @Query("SELECT m FROM UserMemory m WHERE m.userId = :userId ORDER BY m.createdAt ASC")
     List<UserMemory> findByUserIdOrderByCreatedAtAsc(String userId, Pageable pageable);
+
+    @Query("""
+        SELECT m FROM UserMemory m
+        WHERE m.userId = :userId
+          AND m.messageType IN ('USER', 'AI')
+          AND (:beforeId IS NULL OR m.id < :beforeId)
+        ORDER BY m.createdAt DESC, m.id DESC
+        """)
+    List<UserMemory> findVisibleByUserIdBeforeIdOrderByCreatedAtDesc(
+            @Param("userId") String userId,
+            @Param("beforeId") Long beforeId,
+            Pageable pageable);
 
     /**
      * 统计用户的消息数量

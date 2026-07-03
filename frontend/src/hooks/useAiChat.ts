@@ -1,13 +1,11 @@
-import { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect, useState } from 'react';
 import { useAiStore } from '../stores/aiStore';
 import { useNoteStore } from '../stores/noteStore';
 import { useUiStore } from '../stores/uiStore';
 import { useCardStore } from '../stores/cardStore';
 import {
   aiChat,
-  aiChatStream,
   smartChat,
-  routeTask,
   getChatHistory,
   getSpiritGreeting,
   getSmartSuggestions,
@@ -20,11 +18,23 @@ import {
   getPlanDetail,
   subscribePlanProgress,
 } from '../api';
-import type { AiChatResponse, TaskRouteDecision } from '../api';
+import type { AiChatResponse, ChatHistoryMessage } from '../api';
 import { useWorkflowExecution } from './useWorkflowExecution';
 import { isSuggestionDismissed } from './useCardActions';
 import { getAuthToken } from '../services/apiBase';
 import type { CardPayload } from '../components/chat/cards/types';
+import type { AiMessage } from '../stores/aiStore';
+
+const CHAT_HISTORY_PAGE_SIZE = 100;
+
+function toAiMessages(history: ChatHistoryMessage[]): AiMessage[] {
+  return history.map(msg => ({
+    id: msg.id,
+    content: msg.content,
+    timestamp: new Date(msg.createdAt).getTime(),
+    role: (msg.role === 'assistant' ? 'spirit' : 'user') as 'spirit' | 'user'
+  }));
+}
 
 export function useAiChat() {
   const ai = useAiStore();
@@ -37,6 +47,10 @@ export function useAiChat() {
   const planProgressCancelRef = useRef<(() => void) | null>(null);
   const typingCancelRef = useRef(false);
   const requestSeqRef = useRef(0);
+  const chatHistoryCursorRef = useRef<string | null>(null);
+  const chatHistoryLoadingOlderRef = useRef(false);
+  const [hasMoreHistory, setHasMoreHistory] = useState(false);
+  const [isLoadingOlderHistory, setIsLoadingOlderHistory] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -49,13 +63,10 @@ export function useAiChat() {
   const loadChatHistory = useCallback(async () => {
     if (!getAuthToken()) return;
     try {
-      const history = await getChatHistory();
-      const loadedMessages = history.map(msg => ({
-        id: msg.id,
-        content: msg.content,
-        timestamp: new Date(msg.createdAt).getTime(),
-        role: (msg.role === 'assistant' ? 'spirit' : 'user') as 'spirit' | 'user'
-      }));
+      const historyPage = await getChatHistory({ limit: CHAT_HISTORY_PAGE_SIZE });
+      const loadedMessages = toAiMessages(historyPage.items);
+      chatHistoryCursorRef.current = historyPage.nextCursor ?? null;
+      setHasMoreHistory(Boolean(historyPage.hasMore && historyPage.nextCursor));
 
       // 如果没有历史消息，显示欢迎问候语
       if (loadedMessages.length === 0) {
@@ -75,6 +86,8 @@ export function useAiChat() {
       loadSmartSuggestions();
     } catch (err) {
       console.error('加载对话历史失败', err);
+      chatHistoryCursorRef.current = null;
+      setHasMoreHistory(false);
       try {
         const greeting = await getSpiritGreeting();
         const greetingMsg = {
@@ -88,6 +101,32 @@ export function useAiChat() {
       } catch (greetErr) {
         console.error('获取问候语失败', greetErr);
       }
+    }
+  }, []);
+
+  const loadOlderChatHistory = useCallback(async () => {
+    const before = chatHistoryCursorRef.current;
+    if (!before || chatHistoryLoadingOlderRef.current) return;
+
+    chatHistoryLoadingOlderRef.current = true;
+    setIsLoadingOlderHistory(true);
+    try {
+      const historyPage = await getChatHistory({ limit: CHAT_HISTORY_PAGE_SIZE, before });
+      const olderMessages = toAiMessages(historyPage.items);
+      const currentMessages = useAiStore.getState().messages;
+      const existingIds = new Set(currentMessages.map(message => message.id));
+      const uniqueOlderMessages = olderMessages.filter(message => !existingIds.has(message.id));
+
+      if (uniqueOlderMessages.length > 0) {
+        useAiStore.getState().setMessages([...uniqueOlderMessages, ...currentMessages]);
+      }
+      chatHistoryCursorRef.current = historyPage.nextCursor ?? null;
+      setHasMoreHistory(Boolean(historyPage.hasMore && historyPage.nextCursor));
+    } catch (err) {
+      console.error('加载更早对话历史失败', err);
+    } finally {
+      chatHistoryLoadingOlderRef.current = false;
+      setIsLoadingOlderHistory(false);
     }
   }, []);
 
@@ -164,29 +203,20 @@ export function useAiChat() {
       ai.setAiSteps([]);
       const selectedNoteIds = noteStore.selectedNote ? [noteStore.selectedNote.id] : [];
 
-      let routeDecision: TaskRouteDecision | undefined;
       try {
-        routeDecision = await routeTask(message, selectedNoteIds);
-      } catch (routeErr) {
-        console.warn('任务路由失败，回退到普通 Agent 流式对话:', routeErr);
-      }
-
-      if (abortController.signal.aborted || requestSeqRef.current !== currentSeq) return;
-
-      if (routeDecision?.route === 'PLANNED_TASK') {
-        ai.addAiStep({ step: 'planning', detail: '正在生成可审批的任务计划...' });
-        const planned = await smartChat(message, selectedNoteIds, true);
+        ai.addAiStep({ step: 'routing', detail: '正在判断处理方式...' });
+        const smartResponse = await smartChat(message, selectedNoteIds, false);
 
         if (abortController.signal.aborted || requestSeqRef.current !== currentSeq) return;
 
-        if (planned.type === 'plan_created' && planned.plan) {
+        if (smartResponse.type === 'plan_created' && smartResponse.plan) {
           ai.addMessage({
             id: (Date.now() + 1).toString(),
-            content: `我已将这个请求识别为需要计划审批的任务。${planned.routeDecision?.reason || routeDecision.reason}`,
+            content: `我已将这个请求识别为需要计划审批的任务。${smartResponse.routeDecision?.reason || ''}`,
             timestamp: Date.now(),
             role: 'spirit',
-            sources: planned.sources,
-            planData: planned.plan,
+            sources: smartResponse.sources,
+            planData: smartResponse.plan,
           });
           ai.setCurrentMessage('');
           ai.setIsTyping(false);
@@ -195,55 +225,12 @@ export function useAiChat() {
           return;
         }
 
-        ai.addMessage({
-          id: (Date.now() + 1).toString(),
-          content: planned.content || '计划创建失败，已返回普通回复。',
-          timestamp: Date.now(),
-          role: 'spirit',
-          sources: planned.sources,
-        });
-        ai.setCurrentMessage('');
-        ai.setIsTyping(false);
-        ai.setAiPhase('idle');
-        ai.setAiSteps([]);
-        return;
-      }
-
-      try {
-        let streamContent = '';
-        let finalResponse: AiChatResponse | undefined;
-
-        await new Promise<void>((resolve, reject) => {
-          const isStale = () => requestSeqRef.current !== currentSeq || abortController.signal.aborted;
-          aiChatStream(
-            message,
-            noteStore.selectedNote ? 'selected' : 'all',
-            noteStore.selectedNote?.id,
-            (token) => {
-              if (isStale() || typingCancelRef.current) return;
-              streamContent += token;
-              ai.setCurrentMessage(streamContent);
-            },
-            (response) => {
-              if (isStale()) { resolve(); return; }
-              finalResponse = response;
-              resolve();
-            },
-            (error) => {
-              if (isStale()) { resolve(); return; }
-              reject(new Error(error));
-            },
-            (step, detail) => {
-              if (isStale() || typingCancelRef.current) return;
-              ai.addAiStep({ step, detail });
-            },
-            abortController.signal
-          );
-        });
-
-        if (abortController.signal.aborted || requestSeqRef.current !== currentSeq) return;
-
-        const displayContent = finalResponse?.content || streamContent || '抱歉，处理请求时出错了';
+        const finalResponse: AiChatResponse = {
+          content: smartResponse.content || '抱歉，处理请求时出错了',
+          sources: smartResponse.sources || {},
+          action: smartResponse.actionJson,
+        };
+        const displayContent = finalResponse.content;
 
         // Check if response contains pending actions
         let workflowCardId: string | undefined;
@@ -264,6 +251,7 @@ export function useAiChat() {
 
             const backendTypeMap: Record<string, string> = {
               DELETE_NOTE: 'deleteNote',
+              DELETE_NOTES: 'deleteNotes',
               PERMANENT_DELETE: 'permanentDeleteNote',
               EMPTY_TRASH: 'emptyTrash',
               DELETE_FOLDER: 'deleteFolder',
@@ -271,6 +259,7 @@ export function useAiChat() {
             };
             const actionDescMap: Record<string, string> = {
               deleteNote: '删除笔记',
+              deleteNotes: '删除全部笔记',
               updateNote: '更新笔记',
               createNote: '创建笔记',
               moveNote: '移动笔记',
@@ -292,7 +281,7 @@ export function useAiChat() {
               const count = actionObject.count != null ? String(actionObject.count) : undefined;
               const details: { label: string; warn?: boolean }[] = [];
               if (folder) details.push({ label: `文件夹：${folder}` });
-              if (normalizedAction === 'deleteNote') details.push({ label: '删除后进入回收站，可恢复' });
+              if (normalizedAction === 'deleteNote' || normalizedAction === 'deleteNotes') details.push({ label: '删除后进入回收站，可恢复' });
               if (count) details.push({ label: `共 ${count} 条`, warn: true });
 
               const desc = title
@@ -512,6 +501,9 @@ export function useAiChat() {
 
   return {
     loadChatHistory,
+    loadOlderChatHistory,
+    hasMoreHistory,
+    isLoadingOlderHistory,
     handleCancelAi,
     handleAiMessage,
     handleAiInlineAction,

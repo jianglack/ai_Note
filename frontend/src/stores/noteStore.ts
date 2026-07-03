@@ -89,7 +89,16 @@ export const useNoteStore = create<NoteState>((set, get) => ({
   loadData: async () => {
     try {
       const { notes, folders } = await loadNotesAndFolders();
-      set({ notes: dedupeNotes(notes), folders });
+      set((s) => {
+        const uniqueNotes = dedupeNotes(notes);
+        return {
+          notes: uniqueNotes,
+          folders,
+          selectedNote: s.selectedNote
+            ? uniqueNotes.find((note) => note.id === s.selectedNote?.id) ?? null
+            : null,
+        };
+      });
     } catch (err) {
       console.error('加载数据失败:', err);
     }

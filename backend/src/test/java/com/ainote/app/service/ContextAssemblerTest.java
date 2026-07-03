@@ -108,4 +108,52 @@ class ContextAssemblerTest {
                 org.mockito.ArgumentMatchers.anyString());
         verify(noteRepository, never()).findByUserIdAndDeletedAtIsNull("user-1");
     }
+
+    @Test
+    @DisplayName("current-note questions should use the selected note only and avoid global RAG drift")
+    void currentNoteQuestionShouldUseSelectedNoteOnlyAndAvoidGlobalRagDrift() {
+        User user = new User();
+        user.setId("user-1");
+
+        Note selected = new Note();
+        selected.setId("selected-note");
+        selected.setTitle("Prompt Template Library");
+        selected.setContent("<p>Prompt-specific content that should be summarized.</p>");
+        selected.setUser(user);
+        selected.setCreatedAt(LocalDateTime.now());
+        selected.setUpdatedAt(LocalDateTime.now());
+
+        com.ainote.app.model.Note ragHit = new com.ainote.app.model.Note();
+        ragHit.setId("rag-note");
+        ragHit.setTitle("RAG Study Note");
+        ragHit.setContent("RAG content that must not drift into a current-note answer.");
+
+        when(semanticMemoryRepository.findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+        when(episodicMemoryRepository.findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), org.mockito.ArgumentMatchers.any()))
+                .thenReturn(List.of());
+        when(noteRepository.countByUserIdAndDeletedAtIsNull("user-1")).thenReturn(2L);
+        when(folderRepository.findByUserId("user-1")).thenReturn(List.of());
+        when(noteRepository.findByIdAndUserIdWithTagsAndFolder("selected-note", "user-1"))
+                .thenReturn(Optional.of(selected));
+        when(ragFeedbackService.getAdaptiveThreshold()).thenReturn(0.7);
+        when(ragService.searchWithMinScore("What are the key points of this note?", 5, 0.7, "user-1"))
+                .thenReturn(List.of(ragHit));
+
+        String context = contextAssembler.assemble(
+                "What are the key points of this note?",
+                List.of("selected-note"),
+                "user-1"
+        );
+
+        assertThat(context).contains("<selected_notes default_operation_target=\"true\">");
+        assertThat(context).contains("Prompt Template Library");
+        assertThat(context).contains("Prompt-specific content");
+        assertThat(context).doesNotContain("<rag_context");
+        assertThat(context).doesNotContain("RAG Study Note");
+        verify(ragService, never()).searchWithMinScore(org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyDouble(),
+                org.mockito.ArgumentMatchers.anyString());
+    }
 }

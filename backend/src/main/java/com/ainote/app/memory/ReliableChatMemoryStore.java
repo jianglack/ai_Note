@@ -63,6 +63,16 @@ public class ReliableChatMemoryStore implements ChatMemoryStore {
         log.debug("Loading messages for user: {}", userId);
 
         try {
+            List<ChatMessage> deferredMessages = DeferredMemoryState.peek(userId);
+            if (deferredMessages != null) {
+                if (!IN_AGENT_LOOP.get()) {
+                    return sanitizeMessages(deferredMessages);
+                }
+                log.debug("Loaded {} deferred messages (in agent loop) for user: {}",
+                        deferredMessages.size(), userId);
+                return new ArrayList<>(deferredMessages);
+            }
+
             List<UserMemory> memories = memoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId);
             List<ChatMessage> messages = memories.stream()
                     .map(this::toChatMessage)

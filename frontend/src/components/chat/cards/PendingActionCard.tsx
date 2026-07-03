@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
-import { sendActionFeedback } from '../../../api';
+import { saveChatMessages, sendActionFeedback } from '../../../api';
 import { useAiStore } from '../../../stores/aiStore';
+import { useNoteStore } from '../../../stores/noteStore';
 import './ai-cards.css';
 
 type CardState = 'idle' | 'notifying' | 'ai-responding' | 'done';
@@ -31,11 +32,24 @@ export default function PendingActionCard({
         confirmed: decision === 'confirm',
       });
 
+      if (decision === 'confirm') {
+        try {
+          await useNoteStore.getState().loadData();
+        } catch (refreshErr) {
+          console.warn('Failed to refresh notes after action feedback:', refreshErr);
+        }
+      }
+
       setState('ai-responding');
 
       // Add the AI follow-up message to chat
       if (response?.content) {
         setFollowUpMessage(response.content);
+        try {
+          await saveChatMessages(decision === 'confirm' ? '确认执行' : '取消执行', response.content);
+        } catch (saveErr) {
+          console.warn('Failed to persist action feedback chat:', saveErr);
+        }
         setTimeout(() => {
           ai.addMessage({
             id: `feedback-${Date.now()}`,

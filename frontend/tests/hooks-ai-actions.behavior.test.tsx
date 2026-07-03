@@ -77,7 +77,7 @@ describe('useAiChat and useActions behavior', () => {
   });
 
   it('loads greeting when chat history is empty', async () => {
-    apiMocks.getChatHistory.mockResolvedValueOnce([]);
+    apiMocks.getChatHistory.mockResolvedValueOnce({ items: [], nextCursor: null, hasMore: false });
     apiMocks.getSpiritGreeting.mockResolvedValueOnce('hello');
     apiMocks.getSmartSuggestions.mockResolvedValueOnce([]);
     const { result } = renderHook(() => useAiChat());
@@ -86,38 +86,55 @@ describe('useAiChat and useActions behavior', () => {
       await result.current.loadChatHistory();
     });
 
-    expect(apiMocks.getChatHistory).toHaveBeenCalled();
+    expect(apiMocks.getChatHistory).toHaveBeenCalledWith({ limit: 100 });
+    expect(result.current.hasMoreHistory).toBe(false);
     expect(useAiStore.getState().messages).toHaveLength(1);
     expect(useAiStore.getState().messages[0]).toMatchObject({ content: 'hello', role: 'spirit' });
   });
 
-  it('streams a direct agent response and refreshes note data', async () => {
+  it('prepends older chat history when requested', async () => {
+    apiMocks.getChatHistory
+      .mockResolvedValueOnce({
+        items: [{ id: 'm2', role: 'assistant', content: 'latest', createdAt: '2026-07-03T10:00:00' }],
+        nextCursor: 'm2',
+        hasMore: true,
+      })
+      .mockResolvedValueOnce({
+        items: [{ id: 'm1', role: 'user', content: 'older', createdAt: '2026-07-03T09:00:00' }],
+        nextCursor: null,
+        hasMore: false,
+      });
+    apiMocks.getSmartSuggestions.mockResolvedValueOnce([]);
+    const { result } = renderHook(() => useAiChat());
+
+    await act(async () => {
+      await result.current.loadChatHistory();
+    });
+
+    expect(useAiStore.getState().messages.map((message) => message.content)).toEqual(['latest']);
+    expect(result.current.hasMoreHistory).toBe(true);
+
+    await act(async () => {
+      await result.current.loadOlderChatHistory();
+    });
+
+    expect(apiMocks.getChatHistory).toHaveBeenLastCalledWith({ limit: 100, before: 'm2' });
+    expect(useAiStore.getState().messages.map((message) => message.content)).toEqual(['older', 'latest']);
+    expect(result.current.hasMoreHistory).toBe(false);
+  });
+
+  it('uses smart chat for a direct agent response and refreshes note data', async () => {
     const loadData = vi.fn();
     useNoteStore.setState({
       notes: [note],
       selectedNote: note,
       loadData,
     });
-    apiMocks.routeTask.mockResolvedValueOnce({
+    apiMocks.smartChat.mockResolvedValueOnce({
+      type: 'direct',
       route: 'DIRECT_AGENT',
-      confidence: 0.9,
-      reason: 'simple',
-      requiresUserPlanApproval: false,
-      estimatedToolSteps: 1,
-      riskLevel: 'LOW',
-    });
-    apiMocks.aiChatStream.mockImplementation(async (
-      _message,
-      _scope,
-      _noteId,
-      onToken,
-      onComplete,
-      _onError,
-      onProgress
-    ) => {
-      onProgress?.('searching', 'Looking');
-      onToken('partial');
-      onComplete({ content: 'final answer', sources: {} });
+      content: 'final answer',
+      sources: {},
     });
     const { result } = renderHook(() => useAiChat());
 
@@ -125,21 +142,70 @@ describe('useAiChat and useActions behavior', () => {
       await result.current.handleAiMessage('question');
     });
 
-    expect(apiMocks.aiChatStream).toHaveBeenCalledWith(
-      'question',
-      'selected',
-      'note-1',
-      expect.any(Function),
-      expect.any(Function),
-      expect.any(Function),
-      expect.any(Function),
-      expect.any(AbortSignal)
-    );
+    expect(apiMocks.routeTask).not.toHaveBeenCalled();
+    expect(apiMocks.smartChat).toHaveBeenCalledWith('question', ['note-1'], false);
+    expect(apiMocks.aiChatStream).not.toHaveBeenCalled();
     expect(useAiStore.getState().messages.map((message) => message.content))
       .toEqual(['question', 'final answer']);
     expect(useAiStore.getState().aiSteps).toEqual([]);
     expect(useAiStore.getState().isTyping).toBe(false);
     expect(loadData).toHaveBeenCalled();
+  });
+
+  it('renders a plan when smart chat creates one', async () => {
+    apiMocks.smartChat.mockResolvedValueOnce({
+      type: 'plan_created',
+      route: 'PLANNED_TASK',
+      routeDecision: {
+        route: 'PLANNED_TASK',
+        confidence: 0.95,
+        reason: 'multi step',
+        requiresUserPlanApproval: true,
+        estimatedToolSteps: 4,
+        riskLevel: 'MEDIUM',
+      },
+      plan: {
+        id: 'plan-1',
+        goal: '整理笔记',
+        status: 'AWAITING_APPROVAL',
+        originalQuery: '整理',
+        totalSteps: 1,
+        completedSteps: 0,
+        createdAt: '2026-07-03T00:00:00',
+        updatedAt: '2026-07-03T00:00:00',
+        steps: [],
+      },
+    });
+    const { result } = renderHook(() => useAiChat());
+
+    await act(async () => {
+      await result.current.handleAiMessage('整理');
+    });
+
+    expect(apiMocks.routeTask).not.toHaveBeenCalled();
+    expect(apiMocks.smartChat).toHaveBeenCalledWith('整理', [], false);
+    expect(useAiStore.getState().messages.at(-1)?.planData?.id).toBe('plan-1');
+    expect(useAiStore.getState().isTyping).toBe(false);
+  });
+
+  it('renders pending action from direct smart chat response', async () => {
+    apiMocks.smartChat.mockResolvedValueOnce({
+      type: 'direct',
+      route: 'DIRECT_AGENT',
+      content: '需要你确认一下',
+      sources: {},
+      actionJson: '[{"type":"DELETE_NOTES","scope":"ALL_ACTIVE_NOTES","count":"31"}]',
+    });
+    const { result } = renderHook(() => useAiChat());
+
+    await act(async () => {
+      await result.current.handleAiMessage('删除全部笔记');
+    });
+
+    expect(apiMocks.routeTask).not.toHaveBeenCalled();
+    expect(useAiStore.getState().messages.at(-1)?.pendingAction?.actionType).toBe('deleteNotes');
+    expect(useAiStore.getState().messages.at(-1)?.pendingAction?.actionJson)
+      .toContain('ALL_ACTIVE_NOTES');
   });
 
   it('queues an AI action and executes it after confirmation', async () => {

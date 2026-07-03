@@ -4,6 +4,7 @@ import com.ainote.app.agent.CancellationToken;
 import com.ainote.app.entity.AgentTrace;
 import com.ainote.app.model.AiChatRequest;
 import com.ainote.app.model.AiChatResponse;
+import com.ainote.app.model.ChatHistoryPage;
 import com.ainote.app.repository.AgentTraceRepository;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.security.SecurityUtils;
@@ -18,9 +19,12 @@ import com.ainote.app.service.chat.StreamCallback;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -72,6 +76,11 @@ class AiControllerTest {
         agentService = mock(AgentService.class);
         ragService = mock(LangChain4jRagService.class);
         chatOrchestrator = mock(ChatOrchestrator.class);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
@@ -167,6 +176,24 @@ class AiControllerTest {
     }
 
     @Test
+    void getChatHistoryPassesPaginationParamsToService() {
+        AiController controller = new AiController(
+            aiService, securityUtils, traceRepository, new ObjectMapper(), executorService,
+            ragFeedbackService, smartSuggestionService, noteRepository, agentService, ragService,
+            chatOrchestrator
+        );
+        ChatHistoryPage page = new ChatHistoryPage(List.of(), null, false);
+
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(aiService.getChatHistoryPage("user-123", 120, "42")).thenReturn(page);
+
+        var response = controller.getChatHistory(120, "42");
+
+        assertThat(response.getBody()).isSameAs(page);
+        verify(aiService).getChatHistoryPage("user-123", 120, "42");
+    }
+
+    @Test
     @DisplayName("generateCanvas \u5f02\u5e38\u65f6\u4e0d\u6cc4\u9732\u5185\u90e8\u9519\u8bef\u4fe1\u606f")
     void generateCanvas_shouldNotLeakExceptionMessage() {
         AiController controller = new AiController(
@@ -235,6 +262,54 @@ class AiControllerTest {
 
         assertThat(emitter).isSameAs(createdEmitter.get());
         assertThat(token.isCancelled()).isTrue();
+    }
+
+    @Test
+    void chatStream_preservesSecurityContextAcrossSseExecutorBoundary() {
+        AtomicReference<TestSseEmitter> createdEmitter = new AtomicReference<>();
+        AiController controller = new AiController(
+            aiService, securityUtils, traceRepository, new ObjectMapper(), executorService,
+            ragFeedbackService, smartSuggestionService, noteRepository, agentService, ragService,
+            chatOrchestrator,
+            timeout -> {
+                TestSseEmitter emitter = new TestSseEmitter(timeout);
+                createdEmitter.set(emitter);
+                return emitter;
+            }
+        );
+        AiChatRequest request = new AiChatRequest();
+        request.setQuery("hello");
+        var authentication = new UsernamePasswordAuthenticationToken("alice", "password", List.of());
+
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+        when(securityUtils.getCurrentUserId()).thenReturn("user-123");
+        when(agentService.createCancelToken(eq("user-123"), anyString())).thenReturn(new CancellationToken());
+        doAnswer(invocation -> {
+            Runnable task = invocation.getArgument(0);
+            var requestThreadContext = SecurityContextHolder.getContext();
+            SecurityContextHolder.clearContext();
+            try {
+                task.run();
+            } finally {
+                SecurityContextHolder.setContext(requestThreadContext);
+            }
+            return null;
+        }).when(executorService).execute(any(Runnable.class));
+        doAnswer(invocation -> {
+            assertThat(SecurityContextHolder.getContext().getAuthentication()).isSameAs(authentication);
+            StreamCallback callback = invocation.getArgument(4);
+            callback.onComplete(new AiChatResponse("done", Map.of()));
+            return null;
+        }).when(chatOrchestrator).chatStream(
+                eq("hello"),
+                any(),
+                eq("user-123"),
+                anyString(),
+                any(StreamCallback.class));
+
+        controller.chatStream(request);
+
+        assertThat(createdEmitter.get()).isNotNull();
     }
 
     @Test

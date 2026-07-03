@@ -1,11 +1,17 @@
 package com.ainote.app.config;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.concurrent.DelegatingSecurityContextExecutorService;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.lang.reflect.Method;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -13,6 +19,11 @@ import java.util.concurrent.TimeUnit;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class AsyncConfigTest {
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void securityExecutorUsesBoundedThreadPool() throws Exception {
@@ -44,6 +55,45 @@ class AsyncConfigTest {
         try {
             assertThat(executor.allowsCoreThreadTimeOut()).isTrue();
             assertThat(executor.getKeepAliveTime(TimeUnit.SECONDS)).isLessThanOrEqualTo(30);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void securityExecutorPropagatesSecurityContextFromSubmittingThread() throws Exception {
+        AsyncConfig config = new AsyncConfig(1, 10, 1, 10, 30);
+        ExecutorService executor = config.securityExecutor();
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken("alice", "password", List.of());
+
+        try {
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            Authentication observed = executor.submit(
+                    () -> SecurityContextHolder.getContext().getAuthentication()
+            ).get(5, TimeUnit.SECONDS);
+
+            assertThat(observed).isSameAs(authentication);
+        } finally {
+            executor.shutdownNow();
+        }
+    }
+
+    @Test
+    void sseExecutorDoesNotPropagateSecurityContextByItself() throws Exception {
+        AsyncConfig config = new AsyncConfig(1, 10, 1, 10, 30);
+        ExecutorService executor = config.sseExecutor();
+        Authentication authentication =
+                new UsernamePasswordAuthenticationToken("alice", "password", List.of());
+        CompletableFuture<Authentication> observed = new CompletableFuture<>();
+
+        try {
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            executor.execute(() -> observed.complete(
+                    SecurityContextHolder.getContext().getAuthentication()));
+
+            assertThat(observed.get(5, TimeUnit.SECONDS)).isNull();
         } finally {
             executor.shutdownNow();
         }

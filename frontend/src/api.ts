@@ -126,6 +126,12 @@ export type ChatHistoryMessage = {
   createdAt: string;
 };
 
+export type ChatHistoryPage = {
+  items: ChatHistoryMessage[];
+  nextCursor: string | null;
+  hasMore: boolean;
+};
+
 export type NoteSource = {
   id: string;
   title: string;
@@ -141,8 +147,13 @@ export type AiChatResponse = {
 };
 
 // 意图识别响应
-export async function getChatHistory(): Promise<ChatHistoryMessage[]> {
-  const res = await api.get('/api/ai/chat/history');
+export async function getChatHistory(params?: { limit?: number; before?: string | null }): Promise<ChatHistoryPage> {
+  const res = await api.get('/api/ai/chat/history', {
+    params: {
+      limit: params?.limit,
+      before: params?.before ?? undefined,
+    },
+  });
   return res.data;
 }
 

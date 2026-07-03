@@ -16,7 +16,10 @@ import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.security.SecurityUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.opentelemetry.api.trace.Span;
+import io.opentelemetry.api.trace.SpanBuilder;
 import io.opentelemetry.api.trace.Tracer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -26,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -39,6 +43,11 @@ class AgentServicePendingActionTest {
     private NoteService noteService;
     private ConcurrencyGuard concurrencyGuard;
     private InputGuardrail inputGuardrail;
+    private ContextAssembler contextAssembler;
+    private ToolCallAuditor toolCallAuditor;
+    private ReliableChatMemoryStore reliableChatMemoryStore;
+    private OutputGuardrail outputGuardrail;
+    private ExecutorService realExecutor;
 
     @BeforeEach
     void setUp() {
@@ -47,6 +56,11 @@ class AgentServicePendingActionTest {
         noteService = mock(NoteService.class);
         concurrencyGuard = mock(ConcurrencyGuard.class);
         inputGuardrail = mock(InputGuardrail.class);
+        contextAssembler = mock(ContextAssembler.class);
+        toolCallAuditor = mock(ToolCallAuditor.class);
+        reliableChatMemoryStore = mock(ReliableChatMemoryStore.class);
+        outputGuardrail = mock(OutputGuardrail.class);
+        realExecutor = Executors.newSingleThreadExecutor();
         ObjectMapper objectMapper = new ObjectMapper();
 
         agentService = new AgentService(
@@ -57,18 +71,45 @@ class AgentServicePendingActionTest {
                 mock(UserMemoryRepository.class),
                 objectMapper,
                 new PendingActionRegistry(objectMapper),
-                mock(ExecutorService.class),
-                mock(ContextAssembler.class),
-                mock(ToolCallAuditor.class),
-                mock(ReliableChatMemoryStore.class),
+                realExecutor,
+                contextAssembler,
+                toolCallAuditor,
+                reliableChatMemoryStore,
                 mock(MemoryExtractionService.class),
-                mock(Tracer.class),
+                configuredTracer(),
                 mock(ToolLoopDetector.class),
                 concurrencyGuard,
                 mock(TokenBudget.class),
                 inputGuardrail,
-                mock(OutputGuardrail.class)
+                outputGuardrail
         );
+        ReflectionTestUtils.setField(agentService, "agentTimeoutSeconds", 30);
+        lenient().when(concurrencyGuard.tryAcquire(anyString(), anyLong())).thenReturn(true);
+        lenient().when(inputGuardrail.check(anyString())).thenReturn(GuardrailResult.ok());
+        lenient().when(inputGuardrail.scanUntrustedContent(anyString())).thenReturn(GuardrailResult.ok());
+        lenient().when(contextAssembler.assemble(anyString(), anyList(), anyString())).thenReturn("context");
+        lenient().when(contextAssembler.detectIntent(anyString())).thenReturn(ContextAssembler.Intent.STANDARD);
+        lenient().when(reliableChatMemoryStore.getMessages(anyString())).thenReturn(List.of());
+        lenient().when(toolCallAuditor.validate(anyString(), anyString(), any(), anyInt()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(outputGuardrail.sanitize(anyString(), anyString()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+    }
+
+    @AfterEach
+    void tearDown() {
+        realExecutor.shutdownNow();
+    }
+
+    private Tracer configuredTracer() {
+        Tracer tracer = mock(Tracer.class);
+        SpanBuilder spanBuilder = mock(SpanBuilder.class);
+        Span span = mock(Span.class);
+        lenient().when(tracer.spanBuilder(anyString())).thenReturn(spanBuilder);
+        lenient().when(spanBuilder.setAttribute(anyString(), anyString())).thenReturn(spanBuilder);
+        lenient().when(spanBuilder.setAttribute(anyString(), anyLong())).thenReturn(spanBuilder);
+        lenient().when(spanBuilder.startSpan()).thenReturn(span);
+        return tracer;
     }
 
     @Test
@@ -160,64 +201,43 @@ class AgentServicePendingActionTest {
     }
 
     @Test
-    @DisplayName("删除当前选中笔记时，后端直接生成确认卡片数据")
-    void shouldBuildPendingActionDirectlyForSelectedNoteDelete() {
+    @DisplayName("删除当前笔记应交给 Agent 判断并返回 PENDING_ACTION")
+    void shouldLetAgentDecideSelectedNoteDeletePendingAction() {
         Note selected = new Note();
         selected.setId("selected-note");
-        selected.setTitle("测试-上下文工程与记忆系统记录");
-        selected.setContent("content");
-
-        when(inputGuardrail.check("删除笔记")).thenReturn(GuardrailResult.ok());
+        selected.setTitle("测试笔记");
         when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("selected-note", "user-1"))
                 .thenReturn(Optional.of(selected));
+        when(agentAssistant.chat(anyString(), eq("删除笔记"), anyString(), anyString())).thenReturn(
+                "PENDING_ACTION:{\"type\":\"DELETE_NOTE\",\"noteId\":\"selected-note\",\"title\":\"测试笔记\"}\n确认删除吗？");
 
         AiChatResponse response = agentService.chat("删除笔记", List.of("selected-note"), "user-1");
 
-        assertThat(response.getContent()).contains("确认删除「测试-上下文工程与记忆系统记录」");
         assertThat(response.getAction()).contains("\"type\":\"DELETE_NOTE\"");
         assertThat(response.getAction()).contains("\"noteId\":\"selected-note\"");
-        assertThat(response.getAction()).contains("\"title\":\"测试-上下文工程与记忆系统记录\"");
-        verifyNoInteractions(agentAssistant);
-        verify(concurrencyGuard, never()).tryAcquire(anyString(), anyLong());
+        assertThat(response.getAction()).contains("\"title\":\"测试笔记\"");
+        verify(agentAssistant).chat(anyString(), eq("删除笔记"), anyString(), anyString());
+        verify(concurrencyGuard).tryAcquire("user-1", 100);
     }
 
     @Test
-    @DisplayName("English selected note delete also uses deterministic PENDING_ACTION")
-    void shouldBuildPendingActionDirectlyForEnglishSelectedNoteDelete() {
+    @DisplayName("English selected note delete should also be decided by Agent")
+    void shouldLetAgentDecideEnglishSelectedNoteDeletePendingAction() {
         Note selected = new Note();
         selected.setId("selected-note");
         selected.setTitle("Research note");
-        selected.setContent("content");
-
-        when(inputGuardrail.check("delete current note")).thenReturn(GuardrailResult.ok());
         when(noteRepository.findByIdAndUserIdAndDeletedAtIsNull("selected-note", "user-1"))
                 .thenReturn(Optional.of(selected));
+        when(agentAssistant.chat(anyString(), eq("delete current note"), anyString(), anyString())).thenReturn(
+                "PENDING_ACTION:{\"type\":\"DELETE_NOTE\",\"noteId\":\"selected-note\",\"title\":\"Research note\"}\nConfirm?");
 
         AiChatResponse response = agentService.chat("delete current note", List.of("selected-note"), "user-1");
 
         assertThat(response.getAction()).contains("\"type\":\"DELETE_NOTE\"");
         assertThat(response.getAction()).contains("\"noteId\":\"selected-note\"");
         assertThat(response.getAction()).contains("\"title\":\"Research note\"");
-        verifyNoInteractions(agentAssistant);
-        verify(concurrencyGuard, never()).tryAcquire(anyString(), anyLong());
-    }
-
-    @Test
-    @DisplayName("复杂多步请求不应被当前笔记删除的确定性分支拦截")
-    void shouldNotInterceptComplexSelectedNoteDeleteRequest() {
-        Boolean simpleDelete = ReflectionTestUtils.invokeMethod(
-                agentService,
-                "isCurrentSelectedNoteDeleteRequest",
-                "删除这篇笔记"
-        );
-        Boolean complexDelete = ReflectionTestUtils.invokeMethod(
-                agentService,
-                "isCurrentSelectedNoteDeleteRequest",
-                "删除这篇笔记，然后创建一个日程"
-        );
-
-        assertThat(simpleDelete).isTrue();
-        assertThat(complexDelete).isFalse();
+        verify(agentAssistant).chat(anyString(), eq("delete current note"), anyString(), anyString());
+        verify(concurrencyGuard).tryAcquire("user-1", 100);
     }
 
     @Test

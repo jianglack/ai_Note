@@ -15,6 +15,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
@@ -153,7 +154,7 @@ public class ContextAssembler {
         }
 
         // 优先级 5：RAG 片段（查询有实质内容时）
-        if (query != null && isSubstantiveQuery(query)) {
+        if (query != null && isSubstantiveQuery(query) && shouldIncludeGlobalRag(query, noteIds)) {
             int ragBudget = Math.min(budgetRagContext, totalBudgetTokens - usedTokens);
             if (ragBudget > 100) {
                 String rag = truncateToTokenBudget(buildRagContext(query, userId), ragBudget);
@@ -269,6 +270,48 @@ public class ContextAssembler {
         if (query == null || query.trim().length() < 3) return false;
         String trimmed = query.trim().toLowerCase();
         return GREETING_PATTERNS.stream().noneMatch(p -> trimmed.equals(p));
+    }
+
+    private boolean shouldIncludeGlobalRag(String query, List<String> noteIds) {
+        if (noteIds == null || noteIds.isEmpty()) {
+            return true;
+        }
+        return !isSelectedNoteFocusedQuery(query);
+    }
+
+    private boolean isSelectedNoteFocusedQuery(String query) {
+        String normalized = normalizeReferenceText(query);
+        if (normalized.isBlank()) {
+            return false;
+        }
+
+        if (containsAny(normalized,
+                "所有笔记", "全部笔记", "其他笔记", "其它笔记", "全库", "知识库",
+                "allnotes", "everynote", "knowledgebase", "othernotes")) {
+            return false;
+        }
+
+        return containsAny(normalized,
+                "这篇笔记", "这篇", "这份笔记", "这个笔记", "这条笔记",
+                "当前笔记", "当前选中笔记", "当前选中的笔记", "本篇笔记", "本篇",
+                "选中笔记", "选中的笔记", "所选笔记", "该笔记", "本文", "这篇文章",
+                "thisnote", "currentnote", "selectednote", "thisdocument",
+                "currentdocument", "selecteddocument");
+    }
+
+    private String normalizeReferenceText(String text) {
+        return text == null
+                ? ""
+                : text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+    }
+
+    private boolean containsAny(String text, String... needles) {
+        for (String needle : needles) {
+            if (text.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private String smartTruncate(String content, int maxChars) {

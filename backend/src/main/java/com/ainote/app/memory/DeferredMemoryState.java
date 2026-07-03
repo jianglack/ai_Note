@@ -28,6 +28,15 @@ public class DeferredMemoryState {
         state.pendingWrites.put(memoryId, List.copyOf(messages));
     }
 
+    public static List<ChatMessage> peek(String memoryId) {
+        DeferredMemoryState state = CURRENT.get();
+        if (state == null) {
+            return null;
+        }
+        List<ChatMessage> messages = state.pendingWrites.get(memoryId);
+        return messages == null ? null : List.copyOf(messages);
+    }
+
     public static Map<String, List<ChatMessage>> drain() {
         DeferredMemoryState state = CURRENT.get();
         if (state == null) {

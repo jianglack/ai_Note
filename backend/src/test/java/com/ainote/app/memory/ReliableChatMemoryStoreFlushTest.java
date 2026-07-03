@@ -5,6 +5,7 @@ import com.ainote.app.repository.EpisodicMemoryRepository;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.service.MemoryExtractionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +81,20 @@ class ReliableChatMemoryStoreFlushTest {
     }
 
     @Test
+    void deferredModeReturnsBufferedMessagesDuringAgentLoop() {
+        DeferredMemoryState.begin();
+        ReliableChatMemoryStore.IN_AGENT_LOOP.set(true);
+
+        store.updateMessages("user-1", List.of(UserMessage.from("msg1")));
+
+        List<ChatMessage> messages = store.getMessages("user-1");
+
+        assertThat(messages).hasSize(1);
+        assertThat(((UserMessage) messages.get(0)).singleText()).isEqualTo("msg1");
+        verify(memoryRepository, never()).findAllByUserIdOrderByCreatedAtAsc("user-1");
+    }
+
+    @Test
     void immediateModeWritesDirectly() {
         when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
                 .thenReturn(new ArrayList<>());
@@ -103,5 +118,10 @@ class ReliableChatMemoryStoreFlushTest {
         assertThatThrownBy(() -> store.flushDeferredWrites())
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("DB down");
+    }
+
+    @AfterEach
+    void cleanupAgentLoopFlag() {
+        ReliableChatMemoryStore.IN_AGENT_LOOP.remove();
     }
 }

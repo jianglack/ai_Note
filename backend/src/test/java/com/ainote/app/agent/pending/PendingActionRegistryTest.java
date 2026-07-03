@@ -34,6 +34,39 @@ class PendingActionRegistryTest {
     }
 
     @Test
+    void acceptsDeleteNotesWithAllActiveNotesScope() {
+        PendingActionRegistry registry = new PendingActionRegistry(new ObjectMapper());
+
+        List<Map<String, Object>> actions = registry.extractActions(
+                "PENDING_ACTION:{\"type\":\"DELETE_NOTES\",\"scope\":\"ALL_ACTIVE_NOTES\"}");
+
+        assertThat(actions).hasSize(1);
+        assertThat(actions.get(0))
+                .containsEntry("type", "DELETE_NOTES")
+                .containsEntry("scope", "ALL_ACTIVE_NOTES");
+    }
+
+    @Test
+    void rejectsDeleteNotesWithoutIdsOrScope() {
+        PendingActionRegistry registry = new PendingActionRegistry(new ObjectMapper());
+
+        List<Map<String, Object>> actions = registry.extractActions(
+                "PENDING_ACTION:{\"type\":\"DELETE_NOTES\",\"count\":\"31\"}");
+
+        assertThat(actions).isEmpty();
+    }
+
+    @Test
+    void rejectsDeleteNotesWithUnknownScope() {
+        PendingActionRegistry registry = new PendingActionRegistry(new ObjectMapper());
+
+        List<Map<String, Object>> actions = registry.extractActions(
+                "PENDING_ACTION:{\"type\":\"DELETE_NOTES\",\"scope\":\"ALL_USERS_NOTES\"}");
+
+        assertThat(actions).isEmpty();
+    }
+
+    @Test
     void registryIsInjectedInsteadOfConstructedInsideServices() throws Exception {
         String agentService = Files.readString(Path.of(
                 "src", "main", "java", "com", "ainote", "app", "service", "AgentService.java"));

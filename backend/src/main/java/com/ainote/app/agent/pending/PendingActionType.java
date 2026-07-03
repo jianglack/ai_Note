@@ -5,6 +5,7 @@ import java.util.Optional;
 
 enum PendingActionType {
     DELETE_NOTE("noteId"),
+    DELETE_NOTES,
     PERMANENT_DELETE("noteId"),
     EMPTY_TRASH("count"),
     DELETE_SCHEDULE("scheduleId"),

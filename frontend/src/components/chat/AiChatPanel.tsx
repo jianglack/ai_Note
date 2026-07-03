@@ -33,6 +33,9 @@ interface AiChatPanelProps {
   onClose: () => void; onNoteClick?: (noteId: string) => void; noteCount?: number;
   onCardAction?: (cardId: string, action: string, data?: unknown) => void;
   onPlanAction?: (action: string, planId: string, stepId?: string) => void;
+  hasMoreHistory?: boolean;
+  isLoadingOlderHistory?: boolean;
+  onLoadOlderHistory?: () => void;
 }
 
 const T = {
@@ -70,6 +73,7 @@ export default function AiChatPanel({
   messages, currentMessage, isTyping, aiPhase, aiSteps = [],
   onSendMessage, onCancel, onClose, onNoteClick, noteCount = 0,
   onCardAction, onPlanAction,
+  hasMoreHistory = false, isLoadingOlderHistory = false, onLoadOlderHistory,
 }: AiChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const cards = useWorkflowStore((s) => s.cards);
@@ -165,7 +169,30 @@ export default function AiChatPanel({
       >
         {isEmpty && <EmptyState onQuickAction={onSendMessage} />}
 
-        {messages.slice(-50).map((msg) => (
+        {hasMoreHistory && onLoadOlderHistory && (
+          <div style={{ display: 'flex', justifyContent: 'center', flexShrink: 0 }}>
+            <button
+              type="button"
+              aria-label="加载更早的聊天记录"
+              disabled={isLoadingOlderHistory}
+              onClick={onLoadOlderHistory}
+              style={{
+                padding: '6px 12px',
+                borderRadius: 8,
+                border: `1px solid ${T.borderStrong}`,
+                background: isLoadingOlderHistory ? T.surfaceHover : T.surface,
+                color: T.textSecondary,
+                cursor: isLoadingOlderHistory ? 'default' : 'pointer',
+                fontSize: 12,
+                fontFamily: 'inherit',
+              }}
+            >
+              {isLoadingOlderHistory ? '正在加载...' : '加载更早的聊天记录'}
+            </button>
+          </div>
+        )}
+
+        {messages.map((msg) => (
           <div key={msg.id}>
             {msg.role === 'user' ? (
               /* User bubble — right aligned */

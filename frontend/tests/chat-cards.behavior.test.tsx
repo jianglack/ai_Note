@@ -6,10 +6,12 @@ import PendingActionCard from '../src/components/chat/cards/PendingActionCard';
 import AiWorkflowCard from '../src/components/workflow/AiWorkflowCard';
 import type { CardState } from '../src/components/chat/cards/types';
 import { useAiStore } from '../src/stores/aiStore';
+import { useNoteStore } from '../src/stores/noteStore';
 import { useWorkflowStore } from '../src/stores/workflowStore';
 
 const apiMocks = vi.hoisted(() => ({
   sendActionFeedback: vi.fn(),
+  saveChatMessages: vi.fn(),
 }));
 
 vi.mock('../src/api', async () => {
@@ -17,6 +19,7 @@ vi.mock('../src/api', async () => {
   return {
     ...actual,
     sendActionFeedback: apiMocks.sendActionFeedback,
+    saveChatMessages: apiMocks.saveChatMessages,
   };
 });
 
@@ -39,6 +42,12 @@ describe('chat and card behavior', () => {
       aiSteps: [],
     });
     useWorkflowStore.setState({ cards: {}, activeCardId: null });
+    useNoteStore.setState({
+      notes: [],
+      folders: [],
+      selectedNote: null,
+      trashNotes: [],
+    });
   });
 
   afterEach(() => {
@@ -220,9 +229,42 @@ describe('chat and card behavior', () => {
     expect(screen.getByText('Done')).toBeInTheDocument();
   });
 
-  it('sends PENDING_ACTION feedback and appends the AI follow-up after delay', async () => {
+  it('renders all provided messages and exposes the older-history control', () => {
+    const messages = Array.from({ length: 55 }, (_, index) => ({
+      id: `msg-${index + 1}`,
+      role: index % 2 === 0 ? 'user' as const : 'spirit' as const,
+      content: `history message ${index + 1}`,
+      timestamp: index + 1,
+    }));
+    const onLoadOlderHistory = vi.fn();
+
+    render(
+      <AiChatPanel
+        messages={messages}
+        currentMessage=""
+        isTyping={false}
+        aiPhase="idle"
+        onSendMessage={vi.fn()}
+        onCancel={vi.fn()}
+        onClose={vi.fn()}
+        hasMoreHistory
+        isLoadingOlderHistory={false}
+        onLoadOlderHistory={onLoadOlderHistory}
+      />,
+    );
+
+    expect(screen.getByText('history message 1')).toBeInTheDocument();
+    expect(screen.getByText('history message 55')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: '加载更早的聊天记录' }));
+    expect(onLoadOlderHistory).toHaveBeenCalled();
+  });
+
+  it('sends PENDING_ACTION feedback, refreshes notes, persists the follow-up, and appends it after delay', async () => {
     vi.useFakeTimers();
     apiMocks.sendActionFeedback.mockResolvedValue({ content: 'Action handled' });
+    apiMocks.saveChatMessages.mockResolvedValue(undefined);
+    const loadData = vi.fn().mockResolvedValue(undefined);
+    useNoteStore.setState({ loadData });
 
     const { container } = render(
       <PendingActionCard
@@ -241,6 +283,8 @@ describe('chat and card behavior', () => {
       actionJson: '{"action":"deleteNote","noteId":"note-1"}',
       confirmed: true,
     });
+    expect(loadData).toHaveBeenCalled();
+    expect(apiMocks.saveChatMessages).toHaveBeenCalledWith('确认执行', 'Action handled');
 
     await act(async () => {
       vi.advanceTimersByTime(600);

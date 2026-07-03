@@ -3,6 +3,7 @@ package com.ainote.app.service;
 import com.ainote.app.entity.UserMemory;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.model.ChatHistoryItem;
+import com.ainote.app.model.ChatHistoryPage;
 import com.ainote.app.model.ClassificationResponse;
 import com.ainote.app.model.ClassificationSuggestion;
 import com.ainote.app.model.ExtractedSchedule;
@@ -45,6 +46,8 @@ import java.util.regex.Pattern;
 public class AiService {
 
     private static final Logger log = LoggerFactory.getLogger(AiService.class);
+    private static final int DEFAULT_CHAT_HISTORY_PAGE_SIZE = 100;
+    private static final int MAX_CHAT_HISTORY_PAGE_SIZE = 200;
 
     private final NoteService noteService;
     private final FolderService folderService;
@@ -94,17 +97,68 @@ public class AiService {
     }
 
     public List<ChatHistoryItem> getChatHistory(String userId, int limit) {
+        if (limit <= 0) {
+            return List.of();
+        }
         return userMemoryRepository
-                .findByUserIdOrderByCreatedAtAsc(userId, PageRequest.of(0, limit))
+                .findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, limit))
                 .stream()
                 .filter(m -> "USER".equals(m.getMessageType()) || "AI".equals(m.getMessageType()))
-                .map(m -> new ChatHistoryItem(
-                        m.getId().toString(),
-                        "USER".equals(m.getMessageType()) ? "user" : "assistant",
-                        m.getContent(),
-                        m.getCreatedAt()
-                ))
+                .sorted(Comparator
+                        .comparing(UserMemory::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(UserMemory::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .map(this::toChatHistoryItem)
                 .toList();
+    }
+
+    public ChatHistoryPage getChatHistoryPage(String userId, int limit, String before) {
+        int pageSize = normalizeChatHistoryLimit(limit);
+        Long beforeId = parseHistoryCursor(before);
+        List<UserMemory> rows = userMemoryRepository
+                .findVisibleByUserIdBeforeIdOrderByCreatedAtDesc(
+                        userId,
+                        beforeId,
+                        PageRequest.of(0, pageSize + 1));
+
+        boolean hasMore = rows.size() > pageSize;
+        List<UserMemory> visibleRows = hasMore ? rows.subList(0, pageSize) : rows;
+        List<UserMemory> chronologicalRows = new ArrayList<>(visibleRows);
+        chronologicalRows.sort(Comparator
+                .comparing(UserMemory::getCreatedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                .thenComparing(UserMemory::getId, Comparator.nullsLast(Comparator.naturalOrder())));
+
+        List<ChatHistoryItem> items = chronologicalRows.stream()
+                .map(this::toChatHistoryItem)
+                .toList();
+        String nextCursor = hasMore && !items.isEmpty() ? items.get(0).getId() : null;
+        return new ChatHistoryPage(items, nextCursor, hasMore);
+    }
+
+    private int normalizeChatHistoryLimit(int limit) {
+        if (limit <= 0) {
+            return DEFAULT_CHAT_HISTORY_PAGE_SIZE;
+        }
+        return Math.min(limit, MAX_CHAT_HISTORY_PAGE_SIZE);
+    }
+
+    private Long parseHistoryCursor(String before) {
+        if (before == null || before.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(before);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private ChatHistoryItem toChatHistoryItem(UserMemory memory) {
+        return new ChatHistoryItem(
+                memory.getId() == null ? null : memory.getId().toString(),
+                "USER".equals(memory.getMessageType()) ? "user" : "assistant",
+                memory.getContent(),
+                memory.getCreatedAt()
+        );
     }
 
     public void clearChatMemory(String userId) {

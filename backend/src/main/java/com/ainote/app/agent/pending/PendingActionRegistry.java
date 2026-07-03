@@ -122,6 +122,11 @@ public class PendingActionRegistry {
             return Optional.empty();
         }
 
+        if (type.get() == PendingActionType.DELETE_NOTES && !isValidDeleteNotes(node)) {
+            log.warn("Rejected DELETE_NOTES PENDING_ACTION without noteIds or supported scope");
+            return Optional.empty();
+        }
+
         for (String requiredField : type.get().requiredFields()) {
             if (node.path(requiredField).asText("").isBlank()) {
                 log.warn("Rejected PENDING_ACTION {} missing required field {}", rawType, requiredField);
@@ -143,6 +148,18 @@ public class PendingActionRegistry {
                     : objectMapper.convertValue(value, Object.class));
         }
         return Optional.of(action);
+    }
+
+    private boolean isValidDeleteNotes(JsonNode node) {
+        JsonNode noteIds = node.path("noteIds");
+        if (noteIds.isArray()) {
+            for (JsonNode noteId : noteIds) {
+                if (!noteId.asText("").isBlank()) {
+                    return true;
+                }
+            }
+        }
+        return "ALL_ACTIVE_NOTES".equals(node.path("scope").asText(""));
     }
 
     private int skipWhitespace(String text, int index) {

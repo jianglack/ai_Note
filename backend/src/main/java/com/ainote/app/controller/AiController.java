@@ -8,7 +8,7 @@ import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.model.AiNoteRequest;
 import com.ainote.app.model.AiResponse;
 import com.ainote.app.model.ChatSaveRequest;
-import com.ainote.app.model.ChatHistoryItem;
+import com.ainote.app.model.ChatHistoryPage;
 import com.ainote.app.model.ClassificationResponse;
 import com.ainote.app.model.ExtractedSchedule;
 import com.ainote.app.model.GenerateCanvasRequest;
@@ -39,6 +39,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.security.concurrent.DelegatingSecurityContextRunnable;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -182,10 +185,12 @@ public class AiController {
     }
 
     @GetMapping("/chat/history")
-    @Operation(summary = "获取对话历史", description = "获取当前用户最近 50 条 AI 对话历史记录")
-    public ResponseEntity<List<ChatHistoryItem>> getChatHistory() {
+    @Operation(summary = "获取对话历史", description = "分页获取当前用户 AI 对话历史记录")
+    public ResponseEntity<ChatHistoryPage> getChatHistory(
+            @RequestParam(defaultValue = "100") int limit,
+            @RequestParam(required = false) String before) {
         String userId = securityUtils.getCurrentUserId();
-        List<ChatHistoryItem> history = aiService.getChatHistory(userId, 50);
+        ChatHistoryPage history = aiService.getChatHistoryPage(userId, limit, before);
         return ResponseEntity.ok(history);
     }
 
@@ -242,8 +247,9 @@ public class AiController {
     private SseEmitter openChatStream(AiChatRequest request, String transport) {
         SseEmitter emitter = sseEmitterFactory.create(calculateSseTimeoutMillis());
 
-        // securityExecutor 自动传播 SecurityContext，无需手动 set/clear
         String userId = securityUtils.getCurrentUserId();
+        SecurityContext securityContext = SecurityContextHolder.createEmptyContext();
+        securityContext.setAuthentication(SecurityContextHolder.getContext().getAuthentication());
 
         String requestId = UUID.randomUUID().toString();
         CancellationToken cancelToken = agentService.createCancelToken(userId, requestId);
@@ -256,7 +262,7 @@ public class AiController {
         scheduleHeartbeat(emitter, streamContext);
 
         try {
-            executorService.execute(() -> {
+            Runnable streamTask = () -> {
                 try {
                     chatOrchestrator.chatStream(request.getQuery(), request.getNoteIds(), userId, requestId, new StreamCallback() {
                         @Override
@@ -289,7 +295,8 @@ public class AiController {
                 } catch (Exception e) {
                     completeStreamWithError(emitter, streamContext, e, "orchestrator_error");
                 }
-            });
+            };
+            executorService.execute(new DelegatingSecurityContextRunnable(streamTask, securityContext));
         } catch (RejectedExecutionException e) {
             agentService.cancelRequest(userId, requestId);
             recordStreamRejected(transport);

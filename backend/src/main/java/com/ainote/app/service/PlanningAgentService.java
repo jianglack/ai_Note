@@ -20,6 +20,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.Locale;
 
 @Service
 public class PlanningAgentService {
@@ -68,13 +70,24 @@ public class PlanningAgentService {
 
         if (decision.route() == TaskRoute.DIRECT_AGENT) {
             var response = agentService.chat(query, noteIds, userId);
+            String content = response.getContent();
+            String actionJson = response.getAction();
+            Optional<PendingActionBackfill> pendingActionBackfill =
+                    backfillPendingActionIfRequired(query, noteIds, decision, actionJson);
+            if (pendingActionBackfill.isPresent()) {
+                PendingActionBackfill backfill = pendingActionBackfill.get();
+                content = backfill.content();
+                actionJson = backfill.actionJson();
+                log.warn("Backfilled missing PENDING_ACTION for high-risk direct route: type={}", backfill.type());
+            }
+
             Map<String, Object> result = new LinkedHashMap<>();
             result.put("type", "direct");
             result.put("route", decision.route().name());
             result.put("routeDecision", routeDecisionToMap(decision));
-            result.put("content", response.getContent());
+            result.put("content", content);
             result.put("sources", response.getSources());
-            result.put("actionJson", response.getAction());
+            result.put("actionJson", actionJson);
             return result;
         }
 
@@ -193,6 +206,91 @@ public class PlanningAgentService {
         map.put("estimatedToolSteps", decision.estimatedToolSteps());
         map.put("riskLevel", decision.riskLevel());
         return map;
+    }
+
+    private Optional<PendingActionBackfill> backfillPendingActionIfRequired(
+            String query,
+            List<String> noteIds,
+            TaskRouteDecision decision,
+            String actionJson
+    ) {
+        if (actionJson != null && !actionJson.isBlank()) {
+            return Optional.empty();
+        }
+        if (!expectsPendingAction(decision)) {
+            return Optional.empty();
+        }
+        if (isDeleteAllActiveNotesRequest(query)) {
+            return Optional.of(new PendingActionBackfill(
+                    "DELETE_NOTES",
+                    "这是危险操作，需要你在下方确认卡片中确认后才会执行。删除后笔记会进入回收站，可恢复。",
+                    "[{\"type\":\"DELETE_NOTES\",\"scope\":\"ALL_ACTIVE_NOTES\"}]"
+            ));
+        }
+        if (isDeleteSelectedNoteRequest(query, noteIds)) {
+            String noteId = noteIds.get(0);
+            return Optional.of(new PendingActionBackfill(
+                    "DELETE_NOTE",
+                    "这是危险操作，需要你在下方确认卡片中确认后才会执行。删除后笔记会进入回收站，可恢复。",
+                    "[{\"type\":\"DELETE_NOTE\",\"noteId\":\"" + escapeJson(noteId) + "\"}]"
+            ));
+        }
+        return Optional.empty();
+    }
+
+    private boolean expectsPendingAction(TaskRouteDecision decision) {
+        String risk = decision.riskLevel() == null ? "" : decision.riskLevel().trim().toUpperCase(Locale.ROOT);
+        String reason = decision.reason() == null ? "" : decision.reason();
+        return "HIGH".equals(risk)
+                || reason.contains("PENDING_ACTION")
+                || reason.contains("危险")
+                || reason.contains("确认");
+    }
+
+    private boolean isDeleteAllActiveNotesRequest(String query) {
+        String normalized = normalizeIntentText(query);
+        if (normalized.isBlank() || containsAny(normalized, "不要删除", "别删除", "取消删除", "notdelete", "donotdelete")) {
+            return false;
+        }
+        return containsAny(normalized, "删除", "删掉", "清空", "delete", "remove")
+                && containsAny(normalized,
+                "全部笔记", "所有笔记", "全部活动笔记", "所有活动笔记", "所有当前笔记", "全部当前笔记",
+                "allnotes", "allmynotes", "allactivenotes", "everynote");
+    }
+
+    private boolean isDeleteSelectedNoteRequest(String query, List<String> noteIds) {
+        if (noteIds == null || noteIds.size() != 1) {
+            return false;
+        }
+        String normalized = normalizeIntentText(query);
+        if (normalized.isBlank() || containsAny(normalized, "不要删除", "别删除", "取消删除", "notdelete", "donotdelete")) {
+            return false;
+        }
+        return containsAny(normalized, "删除", "删掉", "delete", "remove")
+                && containsAny(normalized, "当前笔记", "这篇笔记", "本篇笔记", "选中笔记", "currentnote", "selectednote");
+    }
+
+    private String normalizeIntentText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
+    }
+
+    private boolean containsAny(String text, String... needles) {
+        for (String needle : needles) {
+            if (text.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String escapeJson(String value) {
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
+    }
+
+    private record PendingActionBackfill(String type, String content, String actionJson) {
     }
 
     private Map<String, Object> planToMap(TaskPlan plan, List<TaskStep> steps) {

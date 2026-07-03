@@ -57,6 +57,41 @@ class PlanningAgentServiceTest {
     }
 
     @Test
+    void highRiskDeleteAllNotesDirectRouteBackfillsPendingActionWhenAgentOnlyAsksForTextConfirmation() {
+        LlmTaskRouterService router = mock(LlmTaskRouterService.class);
+        AgentService agentService = mock(AgentService.class);
+        PlannerService plannerService = mock(PlannerService.class);
+        TaskPlanRepository planRepository = mock(TaskPlanRepository.class);
+        TaskStepRepository stepRepository = mock(TaskStepRepository.class);
+
+        when(router.route("删除全部笔记", List.of())).thenReturn(new TaskRouteDecision(
+                TaskRoute.DIRECT_AGENT,
+                1.0,
+                "单步危险操作，应通过 PENDING_ACTION 机制确认",
+                false,
+                1,
+                "HIGH"));
+        when(agentService.chat("删除全部笔记", List.of(), "user-1"))
+                .thenReturn(new AiChatResponse(
+                        "这是危险操作。确认删除全部笔记吗？如果确认，请回复“确认”。",
+                        new HashMap<>(),
+                        (String) null));
+
+        PlanningAgentService service = service(router, agentService, plannerService, planRepository, stepRepository);
+
+        Map<String, Object> result = service.smartChat("删除全部笔记", List.of(), "user-1");
+
+        assertThat(result.get("type")).isEqualTo("direct");
+        assertThat(result.get("route")).isEqualTo("DIRECT_AGENT");
+        assertThat(result.get("actionJson")).isNotNull();
+        assertThat((String) result.get("actionJson"))
+                .contains("\"type\":\"DELETE_NOTES\"")
+                .contains("\"scope\":\"ALL_ACTIVE_NOTES\"");
+        assertThat(result.get("content").toString()).doesNotContain("回复“确认”");
+        verify(plannerService, never()).generatePlan(anyString(), anyList(), anyString());
+    }
+
+    @Test
     void plannedRouteCreatesTaskPlan() {
         LlmTaskRouterService router = mock(LlmTaskRouterService.class);
         AgentService agentService = mock(AgentService.class);

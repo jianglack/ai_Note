@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import com.ainote.app.entity.UserMemory;
 import com.ainote.app.model.ChatHistoryItem;
+import com.ainote.app.model.ChatHistoryPage;
 import com.ainote.app.model.ExtractedSchedule;
 import com.ainote.app.model.Note;
 import com.ainote.app.repository.UserMemoryRepository;
@@ -50,10 +51,11 @@ class AiServiceTest {
 
     @Test
     void getChatHistoryReturnsChronologicalMessages() {
-        UserMemory msg1 = memory(1L, "USER", "Hello", LocalDateTime.now());
-        UserMemory msg2 = memory(2L, "AI", "Hi there!", LocalDateTime.now());
-        when(userMemoryRepository.findByUserIdOrderByCreatedAtAsc(eq("user-123"), any(PageRequest.class)))
-                .thenReturn(List.of(msg1, msg2));
+        LocalDateTime base = LocalDateTime.of(2026, 7, 3, 10, 0);
+        UserMemory msg1 = memory(1L, "USER", "Hello", base);
+        UserMemory msg2 = memory(2L, "AI", "Hi there!", base.plusSeconds(1));
+        when(userMemoryRepository.findByUserIdOrderByCreatedAtDesc(eq("user-123"), any(PageRequest.class)))
+                .thenReturn(List.of(msg2, msg1));
 
         List<ChatHistoryItem> result = aiService.getChatHistory("user-123", 50);
 
@@ -62,6 +64,62 @@ class AiServiceTest {
         assertThat(result.get(0).getRole()).isEqualTo("user");
         assertThat(result.get(1).getContent()).isEqualTo("Hi there!");
         assertThat(result.get(1).getRole()).isEqualTo("assistant");
+    }
+
+    @Test
+    void getChatHistoryReturnsLatestMessagesInsteadOfOldestPage() {
+        LocalDateTime base = LocalDateTime.of(2026, 7, 3, 10, 0);
+        UserMemory oldUser = memory(1L, "USER", "old user", base);
+        UserMemory oldAi = memory(2L, "AI", "old ai", base.plusSeconds(1));
+        UserMemory latestUser = memory(3L, "USER", "latest user", base.plusSeconds(2));
+        UserMemory latestAi = memory(4L, "AI", "latest ai", base.plusSeconds(3));
+
+        when(userMemoryRepository.findByUserIdOrderByCreatedAtAsc(eq("user-123"), any(PageRequest.class)))
+                .thenReturn(List.of(oldUser, oldAi));
+        when(userMemoryRepository.findByUserIdOrderByCreatedAtDesc(eq("user-123"), any(PageRequest.class)))
+                .thenReturn(List.of(latestAi, latestUser));
+
+        List<ChatHistoryItem> result = aiService.getChatHistory("user-123", 2);
+
+        assertThat(result).extracting(ChatHistoryItem::getContent)
+                .containsExactly("latest user", "latest ai");
+    }
+
+    @Test
+    void getChatHistoryPageReturnsLatestMessagesInChronologicalOrderAndHasMore() {
+        LocalDateTime base = LocalDateTime.of(2026, 7, 3, 10, 0);
+        UserMemory msg1 = memory(1L, "USER", "oldest hidden", base);
+        UserMemory msg2 = memory(2L, "AI", "visible user", base.plusSeconds(1));
+        UserMemory msg3 = memory(3L, "USER", "visible ai", base.plusSeconds(2));
+
+        when(userMemoryRepository.findVisibleByUserIdBeforeIdOrderByCreatedAtDesc(
+                eq("user-123"), org.mockito.Mockito.isNull(), any(PageRequest.class)))
+                .thenReturn(List.of(msg3, msg2, msg1));
+
+        ChatHistoryPage page = aiService.getChatHistoryPage("user-123", 2, null);
+
+        assertThat(page.getItems()).extracting(ChatHistoryItem::getContent)
+                .containsExactly("visible user", "visible ai");
+        assertThat(page.isHasMore()).isTrue();
+        assertThat(page.getNextCursor()).isEqualTo("2");
+    }
+
+    @Test
+    void getChatHistoryPageUsesBeforeCursorForOlderMessages() {
+        LocalDateTime base = LocalDateTime.of(2026, 7, 3, 10, 0);
+        UserMemory older = memory(1L, "USER", "older", base);
+        UserMemory oldest = memory(2L, "AI", "oldest", base.plusSeconds(1));
+
+        when(userMemoryRepository.findVisibleByUserIdBeforeIdOrderByCreatedAtDesc(
+                eq("user-123"), eq(20L), any(PageRequest.class)))
+                .thenReturn(List.of(oldest, older));
+
+        ChatHistoryPage page = aiService.getChatHistoryPage("user-123", 100, "20");
+
+        assertThat(page.getItems()).extracting(ChatHistoryItem::getContent)
+                .containsExactly("older", "oldest");
+        assertThat(page.isHasMore()).isFalse();
+        assertThat(page.getNextCursor()).isNull();
     }
 
     @Test

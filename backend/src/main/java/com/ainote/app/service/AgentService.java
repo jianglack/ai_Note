@@ -315,12 +315,6 @@ public class AgentService {
             }
         }
 
-        AiChatResponse directPendingAction = tryBuildSelectedNoteDeleteConfirmation(query, noteIds, actorUserId);
-        if (directPendingAction != null) {
-            log.info("Returning deterministic selected-note delete confirmation for user={}, noteIds={}", actorUserId, noteIds);
-            return directPendingAction;
-        }
-
         // 并发控制：每用户同时只能有一个 Agent 调用
         if (!concurrencyGuard.tryAcquire(actorUserId, 100)) {
             return new AiChatResponse("您有一个正在进行的请求，请等待完成后再试。", new HashMap<>(), (String) null);
@@ -707,16 +701,6 @@ public class AgentService {
             }
         }
 
-        AiChatResponse directPendingAction = tryBuildSelectedNoteDeleteConfirmation(query, noteIds, actorUserId);
-        if (directPendingAction != null) {
-            String content = directPendingAction.getContent();
-            for (int i = 0; i < content.length(); i++) {
-                callback.onToken(String.valueOf(content.charAt(i)));
-            }
-            callback.onComplete(directPendingAction);
-            return;
-        }
-
         // 并发控制
         if (!concurrencyGuard.tryAcquire(actorUserId, 100)) {
             callback.onError("您有一个正在进行的请求，请等待完成后再试。");
@@ -873,7 +857,7 @@ public class AgentService {
      * @return Agent 的后续回复
      */
     public AiChatResponse confirmAction(String userId, String actionJson, boolean confirmed, String feedback) {
-        AiChatResponse directResult = tryHandlePendingActionDirectly(actionJson, confirmed);
+        AiChatResponse directResult = tryHandlePendingActionDirectly(userId, actionJson, confirmed);
         if (directResult != null) {
             return directResult;
         }
@@ -896,92 +880,16 @@ public class AgentService {
         return chat(feedbackMessage, List.of(), userId);
     }
 
-    /**
-     * 当前已选中一篇笔记，且用户只说“删除笔记/删除当前笔记/删除这篇”时，
-     * 操作对象应由前端传入的 noteIds 决定，而不是交给 LLM 从历史或 RAG 结果中猜。
-     */
-    private AiChatResponse tryBuildSelectedNoteDeleteConfirmation(String query, List<String> noteIds, String userId) {
-        if (noteIds == null || noteIds.size() != 1) {
-            return null;
-        }
-        if (!isCurrentSelectedNoteDeleteRequest(query)) {
-            return null;
-        }
-
-        String noteId = noteIds.get(0);
-        Optional<com.ainote.app.entity.Note> noteOpt =
-                noteRepository.findByIdAndUserIdAndDeletedAtIsNull(noteId, userId);
-        if (noteOpt.isEmpty()) {
-            return null;
-        }
-
-        com.ainote.app.entity.Note note = noteOpt.get();
-        Map<String, Object> action = new LinkedHashMap<>();
-        action.put("type", "DELETE_NOTE");
-        action.put("noteId", note.getId());
-        action.put("title", note.getTitle());
-
-        try {
-            String pendingActionJson = objectMapper.writeValueAsString(action);
-            String content = String.format(
-                    "需要你确认一下：\n\n⚠️ 确认删除「%s」吗？\n（删除后可以从回收站恢复）",
-                    note.getTitle()
-            );
-            return new AiChatResponse(content, buildNoteSources(noteIds, userId), pendingActionJson);
-        } catch (JsonProcessingException e) {
-            log.warn("Failed to serialize deterministic pending action", e);
-            return null;
-        }
-    }
-
-    private boolean isCurrentSelectedNoteDeleteRequest(String query) {
-        if (query == null) return false;
-        String q = query.trim().replaceAll("\\s+", "");
-        if (q.isBlank()) return false;
-        String lower = query.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
-        if (lower.contains("permanentdelete") || lower.contains("emptytrash")) {
-            return false;
-        }
-        boolean englishSelectedDelete = (lower.contains("delete") || lower.contains("remove"))
-                && (lower.contains("currentnote") || lower.contains("selectednote") || lower.contains("thisnote"));
-        if (englishSelectedDelete && !hasComplexTaskConnector(lower)) {
-            return true;
-        }
-        if (q.contains("永久删除") || q.contains("清空")) {
-            return false;
-        }
-
-        boolean hasDeleteVerb = q.contains("删除") || q.contains("删掉") || q.contains("移除");
-        if (!hasDeleteVerb) {
-            return false;
-        }
-
-        boolean explicitlyCurrent = q.contains("当前") || q.contains("选中")
-                || q.contains("这篇") || q.contains("这条") || q.contains("这则");
-        boolean genericNoteDelete = q.matches("^(请|帮我|麻烦|麻烦你)?(删除|删掉|移除)(当前|选中|这篇|这条|这则)?笔记[。.!！?？]*$");
-        return genericNoteDelete || (explicitlyCurrent && !hasComplexTaskConnector(q));
-    }
-
-    private boolean hasComplexTaskConnector(String q) {
-        return q.contains("然后")
-                || q.contains("再")
-                || q.contains("同时")
-                || q.contains("顺便")
-                || q.contains("之后")
-                || q.contains("以及")
-                || q.contains("并且")
-                || q.contains("并")
-                || q.contains(";")
-                || q.contains("；");
-    }
-
-    private AiChatResponse tryHandlePendingActionDirectly(String actionJson, boolean confirmed) {
+    private AiChatResponse tryHandlePendingActionDirectly(String userId, String actionJson, boolean confirmed) {
         JsonNode action = parseFirstPendingAction(actionJson);
         if (action == null || !action.has("type")) {
             return null;
         }
 
         String type = action.path("type").asText("");
+        if ("DELETE_NOTES".equals(type)) {
+            return handleDeleteNotesAction(userId, action, confirmed);
+        }
         if (!"DELETE_NOTE".equals(type)) {
             return null;
         }
@@ -1004,6 +912,65 @@ public class AgentService {
         String title = noteOpt.get().getTitle();
         noteService.delete(noteId);
         return new AiChatResponse("已删除「" + title + "」，并移入回收站。", new HashMap<>(), (String) null);
+    }
+
+    private AiChatResponse handleDeleteNotesAction(String userId, JsonNode action, boolean confirmed) {
+        String countFromAction = action.path("count").asText("");
+        if (!confirmed) {
+            if (!countFromAction.isBlank()) {
+                return new AiChatResponse("好的，已取消删除全部 " + countFromAction + " 篇笔记。", new HashMap<>(), (String) null);
+            }
+            return new AiChatResponse("好的，已取消删除这些笔记。", new HashMap<>(), (String) null);
+        }
+
+        List<String> noteIds = new ArrayList<>();
+        JsonNode noteIdsNode = action.path("noteIds");
+        if (noteIdsNode.isArray()) {
+            for (JsonNode noteIdNode : noteIdsNode) {
+                String noteId = noteIdNode.asText("");
+                if (!noteId.isBlank() && !noteIds.contains(noteId)) {
+                    noteIds.add(noteId);
+                }
+            }
+        }
+
+        if (noteIds.isEmpty() && "ALL_ACTIVE_NOTES".equals(action.path("scope").asText(""))) {
+            List<com.ainote.app.entity.Note> notes = noteRepository.findByUserIdAndDeletedAtIsNull(userId);
+            for (com.ainote.app.entity.Note note : notes) {
+                String noteId = note.getId();
+                if (noteId != null && !noteId.isBlank() && !noteIds.contains(noteId)) {
+                    noteIds.add(noteId);
+                }
+            }
+        }
+
+        if (noteIds.isEmpty()) {
+            return new AiChatResponse("当前没有可删除的笔记。", new HashMap<>(), (String) null);
+        }
+
+        int deleted = 0;
+        List<String> failedIds = new ArrayList<>();
+        for (String noteId : noteIds) {
+            try {
+                noteService.delete(noteId);
+                deleted++;
+            } catch (RuntimeException e) {
+                failedIds.add(noteId);
+                log.warn("Failed to delete note {} during DELETE_NOTES confirmation", noteId, e);
+            }
+        }
+
+        if (failedIds.isEmpty()) {
+            return new AiChatResponse("已删除 " + deleted + " 篇笔记，并移入回收站。", new HashMap<>(), (String) null);
+        }
+        if (deleted == 0) {
+            return new AiChatResponse("没有删除任何笔记，可能它们已经被删除或不属于当前用户。", new HashMap<>(), (String) null);
+        }
+        return new AiChatResponse(
+                "已删除 " + deleted + " 篇笔记，并移入回收站；另有 " + failedIds.size() + " 篇未能删除，可能已经被删除或不属于当前用户。",
+                new HashMap<>(),
+                (String) null
+        );
     }
 
     private JsonNode parseFirstPendingAction(String actionJson) {

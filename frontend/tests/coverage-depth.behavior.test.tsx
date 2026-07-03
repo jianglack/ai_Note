@@ -460,11 +460,13 @@ describe('coverage depth behavior', () => {
     store.removeNote('alpha');
     expect(useNoteStore.getState().notes.some((item) => item.id === 'alpha')).toBe(false);
 
+    store.setSelectedNote(alpha);
     apiMocks.getNotes.mockResolvedValueOnce([loaded]);
     apiMocks.getFolders.mockResolvedValueOnce([folder({ id: 'loaded-folder', name: 'Loaded folder' })]);
     await useNoteStore.getState().loadData();
     expect(useNoteStore.getState().notes).toEqual([loaded]);
     expect(useNoteStore.getState().folders[0].id).toBe('loaded-folder');
+    expect(useNoteStore.getState().selectedNote).toBeNull();
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     apiMocks.getNotes.mockRejectedValueOnce(new Error('boom'));

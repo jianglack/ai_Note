@@ -116,33 +116,25 @@ async function mockBackend(page: Page, state: MockState = {}) {
       return;
     }
 
-    if (path === '/api/ai/chat/stream' && request.method() === 'POST') {
+    if (path === '/api/ai/smart-chat' && request.method() === 'POST') {
       const body = request.postDataJSON() as { query?: string; message?: string };
       const query = body.query ?? body.message ?? '';
       const destructive = query.includes('清空回收站') || query.toLowerCase().includes('empty trash');
-      const complete = destructive
+      const response = destructive
         ? {
-            content: '清空回收站需要确认。',
-            action: JSON.stringify({ type: 'EMPTY_TRASH', count: 1 }),
+            type: 'direct',
+            route: 'DIRECT_AGENT',
+            content: 'Empty trash requires confirmation.',
+            actionJson: JSON.stringify([{ type: 'EMPTY_TRASH', count: 1 }]),
             sources: {},
           }
         : {
-            content: '已根据 [笔记1] 汇总路线图。',
+            type: 'direct',
+            route: 'DIRECT_AGENT',
+            content: 'Based on [note 1], roadmap summary is ready.',
             sources: { 1: { id: 'note-1', title: 'Roadmap review' } },
           };
-      await route.fulfill({
-        status: 200,
-        headers: { 'Content-Type': 'text/event-stream' },
-        body: [
-          'event: token',
-          'data: 墨子正在整理',
-          '',
-          'event: complete',
-          `data: ${JSON.stringify(complete)}`,
-          '',
-          '',
-        ].join('\n'),
-      });
+      await route.fulfill({ json: response });
       return;
     }
 
@@ -167,12 +159,12 @@ async function mockBackend(page: Page, state: MockState = {}) {
 
     if (path === '/api/ai/action-feedback' && request.method() === 'POST') {
       state.actionFeedbackRequests!.push(request.postDataJSON());
-      await route.fulfill({ json: { content: '已取消执行清空回收站。' } });
+      await route.fulfill({ json: { content: 'Cancelled empty trash.' } });
       return;
     }
 
-    if (path === '/api/ai/history') {
-      await route.fulfill({ json: [] });
+    if (path === '/api/ai/chat/history') {
+      await route.fulfill({ json: { items: [], nextCursor: null, hasMore: false } });
       return;
     }
 
@@ -223,7 +215,7 @@ test('authenticated user can create a note without a real backend', async ({ pag
   await expect(page.locator('.col-span-full')).toContainText('Note created');
 });
 
-test('AI stream renders completed content and clickable source references', async ({ page }) => {
+test('AI smart chat renders completed content and clickable source references', async ({ page }) => {
   await mockBackend(page);
   await authenticate(page);
 
@@ -231,7 +223,7 @@ test('AI stream renders completed content and clickable source references', asyn
   await page.getByPlaceholder('问墨子任何事...').fill('总结路线图');
   await page.getByTitle('发送').click();
 
-  await expect(page.getByRole('log')).toContainText('已根据');
+  await expect(page.getByRole('log')).toContainText('Based on');
   await expect(page.getByText('[1] Roadmap review')).toBeVisible();
   await page.getByText('[1] Roadmap review').click();
   await expect(page.getByRole('option', { name: /Roadmap review/ })).toHaveAttribute('aria-selected', 'true');
@@ -268,7 +260,7 @@ test('destructive AI action stays pending until the user confirms or cancels', a
   expect(state.actionFeedbackRequests).toHaveLength(0);
 
   await page.getByRole('button', { name: '取消' }).click();
-  await expect(page.getByText('已取消')).toBeVisible();
+  await expect(page.getByText('Cancelled empty trash.')).toBeVisible();
   expect(state.actionFeedbackRequests).toHaveLength(1);
   expect(state.permanentDeleteRequests).toHaveLength(0);
 });

@@ -100,7 +100,15 @@ export default function App() {
   })));
 
   // Hooks
-  const { loadChatHistory, handleAiMessage, handleCancelAi, handlePlanAction } = useAiChat();
+  const {
+    loadChatHistory,
+    loadOlderChatHistory,
+    hasMoreHistory,
+    isLoadingOlderHistory,
+    handleAiMessage,
+    handleCancelAi,
+    handlePlanAction,
+  } = useAiChat();
   const { handleCardAction } = useCardActions();
   const { loadData, handleSelectNote, handleCreateNote } = useNotes();
 
@@ -158,6 +166,9 @@ export default function App() {
             aiPhase={ai.aiPhase}
             aiSteps={ai.aiSteps}
             onSendMessage={handleAiMessage}
+            hasMoreHistory={hasMoreHistory}
+            isLoadingOlderHistory={isLoadingOlderHistory}
+            onLoadOlderHistory={loadOlderChatHistory}
             onCancel={handleCancelAi}
             onClose={() => ui.setIsAiChatOpen(false)}
             noteCount={notes.length}

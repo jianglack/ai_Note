@@ -98,7 +98,7 @@ describe('App shell real behavior', () => {
     apiMocks.getSchedules.mockResolvedValue([]);
     apiMocks.getNotes.mockResolvedValue([noteFixture]);
     apiMocks.getFolders.mockResolvedValue([]);
-    apiMocks.getChatHistory.mockResolvedValue([]);
+    apiMocks.getChatHistory.mockResolvedValue({ items: [], nextCursor: null, hasMore: false });
     apiMocks.getSpiritGreeting.mockResolvedValue('Hello from the real shell');
     apiMocks.getSmartSuggestions.mockResolvedValue([]);
     apiMocks.createNote.mockResolvedValue({
