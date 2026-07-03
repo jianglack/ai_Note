@@ -12,6 +12,7 @@ import com.ainote.app.agent.pending.PendingActionRegistry;
 import com.ainote.app.agent.pipeline.GracefulDegradation;
 import com.ainote.app.agent.pipeline.ToolAuditLogger;
 import com.ainote.app.agent.pipeline.ToolExecutionPipeline;
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.memory.DeferredMemoryState;
 import com.ainote.app.memory.ReliableChatMemoryStore;
 import com.ainote.app.model.AiChatResponse;
@@ -75,6 +76,8 @@ public class AgentService {
     private final ToolCallAuditor toolCallAuditor;
     private final ReliableChatMemoryStore reliableChatMemoryStore;
     private final MemoryExtractionService memoryExtractionService;
+    private final MemoryOrchestrator memoryOrchestrator;
+    private final MemoryProperties memoryProperties;
     private final Tracer tracer;
     private final com.ainote.app.agent.tools.ToolLoopDetector toolLoopDetector;
     private final ConcurrencyGuard concurrencyGuard;
@@ -105,6 +108,8 @@ public class AgentService {
             ToolCallAuditor toolCallAuditor,
             ReliableChatMemoryStore reliableChatMemoryStore,
             MemoryExtractionService memoryExtractionService,
+            MemoryOrchestrator memoryOrchestrator,
+            MemoryProperties memoryProperties,
             Tracer tracer,
             com.ainote.app.agent.tools.ToolLoopDetector toolLoopDetector,
             ConcurrencyGuard concurrencyGuard,
@@ -124,6 +129,8 @@ public class AgentService {
         this.toolCallAuditor = toolCallAuditor;
         this.reliableChatMemoryStore = reliableChatMemoryStore;
         this.memoryExtractionService = memoryExtractionService;
+        this.memoryOrchestrator = memoryOrchestrator;
+        this.memoryProperties = memoryProperties;
         this.tracer = tracer;
         this.toolLoopDetector = toolLoopDetector;
         this.concurrencyGuard = concurrencyGuard;
@@ -443,9 +450,7 @@ public class AgentService {
             log.info("=== Agent Chat Response === Content length: {}", cleanResponse.length());
 
             // 异步提取语义记忆（仅对非简单操作类查询）
-            if (shouldExtractMemory(query)) {
-                memoryExtractionService.extractSemanticMemoryAsync(actorUserId, query, cleanResponse);
-            }
+            captureLongTermMemory(actorUserId, query, cleanResponse);
 
             agentSpan.setAttribute("response.length", cleanResponse.length());
             agentSpan.setAttribute("pending_actions.count", pendingActions.size());
@@ -817,9 +822,7 @@ public class AgentService {
             callback.onComplete(response);
 
             // 异步提取语义记忆（仅对非简单操作类查询）
-            if (shouldExtractMemory(query)) {
-                memoryExtractionService.extractSemanticMemoryAsync(actorUserId, query, cleanResponse);
-            }
+            captureLongTermMemory(actorUserId, query, cleanResponse);
 
         } catch (Exception e) {
             // 流式也处理工具调用超限
@@ -986,6 +989,16 @@ public class AgentService {
         if (query == null || query.isBlank()) return false;
         ContextAssembler.Intent intent = contextAssembler.detectIntent(query);
         return intent != ContextAssembler.Intent.CHAT;
+    }
+
+    private void captureLongTermMemory(String userId, String query, String cleanResponse) {
+        if (memoryProperties.getCapture().getMode() == MemoryProperties.CaptureMode.POLICY) {
+            memoryOrchestrator.captureAfterTurn(userId, query, cleanResponse);
+            return;
+        }
+        if (shouldExtractMemory(query)) {
+            memoryExtractionService.extractSemanticMemoryAsync(userId, query, cleanResponse);
+        }
     }
 
     /**

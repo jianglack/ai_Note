@@ -8,6 +8,7 @@ import com.ainote.app.agent.guardrail.GuardrailResult;
 import com.ainote.app.agent.guardrail.InputGuardrail;
 import com.ainote.app.agent.guardrail.OutputGuardrail;
 import com.ainote.app.agent.pending.PendingActionRegistry;
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.memory.ReliableChatMemoryStore;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.repository.NoteRepository;
@@ -88,6 +89,7 @@ class AgentServiceGuardrailTest {
                 userMemoryRepository, objectMapper, new PendingActionRegistry(objectMapper),
                 realExecutor, contextAssembler,
                 toolCallAuditor, reliableChatMemoryStore, memoryExtractionService,
+                mock(MemoryOrchestrator.class), new MemoryProperties(),
                 tracer, toolLoopDetector, concurrencyGuard, tokenBudget,
                 inputGuardrail, outputGuardrail);
         ReflectionTestUtils.setField(agentService, "agentTimeoutSeconds", 30);

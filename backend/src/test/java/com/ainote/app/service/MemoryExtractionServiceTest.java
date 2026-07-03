@@ -54,7 +54,8 @@ class MemoryExtractionServiceTest {
         promptLoader = mock(PromptLoader.class);
         memoryProperties = new MemoryProperties();
         service = new MemoryExtractionService(chatModel, embeddingModel, semanticMemoryRepository,
-                episodicMemoryRepository, userMemoryRepository, promptLoader, new ObjectMapper(), memoryProperties);
+                episodicMemoryRepository, userMemoryRepository, promptLoader, new ObjectMapper(), memoryProperties,
+                new MemoryCapturePolicy());
 
         when(promptLoader.load("semantic-extraction.txt")).thenReturn("extract memories");
         when(embeddingModel.embed(any(String.class)))
@@ -119,6 +120,23 @@ class MemoryExtractionServiceTest {
 
         service.extractSemanticMemoryAsync("user-1", "hello", "hi");
 
+        verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
+    }
+
+    @Test
+    void extractSemanticMemorySkipsDeleteAllNotesRequestBeforeCallingLlm() {
+        service.extractSemanticMemoryAsync("user-1", "删除全部笔记", "已准备删除全部笔记");
+
+        verify(chatModel, never()).chat(any(ChatRequest.class));
+        verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
+    }
+
+    @Test
+    void extractSemanticMemorySkipsConfirmAndCancelBeforeCallingLlm() {
+        service.extractSemanticMemoryAsync("user-1", "确认", "已确认");
+        service.extractSemanticMemoryAsync("user-1", "取消", "已取消");
+
+        verify(chatModel, never()).chat(any(ChatRequest.class));
         verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
     }
 

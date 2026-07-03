@@ -8,6 +8,7 @@ import com.ainote.app.agent.guardrail.InputGuardrail;
 import com.ainote.app.agent.guardrail.OutputGuardrail;
 import com.ainote.app.agent.pending.PendingActionRegistry;
 import com.ainote.app.agent.tools.ToolLoopDetector;
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.memory.ReliableChatMemoryStore;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.repository.NoteRepository;
@@ -68,6 +69,8 @@ class AgentServiceCapacityTest {
                 mock(ToolCallAuditor.class),
                 mock(ReliableChatMemoryStore.class),
                 mock(MemoryExtractionService.class),
+                mock(MemoryOrchestrator.class),
+                new MemoryProperties(),
                 mock(Tracer.class),
                 mock(ToolLoopDetector.class),
                 concurrencyGuard,

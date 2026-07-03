@@ -10,6 +10,7 @@ import com.ainote.app.agent.pending.PendingActionRegistry;
 import com.ainote.app.entity.Note;
 import com.ainote.app.agent.pipeline.ToolAuditLogger;
 import com.ainote.app.agent.tools.ToolLoopDetector;
+import com.ainote.app.config.MemoryProperties;
 import com.ainote.app.memory.ReliableChatMemoryStore;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.repository.NoteRepository;
@@ -76,6 +77,8 @@ class AgentServicePendingActionTest {
                 toolCallAuditor,
                 reliableChatMemoryStore,
                 mock(MemoryExtractionService.class),
+                mock(MemoryOrchestrator.class),
+                new MemoryProperties(),
                 configuredTracer(),
                 mock(ToolLoopDetector.class),
                 concurrencyGuard,

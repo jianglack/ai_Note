@@ -63,6 +63,7 @@ public class MemoryExtractionService {
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
     private final MemoryProperties memoryProperties;
+    private final MemoryCapturePolicy memoryCapturePolicy;
 
     public MemoryExtractionService(
             ChatModel chatModel,
@@ -72,7 +73,8 @@ public class MemoryExtractionService {
             UserMemoryRepository userMemoryRepository,
             PromptLoader promptLoader,
             ObjectMapper objectMapper,
-            MemoryProperties memoryProperties) {
+            MemoryProperties memoryProperties,
+            MemoryCapturePolicy memoryCapturePolicy) {
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
         this.semanticMemoryRepository = semanticMemoryRepository;
@@ -81,6 +83,7 @@ public class MemoryExtractionService {
         this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
         this.memoryProperties = memoryProperties;
+        this.memoryCapturePolicy = memoryCapturePolicy;
         log.info("MemoryExtractionService initialized (fuzzy dedup + decay + capacity management)");
     }
 
@@ -92,6 +95,12 @@ public class MemoryExtractionService {
         long startedAt = System.nanoTime();
         if (!memoryProperties.getCapture().isEnabled()) {
             logExtractionResult(userId, "skipped", 0, 0, 0, 0, startedAt, "capture_disabled");
+            return;
+        }
+        MemoryCapturePolicy.CaptureDecision decision = memoryCapturePolicy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(userId, userMessage, aiResponse));
+        if (!decision.allowed()) {
+            logExtractionResult(userId, "skipped", 0, 0, 0, 0, startedAt, decision.reason());
             return;
         }
 
