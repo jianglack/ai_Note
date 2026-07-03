@@ -38,7 +38,7 @@ class SchemaValidationIT {
     @DisplayName("loads context and validates all entities against Flyway schema")
     void validatesAllEntitiesAgainstMigratedSchema() {
         assertThat(entityManagerFactory.getMetamodel().getEntities())
-                .hasSize(31);
+                .hasSize(32);
     }
 
 }

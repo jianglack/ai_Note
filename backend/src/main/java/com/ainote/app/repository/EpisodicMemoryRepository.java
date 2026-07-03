@@ -14,7 +14,8 @@ public interface EpisodicMemoryRepository extends JpaRepository<EpisodicMemory, 
     /**
      * 获取用户最近的会话摘要
      */
-    @Query("SELECT m FROM EpisodicMemory m WHERE m.userId = :userId ORDER BY m.createdAt DESC")
+    @Query("SELECT m FROM EpisodicMemory m WHERE m.userId = :userId " +
+           "AND (m.status IS NULL OR m.status = 'active') ORDER BY m.createdAt DESC")
     List<EpisodicMemory> findRecentByUserId(String userId, Pageable pageable);
 
     /**

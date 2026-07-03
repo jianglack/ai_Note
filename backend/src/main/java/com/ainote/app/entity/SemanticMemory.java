@@ -15,7 +15,7 @@ public class SemanticMemory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", length = 36, nullable = false)
+    @Column(name = "user_id", length = 128, nullable = false)
     private String userId;
 
     /**
@@ -39,8 +39,47 @@ public class SemanticMemory {
     /**
      * 来源: ai_extracted(AI 自动提取), user_explicit(用户明确表达)
      */
-    @Column(length = 20, nullable = false)
+    @Column(length = 50, nullable = false)
     private String source = "ai_extracted";
+
+    @Column(name = "memory_type", length = 30)
+    private String memoryType = "semantic";
+
+    @Column(length = 50)
+    private String scope = "user";
+
+    @Column(length = 30)
+    private String status = "active";
+
+    @Column(name = "source_trace_id", length = 128)
+    private String sourceTraceId;
+
+    @Column(name = "source_message_ids", columnDefinition = "TEXT")
+    private String sourceMessageIds;
+
+    @Column(name = "source_tool_call_id", length = 128)
+    private String sourceToolCallId;
+
+    @Column(name = "evidence_excerpt", columnDefinition = "TEXT")
+    private String evidenceExcerpt;
+
+    @Column(name = "expires_at")
+    private LocalDateTime expiresAt;
+
+    @Column(name = "last_accessed_at")
+    private LocalDateTime lastAccessedAt;
+
+    @Column(name = "access_count")
+    private Integer accessCount = 0;
+
+    @Column(name = "supersedes_id")
+    private Long supersedesId;
+
+    @Column(name = "content_hash", length = 128)
+    private String contentHash;
+
+    @Column(name = "metadata_json", columnDefinition = "TEXT")
+    private String metadataJson;
 
     /**
      * 被多次对话印证的次数
@@ -82,6 +121,18 @@ public class SemanticMemory {
         if (lastReinforcedAt == null) {
             lastReinforcedAt = createdAt;
         }
+        if (memoryType == null) {
+            memoryType = category != null ? category : "semantic";
+        }
+        if (scope == null) {
+            scope = "user";
+        }
+        if (status == null) {
+            status = "active";
+        }
+        if (accessCount == null) {
+            accessCount = 0;
+        }
     }
 
     @PreUpdate
@@ -108,6 +159,45 @@ public class SemanticMemory {
 
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }
+
+    public String getMemoryType() { return memoryType; }
+    public void setMemoryType(String memoryType) { this.memoryType = memoryType; }
+
+    public String getScope() { return scope; }
+    public void setScope(String scope) { this.scope = scope; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getSourceTraceId() { return sourceTraceId; }
+    public void setSourceTraceId(String sourceTraceId) { this.sourceTraceId = sourceTraceId; }
+
+    public String getSourceMessageIds() { return sourceMessageIds; }
+    public void setSourceMessageIds(String sourceMessageIds) { this.sourceMessageIds = sourceMessageIds; }
+
+    public String getSourceToolCallId() { return sourceToolCallId; }
+    public void setSourceToolCallId(String sourceToolCallId) { this.sourceToolCallId = sourceToolCallId; }
+
+    public String getEvidenceExcerpt() { return evidenceExcerpt; }
+    public void setEvidenceExcerpt(String evidenceExcerpt) { this.evidenceExcerpt = evidenceExcerpt; }
+
+    public LocalDateTime getExpiresAt() { return expiresAt; }
+    public void setExpiresAt(LocalDateTime expiresAt) { this.expiresAt = expiresAt; }
+
+    public LocalDateTime getLastAccessedAt() { return lastAccessedAt; }
+    public void setLastAccessedAt(LocalDateTime lastAccessedAt) { this.lastAccessedAt = lastAccessedAt; }
+
+    public Integer getAccessCount() { return accessCount; }
+    public void setAccessCount(Integer accessCount) { this.accessCount = accessCount; }
+
+    public Long getSupersedesId() { return supersedesId; }
+    public void setSupersedesId(Long supersedesId) { this.supersedesId = supersedesId; }
+
+    public String getContentHash() { return contentHash; }
+    public void setContentHash(String contentHash) { this.contentHash = contentHash; }
+
+    public String getMetadataJson() { return metadataJson; }
+    public void setMetadataJson(String metadataJson) { this.metadataJson = metadataJson; }
 
     public Integer getTimesReinforced() { return timesReinforced; }
     public void setTimesReinforced(Integer timesReinforced) { this.timesReinforced = timesReinforced; }

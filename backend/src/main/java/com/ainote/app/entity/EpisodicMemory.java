@@ -15,7 +15,7 @@ public class EpisodicMemory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "user_id", length = 36, nullable = false)
+    @Column(name = "user_id", length = 128, nullable = false)
     private String userId;
 
     /**
@@ -42,6 +42,30 @@ public class EpisodicMemory {
     @Column(name = "message_count")
     private Integer messageCount = 0;
 
+    @Column(name = "session_id", length = 128)
+    private String sessionId;
+
+    @Column(name = "thread_id", length = 128)
+    private String threadId;
+
+    @Column(name = "started_at")
+    private LocalDateTime startedAt;
+
+    @Column(name = "ended_at")
+    private LocalDateTime endedAt;
+
+    @Transient
+    private float[] summaryEmbedding;
+
+    @Column(length = 30)
+    private String status = "active";
+
+    @Column(name = "metadata_json", columnDefinition = "TEXT")
+    private String metadataJson;
+
+    @Column(name = "source_message_range", columnDefinition = "TEXT")
+    private String sourceMessageRange;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -49,6 +73,9 @@ public class EpisodicMemory {
     protected void onCreate() {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (status == null) {
+            status = "active";
         }
     }
 
@@ -74,4 +101,28 @@ public class EpisodicMemory {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public String getSessionId() { return sessionId; }
+    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+
+    public String getThreadId() { return threadId; }
+    public void setThreadId(String threadId) { this.threadId = threadId; }
+
+    public LocalDateTime getStartedAt() { return startedAt; }
+    public void setStartedAt(LocalDateTime startedAt) { this.startedAt = startedAt; }
+
+    public LocalDateTime getEndedAt() { return endedAt; }
+    public void setEndedAt(LocalDateTime endedAt) { this.endedAt = endedAt; }
+
+    public float[] getSummaryEmbedding() { return summaryEmbedding; }
+    public void setSummaryEmbedding(float[] summaryEmbedding) { this.summaryEmbedding = summaryEmbedding; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public String getMetadataJson() { return metadataJson; }
+    public void setMetadataJson(String metadataJson) { this.metadataJson = metadataJson; }
+
+    public String getSourceMessageRange() { return sourceMessageRange; }
+    public void setSourceMessageRange(String sourceMessageRange) { this.sourceMessageRange = sourceMessageRange; }
 }

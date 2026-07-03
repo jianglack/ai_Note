@@ -7,6 +7,7 @@ import com.ainote.app.entity.Note;
 import com.ainote.app.entity.NoteConcept;
 import com.ainote.app.entity.Notification;
 import com.ainote.app.entity.SemanticMemory;
+import com.ainote.app.entity.MemoryEvent;
 import com.ainote.app.entity.TaskSchedule;
 import com.ainote.app.entity.User;
 import com.ainote.app.controller.NotificationController;
@@ -17,6 +18,7 @@ import com.ainote.app.repository.FolderRepository;
 import com.ainote.app.repository.NoteConceptRepository;
 import com.ainote.app.repository.NoteRepository;
 import com.ainote.app.repository.NotificationRepository;
+import com.ainote.app.repository.MemoryEventRepository;
 import com.ainote.app.repository.TaskScheduleRepository;
 import com.ainote.app.repository.ScheduleRepository;
 import com.ainote.app.repository.SemanticMemoryRepository;
@@ -69,6 +71,9 @@ class RepositoryIT {
 
     @Autowired
     private SemanticMemoryRepository semanticMemoryRepository;
+
+    @Autowired
+    private MemoryEventRepository memoryEventRepository;
 
     @Autowired
     private EpisodicMemoryRepository episodicMemoryRepository;
@@ -167,11 +172,33 @@ class RepositoryIT {
         SemanticMemory semantic = new SemanticMemory();
         semantic.setUserId("memory-user");
         semantic.setCategory("preference");
+        semantic.setMemoryType("preference");
+        semantic.setScope("user");
+        semantic.setStatus("active");
         semantic.setContent("prefers concise release notes");
         semantic.setConfidence(0.88);
         semantic.setDecayScore(0.93);
         semanticMemoryRepository.save(semantic);
         semanticMemoryRepository.updateEmbedding(semantic.getId(), semanticVector(1.0f));
+
+        SemanticMemory deleted = new SemanticMemory();
+        deleted.setUserId("memory-user");
+        deleted.setCategory("preference");
+        deleted.setMemoryType("preference");
+        deleted.setScope("user");
+        deleted.setStatus("deleted");
+        deleted.setContent("deleted memory");
+        deleted.setConfidence(0.8);
+        deleted.setDecayScore(0.99);
+        semanticMemoryRepository.save(deleted);
+
+        MemoryEvent event = new MemoryEvent();
+        event.setUserId("memory-user");
+        event.setMemoryId(semantic.getId());
+        event.setEventType("CREATED");
+        event.setActor("system");
+        event.setReason("test");
+        memoryEventRepository.save(event);
 
         EpisodicMemory episodic = new EpisodicMemory();
         episodic.setUserId("memory-user");
@@ -191,7 +218,7 @@ class RepositoryIT {
                 .extracting(NoteConcept::getNoteId)
                 .containsExactly("note-memory-1");
 
-        assertThat(semanticMemoryRepository.countByUserId("memory-user")).isEqualTo(1);
+        assertThat(semanticMemoryRepository.countByUserId("memory-user")).isEqualTo(2);
         assertThat(semanticMemoryRepository.findTopByUserId("memory-user", PageRequest.of(0, 5)))
                 .extracting(SemanticMemory::getContent)
                 .containsExactly("prefers concise release notes");
@@ -210,13 +237,16 @@ class RepositoryIT {
         assertThat(semanticMemoryRepository.findSimilarByEmbedding("memory-user", semanticVector(1.0f), 0.99, 5))
                 .extracting(SemanticMemory::getContent)
                 .containsExactly("prefers concise release notes");
+        assertThat(memoryEventRepository.findByUserIdOrderByCreatedAtDesc("memory-user"))
+                .extracting(MemoryEvent::getEventType)
+                .containsExactly("CREATED");
 
         assertThat(episodicMemoryRepository.countByUserId("memory-user")).isEqualTo(1);
         assertThat(episodicMemoryRepository.findRecentByUserId("memory-user", PageRequest.of(0, 5)))
                 .extracting(EpisodicMemory::getSessionSummary)
                 .containsExactly("Discussed the launch checklist");
 
-        semanticMemoryRepository.deleteByIds(List.of(semantic.getId()));
+        semanticMemoryRepository.deleteByIds(List.of(semantic.getId(), deleted.getId()));
         assertThat(semanticMemoryRepository.countByUserId("memory-user")).isZero();
     }
 

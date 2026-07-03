@@ -17,8 +17,27 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
      * 获取用户的语义记忆，按衰减分数排序（decay_score 由应用层定期更新），取 top N
      */
     @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId " +
+           "AND (m.status IS NULL OR m.status = 'active') " +
            "ORDER BY m.decayScore DESC")
     List<SemanticMemory> findTopByUserId(String userId, Pageable pageable);
+
+    @Query("""
+           SELECT m FROM SemanticMemory m
+           WHERE m.userId = :userId
+             AND (:type IS NULL OR :type = '' OR m.memoryType = :type OR m.category = :type)
+             AND (:status IS NULL OR :status = '' OR m.status = :status)
+             AND (:query IS NULL OR :query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
+           ORDER BY m.updatedAt DESC, m.createdAt DESC
+           """)
+    List<SemanticMemory> searchUserMemories(String userId,
+                                            String type,
+                                            String status,
+                                            String query,
+                                            Pageable pageable);
+
+    java.util.Optional<SemanticMemory> findByIdAndUserId(Long id, String userId);
+
+    List<SemanticMemory> findByUserIdAndIdIn(String userId, List<Long> ids);
 
     /**
      * 获取用户某分类的所有语义记忆
@@ -33,7 +52,8 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     /**
      * 精确匹配去重（保留作为后备）
      */
-    @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.content = :content")
+    @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.content = :content " +
+           "AND (m.status IS NULL OR m.status = 'active')")
     List<SemanticMemory> findByUserIdAndContent(String userId, String content);
 
     /**
@@ -44,6 +64,7 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Query(value = """
         SELECT * FROM semantic_memories
         WHERE user_id = :userId
+          AND (status IS NULL OR status = 'active')
           AND embedding IS NOT NULL
           AND (1 - (embedding <=> cast(:embedding AS vector))) > :threshold
         ORDER BY embedding <=> cast(:embedding AS vector) ASC
@@ -71,6 +92,7 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Query(value = """
         SELECT * FROM semantic_memories
         WHERE user_id = :userId
+          AND (status IS NULL OR status = 'active')
         ORDER BY decay_score ASC
         LIMIT :limit
         """, nativeQuery = true)
