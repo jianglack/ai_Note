@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getWorkflows, createWorkflow as apiCreateWorkflow, deleteWorkflow, toggleWorkflow, runWorkflow, getWorkflowRuns } from '../../api';
 import { askConfirm } from '../../services/dialogService';
+import { ToolWorkbenchShell } from '../workbench';
 import './features.css';
 
 interface Workflow {
@@ -146,19 +147,16 @@ export default function WorkflowsView({ onClose }: { onClose: () => void }) {
   };
 
   return (
+    <ToolWorkbenchShell
+      title="AI 工作流"
+      subtitle={`定义多步 AI 任务，自动依次执行 · 共 ${flows.length} 个工作流`}
+      onBack={onClose}
+      backLabel="关闭 AI 工作流"
+      closeOnEscape
+      primaryActions={[{ key: 'create', label: '创建工作流', variant: 'primary', onClick: () => setShowCreate(true) }]}
+      secondaryActions={[{ key: 'refresh', label: '刷新', onClick: () => { void loadFlows(); } }]}
+    >
     <div className="wf-root">
-      <div className="wf-head">
-        <div>
-          <h1 className="wf-title">AI 工作流</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>
-            定义多步 AI 任务，自动依次执行 · 共 {flows.length} 个工作流
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="feat-btn ghost" onClick={onClose}>← 返回</button>
-          <button className="feat-btn primary" onClick={() => setShowCreate(true)}>+ 创建工作流</button>
-        </div>
-      </div>
 
       <div className="wf-tabs">
         <button className={tab === 'list' ? 'on' : ''} onClick={() => setTab('list')}>我的工作流</button>
@@ -354,5 +352,6 @@ export default function WorkflowsView({ onClose }: { onClose: () => void }) {
         </div>
       )}
     </div>
+    </ToolWorkbenchShell>
   );
 }

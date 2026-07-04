@@ -192,6 +192,9 @@ describe('sidebar and canvas behavior', () => {
 
     const { container } = render(<CanvasView onClose={vi.fn()} />);
 
+    expect(screen.getByRole('dialog', { name: '画布' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /新建画布/ })).toBeInTheDocument();
+
     await screen.findByText('Board');
     await user.click(screen.getByText('Board'));
 

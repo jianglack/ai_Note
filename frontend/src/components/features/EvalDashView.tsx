@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { getEvalDatasets, getEvalDataset, createEvalDataset, addEvalItem, startEvalRun, getEvalRuns, getEvalRunDetail, deleteEvalDataset, EvalResultData } from '../../api';
 import { askConfirm } from '../../services/dialogService';
+import { ToolWorkbenchShell } from '../workbench';
 import './features.css';
 
 interface Dataset { id: string; name: string; description?: string; datasetType: string; createdAt: string; }
@@ -134,20 +135,22 @@ export default function EvalDashView({ onClose }: { onClose: () => void }) {
   const fmtTokens = (v: number | null | undefined) => v == null ? '—' : v > 1000 ? (v / 1000).toFixed(1) + 'k' : v.toString();
 
   return (
+    <ToolWorkbenchShell
+      title="评估中心"
+      subtitle={`${datasets.length} 数据集 · ${items.length} 评估项 · ${runs.length} 次运行`}
+      onBack={onClose}
+      backLabel="关闭评估中心"
+      closeOnEscape
+      secondaryActions={[{ key: 'new-dataset', label: '新建数据集', onClick: () => setShowAdd(true) }]}
+      primaryActions={[{
+        key: 'start-eval',
+        label: running ? '评估中' : '开始评估',
+        variant: 'primary',
+        disabled: !activeDs || running || items.length === 0,
+        onClick: () => { void handleStartRun(); },
+      }]}
+    >
     <div className="ev-root">
-      <div className="ev-top">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button className="feat-btn subtle small" onClick={onClose}>←</button>
-          <h1 style={{ fontSize: 20, fontWeight: 600, margin: 0 }}>评估中心</h1>
-          <span className="feat-badge">{datasets.length} 数据集</span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="feat-btn ghost" onClick={() => setShowAdd(true)}>+ 新建数据集</button>
-          <button className="feat-btn primary" onClick={handleStartRun} disabled={!activeDs || running || items.length === 0}>
-            {running ? '⏳ 评估中...' : '▶ 开始评估'}
-          </button>
-        </div>
-      </div>
 
       {/* 统计卡片 */}
       <div className="ev-stats">
@@ -423,5 +426,6 @@ export default function EvalDashView({ onClose }: { onClose: () => void }) {
         </div>
       )}
     </div>
+    </ToolWorkbenchShell>
   );
 }

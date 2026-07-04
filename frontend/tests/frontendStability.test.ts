@@ -303,6 +303,12 @@ describe('frontend stability guards', () => {
     }
   });
 
+  it('migrates second-wave feature tools to the shared workbench shell', () => {
+    assert.match(read('src/components/features/CanvasView.tsx'), /ToolWorkbenchShell/);
+    assert.match(read('src/components/features/WorkflowsView.tsx'), /ToolWorkbenchShell/);
+    assert.match(read('src/components/features/EvalDashView.tsx'), /ToolWorkbenchShell/);
+  });
+
   it('uses semantic buttons for feature panel selectable rows', () => {
     const timeline = read('src/components/TimelineView.tsx');
     const traces = read('src/components/TracesPanel.tsx');

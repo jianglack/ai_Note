@@ -3,6 +3,7 @@ import { FixedSizeList } from 'react-window';
 import { getCanvases, createCanvas, updateCanvas, deleteCanvas, generateCanvasAI } from '../../api';
 import { useNoteStore } from '../../stores/noteStore';
 import { askConfirm, askPrompt, showAlert } from '../../services/dialogService';
+import { ToolWorkbenchShell } from '../workbench';
 import './features.css';
 
 interface CanvasData { id: string; title: string; data: string; createdAt: string; updatedAt: string; }
@@ -262,37 +263,36 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
   // --- Canvas list view ---
   if (showList) {
     return (
-      <div className="wf-root">
-        <div className="wf-head">
-          <div>
-            <h1 className="wf-title">画布</h1>
-            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--color-text-secondary)' }}>空间化组织笔记关系，支持 AI 自动生成</p>
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="feat-btn ghost" onClick={onClose}>← 返回</button>
-            <button className="feat-btn primary" onClick={handleCreate}>+ 新建画布</button>
-          </div>
-        </div>
-        <div className="wf-grid">
-          {canvases.map(c => (
-            <div key={c.id} className="wf-card" onClick={() => openCanvas(c)}>
-              <div className="wf-card-top"><span className="wf-card-name">{c.title}</span></div>
-              <div className="wf-card-meta"><span>更新于 {new Date(c.updatedAt).toLocaleDateString('zh-CN')}</span></div>
-              <div className="wf-card-actions">
-                <button className="feat-btn small primary" onClick={e => { e.stopPropagation(); openCanvas(c); }}>打开</button>
-                <button className="feat-btn small subtle" onClick={e => { e.stopPropagation(); handleDeleteCanvas(c.id); }}>删除</button>
+      <ToolWorkbenchShell
+        title="画布"
+        subtitle="空间化组织笔记关系，支持 AI 自动生成"
+        onBack={onClose}
+        backLabel="关闭画布"
+        closeOnEscape
+        primaryActions={[{ key: 'create', label: '新建画布', variant: 'primary', onClick: () => { void handleCreate(); } }]}
+      >
+        <div className="wf-root">
+          <div className="wf-grid">
+            {canvases.map(c => (
+              <div key={c.id} className="wf-card" onClick={() => openCanvas(c)}>
+                <div className="wf-card-top"><span className="wf-card-name">{c.title}</span></div>
+                <div className="wf-card-meta"><span>更新于 {new Date(c.updatedAt).toLocaleDateString('zh-CN')}</span></div>
+                <div className="wf-card-actions">
+                  <button className="feat-btn small primary" onClick={e => { e.stopPropagation(); openCanvas(c); }}>打开</button>
+                  <button className="feat-btn small subtle" onClick={e => { e.stopPropagation(); handleDeleteCanvas(c.id); }}>删除</button>
+                </div>
               </div>
-            </div>
-          ))}
-          {canvases.length === 0 && (
-            <div style={{ gridColumn: '1/3', textAlign: 'center', padding: 40, color: 'var(--color-ink-400)' }}>
-              <div style={{ fontSize: 32, marginBottom: 12 }}>◫</div>
-              <div style={{ fontSize: 14, marginBottom: 8 }}>创建你的第一个画布</div>
-              <button className="feat-btn primary" onClick={handleCreate}>+ 新建画布</button>
-            </div>
-          )}
+            ))}
+            {canvases.length === 0 && (
+              <div style={{ gridColumn: '1/3', textAlign: 'center', padding: 40, color: 'var(--color-ink-400)' }}>
+                <div style={{ fontSize: 32, marginBottom: 12 }}>◫</div>
+                <div style={{ fontSize: 14, marginBottom: 8 }}>创建你的第一个画布</div>
+                <button className="feat-btn primary" onClick={handleCreate}>创建第一个画布</button>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </ToolWorkbenchShell>
     );
   }
 
@@ -300,6 +300,17 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
   const nodeMap = Object.fromEntries(nodes.map(n => [n.id, n]));
 
   return (
+    <ToolWorkbenchShell
+      title={currentCanvas?.title || '画布'}
+      subtitle={`${nodes.length} 节点 · ${edges.length} 连线`}
+      onBack={() => { setShowList(true); loadCanvases(); }}
+      backLabel="返回画布列表"
+      closeOnEscape
+      secondaryActions={[
+        { key: 'close', label: '关闭', onClick: onClose },
+        { key: 'save', label: '保存', variant: 'primary', onClick: () => { void handleSave(); } },
+      ]}
+    >
     <div className="cv-root" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Top bar */}
       <div className="cv-top" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 14px', borderBottom: '1px solid var(--color-border)', flexShrink: 0 }}>
@@ -481,5 +492,6 @@ export default function CanvasView({ onClose }: { onClose: () => void }) {
         </div>
       )}
     </div>
+    </ToolWorkbenchShell>
   );
 }

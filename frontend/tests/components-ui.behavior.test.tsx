@@ -8,6 +8,14 @@ const apiMocks = vi.hoisted(() => ({
   getWorkflows: vi.fn(),
   createWorkflow: vi.fn(),
   deleteWorkflow: vi.fn(),
+  getEvalDatasets: vi.fn(),
+  getEvalDataset: vi.fn(),
+  createEvalDataset: vi.fn(),
+  addEvalItem: vi.fn(),
+  startEvalRun: vi.fn(),
+  getEvalRuns: vi.fn(),
+  getEvalRunDetail: vi.fn(),
+  deleteEvalDataset: vi.fn(),
   deleteMemory: vi.fn(),
   exportMemories: vi.fn(),
   getMemories: vi.fn(),
@@ -30,6 +38,14 @@ vi.mock('../src/api', () => ({
   getWorkflows: apiMocks.getWorkflows,
   createWorkflow: apiMocks.createWorkflow,
   deleteWorkflow: apiMocks.deleteWorkflow,
+  getEvalDatasets: apiMocks.getEvalDatasets,
+  getEvalDataset: apiMocks.getEvalDataset,
+  createEvalDataset: apiMocks.createEvalDataset,
+  addEvalItem: apiMocks.addEvalItem,
+  startEvalRun: apiMocks.startEvalRun,
+  getEvalRuns: apiMocks.getEvalRuns,
+  getEvalRunDetail: apiMocks.getEvalRunDetail,
+  deleteEvalDataset: apiMocks.deleteEvalDataset,
   deleteMemory: apiMocks.deleteMemory,
   exportMemories: apiMocks.exportMemories,
   getMemories: apiMocks.getMemories,
@@ -133,6 +149,7 @@ import MindMapCanvas, { branchesToFlowData } from '../src/components/MindMapCanv
 import SettingsPage from '../src/components/SettingsPage';
 import TimelineView from '../src/components/TimelineView';
 import TracesPanel from '../src/components/TracesPanel';
+import EvalDashView from '../src/components/features/EvalDashView';
 import WorkflowsView from '../src/components/features/WorkflowsView';
 import { useToastStore } from '../src/stores/toastStore';
 import { useUiStore } from '../src/stores/uiStore';
@@ -358,6 +375,7 @@ describe('core component behavior', () => {
 
     const firstRender = render(<WorkflowsView onClose={vi.fn()} />);
     await waitFor(() => expect(apiMocks.getWorkflows).toHaveBeenCalledTimes(1));
+    expect(screen.getByRole('dialog', { name: 'AI 工作流' })).toBeInTheDocument();
 
     const createButton = Array.from(firstRender.container.querySelectorAll('button'))
       .find((button) => button.textContent?.includes('+'))!;
@@ -377,5 +395,15 @@ describe('core component behavior', () => {
     expect(screen.getByRole('dialog', { name: 'Workflow run details' })).toBeInTheDocument();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(screen.queryByRole('dialog', { name: 'Workflow run details' })).not.toBeInTheDocument();
+  });
+
+  it('EvalDashView renders in the tool workbench shell', async () => {
+    apiMocks.getEvalDatasets.mockResolvedValueOnce([]);
+
+    render(<EvalDashView onClose={vi.fn()} />);
+
+    expect(screen.getByRole('dialog', { name: '评估中心' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /新建数据集/ })).toBeInTheDocument();
+    await waitFor(() => expect(apiMocks.getEvalDatasets).toHaveBeenCalledTimes(1));
   });
 });
