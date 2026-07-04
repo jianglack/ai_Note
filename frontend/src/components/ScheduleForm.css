@@ -1,57 +1,72 @@
 .schedule-form-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
+  inset: 0;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 9999;
+  padding: 20px;
+  background: rgba(43, 38, 32, 0.32);
+  backdrop-filter: blur(10px);
 }
 
 .schedule-form-panel {
-  background: #fff;
-  border-radius: 12px;
   width: 480px;
-  max-width: 95vw;
+  max-width: min(95vw, 520px);
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--color-border, rgba(74, 64, 50, 0.14));
+  border-radius: 8px;
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-text, #2b2620);
+  box-shadow: 0 22px 56px rgba(43, 38, 32, 0.2);
+}
+
+.schedule-form-paper {
+  background:
+    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0)),
+    var(--color-paper-0, #fbf7ee);
 }
 
 .schedule-form-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e5e7eb;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--color-border, rgba(74, 64, 50, 0.14));
+  background: var(--color-paper-1, #f5efe0);
 }
 
 .schedule-form-header h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #1e1e1e;
   margin: 0;
+  color: var(--color-text, #2b2620);
+  font-size: 18px;
+  font-weight: 650;
+  line-height: 1.25;
+  letter-spacing: 0;
 }
 
 .schedule-form-close {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
   background: transparent;
-  border: none;
+  color: var(--color-text-secondary, #7a6b58);
   font-size: 18px;
+  line-height: 1;
   cursor: pointer;
-  color: #6b7280;
-  padding: 4px;
-  border-radius: 4px;
 }
 
 .schedule-form-close:hover {
-  background: #f3f4f6;
+  border-color: var(--color-border, rgba(74, 64, 50, 0.14));
+  background: var(--color-paper-2, #efe4cf);
+  color: var(--color-text, #2b2620);
 }
 
 .schedule-form-body {
-  padding: 24px;
+  padding: 22px;
 }
 
 .form-group {
@@ -60,10 +75,10 @@
 
 .form-group label {
   display: block;
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
   margin-bottom: 6px;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 13px;
+  font-weight: 560;
 }
 
 .form-group input[type="text"],
@@ -73,19 +88,26 @@
 .form-group select {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-strong, rgba(74, 64, 50, 0.22));
   border-radius: 8px;
+  background: var(--color-paper, #fffaf2);
+  color: var(--color-text, #2b2620);
+  font: inherit;
   font-size: 14px;
-  background: #fff;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+
+.form-group textarea {
+  resize: vertical;
 }
 
 .form-group input:focus,
 .form-group textarea:focus,
 .form-group select:focus {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent, #b8452e);
+  box-shadow: 0 0 0 3px rgba(184, 69, 46, 0.16);
+  background: var(--color-paper-0, #fbf7ee);
 }
 
 .form-row {
@@ -103,15 +125,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--color-text, #2b2620);
   font-size: 14px;
-  color: #374151;
   cursor: pointer;
 }
 
 .checkbox-label input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: #3b82f6;
+  accent-color: var(--color-accent, #b8452e);
 }
 
 .note-selector-toggle {
@@ -120,33 +142,35 @@
   justify-content: space-between;
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--color-border-strong, rgba(74, 64, 50, 0.22));
   border-radius: 8px;
-  background: #fff;
-  cursor: pointer;
+  background: var(--color-paper, #fffaf2);
+  color: var(--color-text-secondary, #7a6b58);
   font-family: inherit;
   font-size: 14px;
-  color: #6b7280;
   text-align: left;
+  cursor: pointer;
 }
 
 .note-selector-toggle:hover {
-  border-color: #9ca3af;
+  border-color: rgba(74, 64, 50, 0.32);
+  background: var(--color-paper-0, #fbf7ee);
 }
 
 .note-selector-toggle:focus-visible {
   outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  border-color: var(--color-accent, #b8452e);
+  box-shadow: 0 0 0 3px rgba(184, 69, 46, 0.16);
 }
 
 .note-selector-list {
   margin-top: 8px;
   max-height: 200px;
   overflow-y: auto;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--color-border, rgba(74, 64, 50, 0.14));
   border-radius: 8px;
   padding: 8px;
+  background: var(--color-paper, #fffaf2);
 }
 
 .note-selector-item {
@@ -154,20 +178,20 @@
   align-items: center;
   gap: 8px;
   padding: 8px;
-  border-radius: 4px;
-  cursor: pointer;
+  border-radius: 8px;
+  color: var(--color-text, #2b2620);
   font-size: 13px;
-  color: #374151;
+  cursor: pointer;
 }
 
 .note-selector-item:hover {
-  background: #f3f4f6;
+  background: var(--color-paper-2, #efe4cf);
 }
 
 .note-selector-item input[type="checkbox"] {
   width: 14px;
   height: 14px;
-  accent-color: #3b82f6;
+  accent-color: var(--color-accent, #b8452e);
 }
 
 .schedule-form-actions {
@@ -177,49 +201,69 @@
   gap: 12px;
   margin-top: 24px;
   padding-top: 16px;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--color-border, rgba(74, 64, 50, 0.14));
 }
 
 .schedule-form-error {
   flex-basis: 100%;
   padding: 10px 12px;
+  border: 1px solid rgba(184, 69, 46, 0.24);
   border-radius: 8px;
-  background: #fef2f2;
-  border: 1px solid #fecaca;
-  color: #b91c1c;
+  background: rgba(184, 69, 46, 0.08);
+  color: #9d2f24;
   font-size: 13px;
 }
 
 .schedule-form-actions button {
-  padding: 10px 20px;
+  min-height: 38px;
+  padding: 0 18px;
   border-radius: 8px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 560;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
 }
 
 .schedule-form-actions button:first-child {
-  background: #fff;
-  border: 1px solid #d1d5db;
-  color: #374151;
+  border: 1px solid var(--color-border-strong, rgba(74, 64, 50, 0.22));
+  background: var(--color-paper-2, #efe4cf);
+  color: var(--color-text, #2b2620);
 }
 
 .schedule-form-actions button:first-child:hover {
-  background: #f9fafb;
+  border-color: rgba(74, 64, 50, 0.34);
+  background: var(--color-paper-1, #f5efe0);
 }
 
 .schedule-form-actions button.primary {
-  background: #f59e0b;
-  border: none;
-  color: #fff;
+  border: 1px solid var(--color-accent, #b8452e);
+  background: var(--color-accent, #b8452e);
+  color: #fffaf2;
 }
 
 .schedule-form-actions button.primary:hover {
-  background: #d97706;
+  border-color: var(--color-accent-strong, #8f4d2e);
+  background: var(--color-accent-strong, #8f4d2e);
 }
 
 .schedule-form-actions button:disabled {
-  opacity: 0.5;
   cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@media (max-width: 640px) {
+  .schedule-form-overlay {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .schedule-form-panel {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+  }
+
+  .form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
 }

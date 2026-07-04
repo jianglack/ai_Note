@@ -187,7 +187,7 @@ export default function ScheduleForm({ schedule, notes, onSave, onClose }: Sched
   return (
     <div className="schedule-form-overlay" onClick={onClose}>
       <div
-        className="schedule-form-panel"
+        className="schedule-form-panel schedule-form-paper"
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}

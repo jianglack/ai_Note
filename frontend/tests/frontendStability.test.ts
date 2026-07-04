@@ -191,6 +191,17 @@ describe('frontend stability guards', () => {
     assert.match(scheduleForm, /aria-label="Close schedule form"/);
   });
 
+  it('styles ScheduleForm with warm paper tokens instead of blue focus styles', () => {
+    const scheduleForm = read('src/components/ScheduleForm.tsx');
+    const scheduleFormCss = read('src/components/ScheduleForm.css');
+
+    assert.match(scheduleForm, /schedule-form-paper/);
+    assert.match(scheduleFormCss, /rgba\(43,\s*38,\s*32,\s*0\.32\)/);
+    assert.match(scheduleFormCss, /var\(--color-paper-0/);
+    assert.match(scheduleFormCss, /var\(--color-accent/);
+    assert.doesNotMatch(scheduleFormCss, /#3b82f6/);
+  });
+
   it('uses native buttons for EmptyState action cards', () => {
     const emptyState = read('src/components/EmptyState.tsx');
 

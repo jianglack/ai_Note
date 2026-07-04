@@ -16,6 +16,19 @@ describe('ScheduleForm behavior', () => {
     vi.clearAllMocks();
   });
 
+  it('uses the warm paper schedule dialog surface', () => {
+    const { container } = render(
+      <ScheduleForm
+        notes={[]}
+        onSave={vi.fn()}
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(container.querySelector('.schedule-form-overlay')).toBeInTheDocument();
+    expect(container.querySelector('.schedule-form-panel')).toHaveClass('schedule-form-paper');
+  });
+
   it('shows a visible error when schedule creation fails', async () => {
     vi.mocked(createSchedule).mockRejectedValueOnce(new Error('network down'));
     const user = userEvent.setup();
