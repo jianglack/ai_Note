@@ -534,6 +534,41 @@ export async function exportMemories(): Promise<MemoryListResponse> {
   return res.data;
 }
 
+export type ContextPreviewSection = {
+  type: string;
+  label: string;
+  included: boolean;
+  estimatedTokens: number;
+  content: string;
+};
+
+export type ContextPreviewFlowStep = {
+  order: number;
+  title: string;
+  detail: string;
+  status: 'active' | 'skipped' | string;
+};
+
+export type ContextPreviewResponse = {
+  query: string;
+  noteIds: string[];
+  selectedNoteCount: number;
+  intent: string;
+  contextChars: number;
+  estimatedTokens: number;
+  finalContext: string;
+  sections: ContextPreviewSection[];
+  flow: ContextPreviewFlowStep[];
+};
+
+export async function previewContext(payload: { query: string; noteIds?: string[] }): Promise<ContextPreviewResponse> {
+  const res = await api.post('/api/ai/context-preview', {
+    query: payload.query,
+    noteIds: payload.noteIds ?? [],
+  });
+  return res.data;
+}
+
 export async function saveChatMessages(userMessage: string, aiReply: string): Promise<void> {
   await api.post('/api/ai/chat/save', { userMessage, aiReply });
 }

@@ -11,7 +11,9 @@ import {
   deleteMemory,
   exportMemories,
   getMemories,
+  previewContext,
   updateMemory,
+  type ContextPreviewResponse,
   type MemoryListParams,
   type MemoryRecord,
   type MemoryStatus,
@@ -25,7 +27,7 @@ const TYPE_OPTIONS = [
   { value: 'style', label: '风格' },
   { value: 'fact', label: '事实' },
   { value: 'procedure', label: '流程' },
-  { value: 'project_context', label: '项目上下文' },
+  { value: 'project_context', label: '项目资料' },
 ];
 
 const STATUS_OPTIONS = [
@@ -78,6 +80,11 @@ export default function MemoryControlPanel() {
   const [error, setError] = useState<string | null>(null);
   const [busyMemoryId, setBusyMemoryId] = useState<number | null>(null);
   const [exporting, setExporting] = useState(false);
+  const [previewQuery, setPreviewQuery] = useState('');
+  const [previewNoteIds, setPreviewNoteIds] = useState('');
+  const [preview, setPreview] = useState<ContextPreviewResponse | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
 
   const activeCount = useMemo(
     () => memories.filter(memory => memory.status === 'active' || !memory.status).length,
@@ -183,6 +190,32 @@ export default function MemoryControlPanel() {
     }
   };
 
+  const handlePreview = async () => {
+    const query = previewQuery.trim();
+    if (!query) {
+      setPreviewError('请输入问题后再生成上下文预览');
+      return;
+    }
+
+    const noteIds = previewNoteIds
+      .split(',')
+      .map(id => id.trim())
+      .filter(Boolean);
+
+    setPreviewLoading(true);
+    setPreviewError(null);
+    try {
+      const response = await previewContext({ query, noteIds });
+      setPreview(response);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '上下文预览加载失败';
+      setPreviewError(message);
+      addToast({ type: 'failed', title: '上下文预览加载失败', message });
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
   return (
     <section className="memory-control-panel">
       <div className="memory-panel-header">
@@ -203,6 +236,89 @@ export default function MemoryControlPanel() {
           <ArrowDownTrayIcon aria-hidden="true" />
         </button>
       </div>
+
+      <section className="context-preview-panel" aria-label="上下文预览">
+        <div className="context-preview-header">
+          <div>
+            <h2>上下文预览</h2>
+            <p>输入一个问题，查看本次模型会收到的真实上下文和组装流程。</p>
+          </div>
+          {preview && (
+            <div className="context-preview-stats">
+              <span>{preview.intent}</span>
+              <span>{preview.estimatedTokens} tokens</span>
+              <span>{preview.contextChars} 字符</span>
+            </div>
+          )}
+        </div>
+
+        <div className="context-preview-form">
+          <label className="memory-search context-preview-query">
+            <MagnifyingGlassIcon aria-hidden="true" />
+            <input
+              aria-label="上下文预览问题"
+              value={previewQuery}
+              onChange={event => setPreviewQuery(event.target.value)}
+              placeholder="输入问题以预览上下文"
+            />
+          </label>
+          <input
+            className="context-preview-note-input"
+            aria-label="选中笔记 ID"
+            value={previewNoteIds}
+            onChange={event => setPreviewNoteIds(event.target.value)}
+            placeholder="可选：笔记 ID，用逗号分隔"
+          />
+          <button
+            type="button"
+            className="memory-secondary-button"
+            onClick={() => void handlePreview()}
+            disabled={previewLoading}
+          >
+            {previewLoading ? '生成中' : '生成上下文预览'}
+          </button>
+        </div>
+
+        {previewError && <div className="memory-error">{previewError}</div>}
+
+        {preview && (
+          <div className="context-preview-result">
+            <div className="context-preview-flow">
+              <h3>组装流程</h3>
+              <ol>
+                {preview.flow.map(step => (
+                  <li key={step.order} data-status={step.status}>
+                    <span>{step.title}</span>
+                    <small>{step.detail}</small>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            <div className="context-preview-sections">
+              <h3>项目上下文分段</h3>
+              {preview.sections.length === 0 ? (
+                <p className="memory-muted">本次没有注入长期记忆、选中笔记或 RAG 片段。</p>
+              ) : (
+                preview.sections.map(section => (
+                  <details key={section.type} open>
+                    <summary>
+                      <span>{section.label}</span>
+                      <small>{section.estimatedTokens} tokens</small>
+                    </summary>
+                    <pre>{section.content}</pre>
+                  </details>
+                ))
+              )}
+            </div>
+
+            <details className="context-preview-final" open>
+              <summary>最终上下文</summary>
+              <pre>{preview.finalContext || '本次最终上下文为空。'}</pre>
+            </details>
+          </div>
+        )}
+      </section>
 
       <div className="memory-toolbar">
         <label className="memory-search">

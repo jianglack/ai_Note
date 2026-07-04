@@ -6,6 +6,7 @@ const apiMocks = vi.hoisted(() => ({
   deleteMemory: vi.fn(),
   exportMemories: vi.fn(),
   getMemories: vi.fn(),
+  previewContext: vi.fn(),
   updateMemory: vi.fn(),
 }));
 
@@ -17,6 +18,7 @@ vi.mock('../src/api', () => ({
   deleteMemory: apiMocks.deleteMemory,
   exportMemories: apiMocks.exportMemories,
   getMemories: apiMocks.getMemories,
+  previewContext: apiMocks.previewContext,
   updateMemory: apiMocks.updateMemory,
 }));
 
@@ -58,6 +60,28 @@ describe('MemoryControlPanel behavior', () => {
     useToastStore.setState({ toasts: [] });
     apiMocks.getMemories.mockResolvedValue({ items: [makeMemory()], nextCursor: null });
     apiMocks.exportMemories.mockResolvedValue({ items: [makeMemory()], nextCursor: null });
+    apiMocks.previewContext.mockResolvedValue({
+      query: '总结这篇笔记',
+      noteIds: [],
+      selectedNoteCount: 0,
+      intent: 'STANDARD',
+      contextChars: 96,
+      estimatedTokens: 24,
+      finalContext: '<user_memory>Prefers concise answers</user_memory>',
+      sections: [
+        {
+          type: 'semantic_memory',
+          label: '长期记忆',
+          included: true,
+          estimatedTokens: 12,
+          content: '<user_memory>Prefers concise answers</user_memory>',
+        },
+      ],
+      flow: [
+        { order: 1, title: '判断问题类型', detail: 'STANDARD', status: 'active' },
+        { order: 2, title: '加入长期记忆', detail: '命中 1 段', status: 'active' },
+      ],
+    });
     dialogMocks.askConfirm.mockResolvedValue(true);
   });
 
@@ -108,5 +132,25 @@ describe('MemoryControlPanel behavior', () => {
       expect(apiMocks.deleteMemory).toHaveBeenCalledWith(1);
     });
     expect(screen.queryByText('用户希望回答简洁、直接。')).not.toBeInTheDocument();
+  });
+  it('previews the real assembled context and flow for a draft question', async () => {
+    const user = userEvent.setup();
+    render(<MemoryControlPanel />);
+
+    expect(await screen.findByText('trace-1')).toBeInTheDocument();
+
+    await user.type(screen.getByPlaceholderText('输入问题以预览上下文'), '总结这篇笔记');
+    await user.click(screen.getByRole('button', { name: '生成上下文预览' }));
+
+    await waitFor(() => {
+      expect(apiMocks.previewContext).toHaveBeenCalledWith({
+        query: '总结这篇笔记',
+        noteIds: [],
+      });
+    });
+    expect(await screen.findByText('最终上下文')).toBeInTheDocument();
+    expect(screen.getByText('长期记忆')).toBeInTheDocument();
+    expect(screen.getByText('判断问题类型')).toBeInTheDocument();
+    expect(screen.getAllByText('<user_memory>Prefers concise answers</user_memory>')).toHaveLength(2);
   });
 });
