@@ -41,9 +41,9 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Query("""
            SELECT m FROM SemanticMemory m
            WHERE m.userId = :userId
-             AND (:type IS NULL OR :type = '' OR m.memoryType = :type OR m.category = :type)
-             AND (:status IS NULL OR :status = '' OR m.status = :status)
-             AND (:query IS NULL OR :query = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
+             AND (COALESCE(:type, '') = '' OR m.memoryType = :type OR m.category = :type)
+             AND (COALESCE(:status, '') = '' OR m.status = :status)
+             AND (COALESCE(:query, '') = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
            ORDER BY m.updatedAt DESC, m.createdAt DESC
            """)
     List<SemanticMemory> searchUserMemories(String userId,

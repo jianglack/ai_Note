@@ -216,6 +216,7 @@ describe('coverage depth behavior', () => {
     await user.click(screen.getByRole('button', { name: 'Open evaluation dashboard' }));
     await user.click(screen.getByRole('button', { name: 'Open agent metrics' }));
     await user.click(screen.getByRole('button', { name: 'Open trace panel' }));
+    expect(screen.queryByRole('button', { name: 'Open AI memory' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Open cost dashboard' }));
     await user.click(screen.getByRole('button', { name: 'Open settings' }));
 

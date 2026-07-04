@@ -183,8 +183,8 @@ class RepositoryIT {
 
         SemanticMemory deleted = new SemanticMemory();
         deleted.setUserId("memory-user");
-        deleted.setCategory("preference");
-        deleted.setMemoryType("preference");
+        deleted.setCategory("obsolete");
+        deleted.setMemoryType("obsolete");
         deleted.setScope("user");
         deleted.setStatus("deleted");
         deleted.setContent("deleted memory");
@@ -228,6 +228,10 @@ class RepositoryIT {
         assertThat(semanticMemoryRepository.findByUserIdAndContent("memory-user", "prefers concise release notes"))
                 .extracting(SemanticMemory::getCategory)
                 .containsExactly("preference");
+        assertThat(semanticMemoryRepository.searchUserMemories(
+                "memory-user", null, null, null, PageRequest.of(0, 10)))
+                .extracting(SemanticMemory::getContent)
+                .containsExactlyInAnyOrder("deleted memory", "prefers concise release notes");
         assertThat(semanticMemoryRepository.findLowestScored("memory-user", 10))
                 .extracting(SemanticMemory::getId)
                 .containsExactly(semantic.getId());
