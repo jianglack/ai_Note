@@ -12,54 +12,6 @@
   color: var(--color-text-tertiary, #9a8770);
 }
 
-/* ── Page header ── */
-.amd-page-header {
-  padding: 22px 36px 18px;
-  border-bottom: 1px solid rgba(43,38,32,0.08);
-  display: flex; align-items: flex-end; gap: 16px;
-}
-.amd-breadcrumb {
-  display: flex; align-items: center; gap: 5px;
-  color: var(--color-text-tertiary, #9a8770); font-size: 12px;
-}
-.amd-crumb-sep { font-size: 14px; opacity: 0.5; }
-.amd-title {
-  margin: 6px 0 0;
-  font-family: var(--font-serif, 'Noto Serif SC', serif);
-  font-size: 28px; font-weight: 700;
-  color: var(--color-text, #2b2620); line-height: 1.2;
-  display: inline-block; position: relative;
-}
-.amd-title-underline {
-  position: absolute; left: 0; right: 0; bottom: -5px; height: 5px;
-  background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 5' preserveAspectRatio='none'><path d='M1 3 Q 20 1 40 2.5 T 80 2.5 T 119 2' stroke='%23b8452e' stroke-width='1.4' fill='none' stroke-linecap='round'/></svg>") no-repeat center / 100% 100%;
-  opacity: 0.85;
-}
-.amd-subtitle {
-  font-size: 13px; color: var(--color-text-secondary, #6b5848); margin-top: 10px;
-}
-
-.amd-hbtn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; font-size: 13px; font-weight: 500;
-  background: var(--color-paper-0, #fbf7ee);
-  border: 1px solid rgba(43,38,32,0.14); border-radius: 7px;
-  color: var(--color-text-secondary, #6b5848); cursor: pointer;
-  font-family: inherit; transition: all 0.15s;
-}
-.amd-hbtn:hover { background: rgba(43,38,32,0.04); }
-.amd-hbtn:disabled { opacity: 0.6; cursor: default; }
-
-.amd-close-btn {
-  display: inline-flex; align-items: center; gap: 5px;
-  padding: 6px 12px; font-size: 13px; font-weight: 500;
-  background: rgba(43,38,32,0.06);
-  border: 1px solid rgba(43,38,32,0.14); border-radius: 7px;
-  color: var(--color-text-secondary, #6b5848); cursor: pointer;
-  font-family: inherit; transition: all 0.15s;
-}
-.amd-close-btn:hover { background: rgba(43,38,32,0.10); }
-
 /* ── Content ── */
 .amd-content {
   padding: 24px 36px 36px;

@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getAgentMetrics } from '../../api';
+import { ToolWorkbenchShell } from '../workbench';
 import './agent-metrics.css';
 
 interface ToolMetric {
@@ -67,39 +68,20 @@ export default function AgentMetricsDashboard({ onClose }: { onClose: () => void
   }, [fetchMetrics]);
 
   return (
+    <ToolWorkbenchShell
+      title="Agent 指标"
+      subtitle={`智记 Agent 系统健康状态 · 最后采样于 ${metrics.lastSampled || '暂无数据'}`}
+      onBack={onClose}
+      backLabel="关闭 Agent 指标"
+      closeOnEscape
+      secondaryActions={[{
+        key: 'refresh',
+        label: loading ? '刷新中' : '刷新',
+        disabled: loading,
+        onClick: () => { void fetchMetrics(); },
+      }]}
+    >
     <div className="amd-root">
-      {/* Page header */}
-      <div className="amd-page-header">
-        <div style={{ flex: 1 }}>
-          <div className="amd-breadcrumb">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
-            <span>设置</span>
-            <span className="amd-crumb-sep">›</span>
-            <span>管理员</span>
-            <span className="amd-crumb-sep">›</span>
-            <span style={{ color: 'var(--color-text-secondary, #6b5848)' }}>Agent 运行指标</span>
-          </div>
-          <h1 className="amd-title">
-            Agent 运行指标
-            <span className="amd-title-underline" />
-          </h1>
-          <div className="amd-subtitle">
-            智记 Agent 系统健康状态 · 最后采样于
-            <span className="amd-mono" style={{ marginLeft: 4 }}>{metrics.lastSampled}</span>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button className="amd-hbtn" onClick={fetchMetrics} disabled={loading}>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M3 21v-5h5"/></svg>
-            {loading ? '刷新中…' : '刷新'}
-          </button>
-          <button type="button" className="amd-close-btn" aria-label="Close agent metrics dashboard" onClick={onClose}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
-            关闭
-          </button>
-        </div>
-      </div>
-
       <div className="amd-content">
         {/* Index cards */}
         <div className="amd-cards-row">
@@ -161,6 +143,7 @@ export default function AgentMetricsDashboard({ onClose }: { onClose: () => void
         </div>
       </div>
     </div>
+    </ToolWorkbenchShell>
   );
 }
 

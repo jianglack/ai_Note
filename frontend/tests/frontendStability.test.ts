@@ -291,7 +291,7 @@ describe('frontend stability guards', () => {
       ['src/components/TimelineView.tsx', /backLabel="关闭时间线"/],
       ['src/components/TracesPanel.tsx', /backLabel="关闭调用追踪"/],
       ['src/components/ScheduleExtractDialog.tsx', /aria-label="Close schedule extraction dialog"/],
-      ['src/components/admin/AgentMetricsDashboard.tsx', /aria-label="Close agent metrics dashboard"/],
+      ['src/components/admin/AgentMetricsDashboard.tsx', /backLabel="关闭 Agent 指标"/],
       ['src/components/features/TaskPanelView.tsx', /aria-label="Close task panel"/],
       ['src/components/features/TaskScheduleView.tsx', /aria-label="Close task schedule"/],
       ['src/components/MindMapCanvas.tsx', /aria-label="Close mind map"/],
@@ -307,6 +307,13 @@ describe('frontend stability guards', () => {
     assert.match(read('src/components/features/CanvasView.tsx'), /ToolWorkbenchShell/);
     assert.match(read('src/components/features/WorkflowsView.tsx'), /ToolWorkbenchShell/);
     assert.match(read('src/components/features/EvalDashView.tsx'), /ToolWorkbenchShell/);
+  });
+
+  it('Agent metrics uses the tool workbench shell instead of admin breadcrumbs', () => {
+    const metrics = read('src/components/admin/AgentMetricsDashboard.tsx');
+
+    assert.match(metrics, /ToolWorkbenchShell/);
+    assert.doesNotMatch(metrics, /amd-breadcrumb/);
   });
 
   it('uses semantic buttons for feature panel selectable rows', () => {
