@@ -332,6 +332,16 @@ describe('frontend stability guards', () => {
     assert.match(read('src/components/features/TaskScheduleView.tsx'), /ToolWorkbenchShell/);
   });
 
+  it('styles the tool workbench back button as a soft pill control', () => {
+    const workbenchCss = read('src/components/workbench/ToolWorkbenchShell.css');
+
+    assert.match(workbenchCss, /\.twb-back\s*\{[^}]*width:\s*40px;/s);
+    assert.match(workbenchCss, /\.twb-back\s*\{[^}]*height:\s*32px;/s);
+    assert.match(workbenchCss, /\.twb-back\s*\{[^}]*border-radius:\s*999px;/s);
+    assert.match(workbenchCss, /\.twb-back\s*\{[^}]*background:\s*rgba\(237,\s*229,\s*209,\s*0\.9\);/s);
+    assert.match(workbenchCss, /\.twb-back\s*\{[^}]*box-shadow:\s*inset 0 0 0 1px rgba\(96,\s*76,\s*49,\s*0\.12\);/s);
+  });
+
   it('recycle bin uses the shared workbench shell and detail panel', () => {
     const trashView = read('src/TrashView.tsx');
 
