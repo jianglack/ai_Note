@@ -4,6 +4,7 @@ import {
   type TaskScheduleData,
 } from '../../api';
 import { askConfirm } from '../../services/dialogService';
+import { ToolWorkbenchShell } from '../workbench';
 
 const T = {
   bg: 'var(--color-paper-0, #fbf7ee)',
@@ -29,13 +30,13 @@ export default function TaskScheduleView({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
 
-  // Form state
   const [query, setQuery] = useState('');
   const [triggerType, setTriggerType] = useState('ONCE');
   const [scheduledTime, setScheduledTime] = useState('');
   const [maxRunCount, setMaxRunCount] = useState('');
 
   const loadSchedules = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await getTaskSchedules();
       setSchedules(data);
@@ -87,88 +88,77 @@ export default function TaskScheduleView({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60,
-      background: T.bg, fontFamily: T.font, display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Header */}
+    <ToolWorkbenchShell
+      title="定时任务"
+      subtitle={`${schedules.length} 个自动化任务`}
+      onBack={onClose}
+      backLabel="关闭定时任务"
+      closeOnEscape
+      primaryActions={[
+        {
+          key: 'create',
+          label: showForm ? '取消新建' : '新建任务',
+          variant: showForm ? 'secondary' : 'primary',
+          onClick: () => setShowForm(!showForm),
+        },
+      ]}
+      secondaryActions={[
+        {
+          key: 'refresh',
+          label: loading ? '刷新中' : '刷新',
+          disabled: loading,
+          onClick: loadSchedules,
+        },
+      ]}
+    >
       <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 24px',
-        borderBottom: `1px solid ${T.borderStrong}`, flexShrink: 0,
+        height: '100%',
+        background: T.bg,
+        fontFamily: T.font,
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
       }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: T.text, flex: 1 }}>
-          定时任务
-        </span>
-        <button onClick={() => setShowForm(!showForm)} style={{
-          background: T.accent + '18', color: T.accent, border: `1px solid ${T.accent}44`,
-          borderRadius: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
-        }}>
-          {showForm ? '取消' : '+ 新建'}
-        </button>
-        <button type="button" aria-label="Close task schedule" onClick={onClose} style={{
-          background: 'none', border: `1px solid ${T.border}`, borderRadius: 8,
-          padding: '6px 14px', fontSize: 13, cursor: 'pointer', color: T.textSecondary,
-        }}>
-          关闭
-        </button>
-      </div>
-
-      {/* Create form */}
-      {showForm && (
-        <div style={{
-          padding: '16px 24px', borderBottom: `1px solid ${T.border}`,
-          background: T.surface, display: 'flex', flexDirection: 'column', gap: 12,
-        }}>
-          <div>
-            <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
-              任务描述
-            </label>
-            <input
-              value={query} onChange={e => setQuery(e.target.value)}
-              placeholder="例如：整理本周笔记并生成摘要"
-              style={{
-                width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
-                border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
-                fontFamily: T.font, boxSizing: 'border-box',
-              }}
-            />
-          </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <div style={{ flex: 1 }}>
+        {showForm && (
+          <div style={{
+            padding: '16px 24px', borderBottom: `1px solid ${T.border}`,
+            background: T.surface, display: 'flex', flexDirection: 'column', gap: 12,
+          }}>
+            <div>
               <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
-                触发类型
+                任务描述
               </label>
-              <select value={triggerType} onChange={e => setTriggerType(e.target.value)} style={{
-                width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
-                border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
-              }}>
-                <option value="ONCE">一次性</option>
-                <option value="DAILY">每日</option>
-                <option value="WEEKLY">每周</option>
-                <option value="MONTHLY">每月</option>
-              </select>
-            </div>
-            <div style={{ flex: 1 }}>
-              <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
-                执行时间
-              </label>
-              <input type="datetime-local" value={scheduledTime}
-                onChange={e => setScheduledTime(e.target.value)}
+              <input
+                value={query} onChange={e => setQuery(e.target.value)}
+                placeholder="例如：整理本周笔记并生成摘要"
                 style={{
                   width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
                   border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
-                  boxSizing: 'border-box',
+                  fontFamily: T.font, boxSizing: 'border-box',
                 }}
               />
             </div>
-            {triggerType !== 'ONCE' && (
-              <div style={{ width: 100 }}>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}>
                 <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
-                  最大次数
+                  触发类型
                 </label>
-                <input type="number" value={maxRunCount}
-                  onChange={e => setMaxRunCount(e.target.value)}
-                  placeholder="无限"
+                <select value={triggerType} onChange={e => setTriggerType(e.target.value)} style={{
+                  width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
+                  border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
+                }}>
+                  <option value="ONCE">一次性</option>
+                  <option value="DAILY">每日</option>
+                  <option value="WEEKLY">每周</option>
+                  <option value="MONTHLY">每月</option>
+                </select>
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
+                  执行时间
+                </label>
+                <input type="datetime-local" value={scheduledTime}
+                  onChange={e => setScheduledTime(e.target.value)}
                   style={{
                     width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
                     border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
@@ -176,70 +166,82 @@ export default function TaskScheduleView({ onClose }: { onClose: () => void }) {
                   }}
                 />
               </div>
-            )}
-          </div>
-          <button onClick={handleCreate} style={{
-            background: T.accent, color: '#fff', border: 'none', borderRadius: 8,
-            padding: '8px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-end',
-          }}>
-            创建
-          </button>
-        </div>
-      )}
-
-      {/* Schedule list */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-        {loading && <div style={{ color: T.textSecondary, fontSize: 14 }}>加载中...</div>}
-        {!loading && schedules.length === 0 && (
-          <div style={{ color: T.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>
-            暂无定时任务。点击「新建」创建你的第一个自动化任务。
+              {triggerType !== 'ONCE' && (
+                <div style={{ width: 100 }}>
+                  <label style={{ fontSize: 12, color: T.textSecondary, marginBottom: 4, display: 'block' }}>
+                    最大次数
+                  </label>
+                  <input type="number" value={maxRunCount}
+                    onChange={e => setMaxRunCount(e.target.value)}
+                    placeholder="无限"
+                    style={{
+                      width: '100%', padding: '8px 12px', fontSize: 14, borderRadius: 8,
+                      border: `1px solid ${T.borderStrong}`, background: T.bg, color: T.text,
+                      boxSizing: 'border-box',
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={handleCreate} style={{
+              background: T.accent, color: '#fff', border: 'none', borderRadius: 8,
+              padding: '8px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer', alignSelf: 'flex-end',
+            }}>
+              创建
+            </button>
           </div>
         )}
-        <div style={{ display: 'grid', gap: 12, maxWidth: 800 }}>
-          {schedules.map(s => (
-            <div key={s.id} style={{
-              background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12,
-              padding: 16, display: 'flex', alignItems: 'center', gap: 14,
-            }}>
-              {/* Toggle */}
-              <button onClick={() => handleToggle(s.id)} style={{
-                width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
-                background: s.enabled ? T.success : T.border, position: 'relative', transition: 'background 0.2s',
-                flexShrink: 0,
-              }}>
-                <span style={{
-                  width: 16, height: 16, borderRadius: '50%', background: '#fff',
-                  position: 'absolute', top: 3, transition: 'left 0.2s',
-                  left: s.enabled ? 21 : 3,
-                }} />
-              </button>
 
-              {/* Info */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{
-                  fontSize: 14, fontWeight: 600, color: s.enabled ? T.text : T.textSecondary,
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>
-                  {s.originalQuery}
-                </div>
-                <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 4, display: 'flex', gap: 12 }}>
-                  <span>{TRIGGER_LABELS[s.triggerType] || s.triggerType}</span>
-                  {s.nextRunAt && <span>下次: {new Date(s.nextRunAt).toLocaleString()}</span>}
-                  <span>已运行 {s.runCount} 次</span>
-                </div>
-              </div>
-
-              {/* Delete */}
-              <button onClick={() => handleDelete(s.id)} style={{
-                background: 'none', border: `1px solid ${T.border}`, borderRadius: 6,
-                padding: '4px 10px', fontSize: 12, cursor: 'pointer', color: '#c44',
-              }}>
-                删除
-              </button>
+        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
+          {loading && <div style={{ color: T.textSecondary, fontSize: 14 }}>加载中...</div>}
+          {!loading && schedules.length === 0 && (
+            <div style={{ color: T.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 40 }}>
+              暂无定时任务。点击「新建任务」创建你的第一个自动化任务。
             </div>
-          ))}
+          )}
+          <div style={{ display: 'grid', gap: 12, maxWidth: 800 }}>
+            {schedules.map(s => (
+              <div key={s.id} style={{
+                background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
+                padding: 16, display: 'flex', alignItems: 'center', gap: 14,
+              }}>
+                <button type="button" aria-label={s.enabled ? '禁用定时任务' : '启用定时任务'} onClick={() => handleToggle(s.id)} style={{
+                  width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer',
+                  background: s.enabled ? T.success : T.border, position: 'relative', transition: 'background 0.2s',
+                  flexShrink: 0,
+                }}>
+                  <span style={{
+                    width: 16, height: 16, borderRadius: '50%', background: '#fff',
+                    position: 'absolute', top: 3, transition: 'left 0.2s',
+                    left: s.enabled ? 21 : 3,
+                  }} />
+                </button>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{
+                    fontSize: 14, fontWeight: 600, color: s.enabled ? T.text : T.textSecondary,
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {s.originalQuery}
+                  </div>
+                  <div style={{ fontSize: 12, color: T.textSecondary, marginTop: 4, display: 'flex', gap: 12 }}>
+                    <span>{TRIGGER_LABELS[s.triggerType] || s.triggerType}</span>
+                    {s.nextRunAt && <span>下次: {new Date(s.nextRunAt).toLocaleString()}</span>}
+                    <span>已运行 {s.runCount} 次</span>
+                  </div>
+                </div>
+
+                <button type="button" onClick={() => handleDelete(s.id)} style={{
+                  background: 'none', border: `1px solid ${T.border}`, borderRadius: 6,
+                  padding: '4px 10px', fontSize: 12, cursor: 'pointer', color: '#c44',
+                }}>
+                  删除
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </ToolWorkbenchShell>
   );
 }

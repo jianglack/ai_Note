@@ -5,6 +5,7 @@ import {
   type TaskPlanData,
 } from '../../api';
 import PlanApprovalCard from '../chat/PlanApprovalCard';
+import { ToolWorkbenchShell } from '../workbench';
 
 const T = {
   bg: 'var(--color-paper-0, #fbf7ee)',
@@ -25,6 +26,7 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
   const [detailPlan, setDetailPlan] = useState<TaskPlanData | null>(null);
 
   const loadPlans = useCallback(async () => {
+    setLoading(true);
     try {
       const data = await getPlans();
       setPlans(data);
@@ -49,7 +51,7 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
         case 'rollback': await rollbackPlan(planId); break;
         case 'skipStep': if (stepId) await skipStep(planId, stepId); break;
       }
-      // Refresh
+
       const updated = await getPlanDetail(planId);
       setPlans(prev => prev.map(p => p.id === planId ? updated : p));
       if (selectedPlanId === planId) setDetailPlan(updated);
@@ -78,39 +80,30 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
     CANCELLED_PARTIAL: '部分取消',
   };
 
-  return (
-    <div style={{
-      position: 'fixed', inset: 0, zIndex: 60,
-      background: T.bg, fontFamily: T.font, display: 'flex', flexDirection: 'column',
-    }}>
-      {/* Header */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 12, padding: '14px 24px',
-        borderBottom: `1px solid ${T.borderStrong}`, flexShrink: 0,
-      }}>
-        <span style={{ fontSize: 18, fontWeight: 700, color: T.text, flex: 1 }}>
-          任务中心
-        </span>
-        <button onClick={loadPlans} style={{
-          background: T.surface, border: `1px solid ${T.border}`, borderRadius: 8,
-          padding: '6px 14px', fontSize: 13, cursor: 'pointer', color: T.textSecondary,
-        }}>
-          刷新
-        </button>
-        <button type="button" aria-label="Close task panel" onClick={onClose} style={{
-          background: 'none', border: `1px solid ${T.border}`, borderRadius: 8,
-          padding: '6px 14px', fontSize: 13, cursor: 'pointer', color: T.textSecondary,
-        }}>
-          关闭
-        </button>
-      </div>
+  const selectedPlan = detailPlan ?? plans.find(plan => plan.id === selectedPlanId) ?? null;
 
-      {/* Content */}
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
-        {/* Plan list */}
+  return (
+    <ToolWorkbenchShell
+      title="任务中心"
+      subtitle={`${plans.length} 个任务计划`}
+      onBack={onClose}
+      backLabel="关闭任务中心"
+      closeOnEscape
+      secondaryActions={[
+        {
+          key: 'refresh',
+          label: loading ? '刷新中' : '刷新',
+          disabled: loading,
+          onClick: loadPlans,
+        },
+      ]}
+      leftRail={(
         <div style={{
-          width: 360, borderRight: `1px solid ${T.border}`,
-          overflowY: 'auto', padding: 16,
+          height: '100%',
+          boxSizing: 'border-box',
+          overflowY: 'auto',
+          padding: 16,
+          fontFamily: T.font,
         }}>
           {loading && <div style={{ color: T.textSecondary, fontSize: 14, padding: 20 }}>加载中...</div>}
           {!loading && plans.length === 0 && (
@@ -125,11 +118,16 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
 
             return (
               <button key={plan.id} type="button" aria-pressed={isSelected} onClick={() => setSelectedPlanId(plan.id)} style={{
-                padding: '12px 14px', borderRadius: 10, cursor: 'pointer', marginBottom: 8,
+                width: '100%',
+                marginBottom: 8,
+                padding: '12px 14px',
+                borderRadius: 8,
+                cursor: 'pointer',
                 background: isSelected ? T.surface : 'transparent',
                 border: isSelected ? `1px solid ${T.borderStrong}` : `1px solid transparent`,
                 transition: 'all 0.15s',
-                width: '100%', textAlign: 'left', fontFamily: T.font,
+                textAlign: 'left',
+                fontFamily: T.font,
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: T.text, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -157,21 +155,29 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
             );
           })}
         </div>
-
-        {/* Plan detail */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: 24 }}>
-          {!detailPlan ? (
-            <div style={{ color: T.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 60 }}>
-              选择一个任务计划查看详情
+      )}
+    >
+      <div style={{
+        height: '100%',
+        boxSizing: 'border-box',
+        overflowY: 'auto',
+        padding: 24,
+        background: T.bg,
+        fontFamily: T.font,
+      }}>
+        {!selectedPlan ? (
+          <div style={{ color: T.textSecondary, fontSize: 14, textAlign: 'center', marginTop: 60 }}>
+            选择一个任务计划查看详情
+          </div>
+        ) : (
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, margin: '0 0 8px' }}>
+              {selectedPlan.goal}
+            </h2>
+            <div style={{ fontSize: 13, color: T.textSecondary, marginBottom: 16 }}>
+              原始请求: {selectedPlan.originalQuery}
             </div>
-          ) : (
-            <div>
-              <h2 style={{ fontSize: 20, fontWeight: 700, color: T.text, margin: '0 0 8px' }}>
-                {detailPlan.goal}
-              </h2>
-              <div style={{ fontSize: 13, color: T.textSecondary, marginBottom: 16 }}>
-                原始请求: {detailPlan.originalQuery}
-              </div>
+            {detailPlan ? (
               <PlanApprovalCard
                 plan={detailPlan}
                 onApprove={(id) => handleAction('approve', id)}
@@ -181,10 +187,12 @@ export default function TaskPanelView({ onClose }: { onClose: () => void }) {
                 onRollback={(id) => handleAction('rollback', id)}
                 onSkipStep={(planId, stepId) => handleAction('skipStep', planId, stepId)}
               />
-            </div>
-          )}
-        </div>
+            ) : (
+              <div style={{ color: T.textSecondary, fontSize: 14 }}>详情加载中...</div>
+            )}
+          </div>
+        )}
       </div>
-    </div>
+    </ToolWorkbenchShell>
   );
 }

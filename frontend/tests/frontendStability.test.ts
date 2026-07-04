@@ -292,8 +292,8 @@ describe('frontend stability guards', () => {
       ['src/components/TracesPanel.tsx', /backLabel="关闭调用追踪"/],
       ['src/components/ScheduleExtractDialog.tsx', /aria-label="Close schedule extraction dialog"/],
       ['src/components/admin/AgentMetricsDashboard.tsx', /backLabel="关闭 Agent 指标"/],
-      ['src/components/features/TaskPanelView.tsx', /aria-label="Close task panel"/],
-      ['src/components/features/TaskScheduleView.tsx', /aria-label="Close task schedule"/],
+      ['src/components/features/TaskPanelView.tsx', /backLabel="关闭任务中心"/],
+      ['src/components/features/TaskScheduleView.tsx', /backLabel="关闭定时任务"/],
       ['src/components/MindMapCanvas.tsx', /aria-label="Close mind map"/],
       ['src/App.tsx', /aria-label="Close cost dashboard"/],
     ] as const;
@@ -314,6 +314,11 @@ describe('frontend stability guards', () => {
 
     assert.match(metrics, /ToolWorkbenchShell/);
     assert.doesNotMatch(metrics, /amd-breadcrumb/);
+  });
+
+  it('task tools use the shared workbench shell', () => {
+    assert.match(read('src/components/features/TaskPanelView.tsx'), /ToolWorkbenchShell/);
+    assert.match(read('src/components/features/TaskScheduleView.tsx'), /ToolWorkbenchShell/);
   });
 
   it('uses semantic buttons for feature panel selectable rows', () => {
