@@ -289,7 +289,7 @@ describe('frontend stability guards', () => {
       ['src/TrashView.tsx', /aria-label="Close trash"/],
       ['src/components/GraphView.tsx', /backLabel="关闭关系图谱"/],
       ['src/components/TimelineView.tsx', /backLabel="关闭时间线"/],
-      ['src/components/TracesPanel.tsx', /aria-label="Close traces panel"/],
+      ['src/components/TracesPanel.tsx', /backLabel="关闭调用追踪"/],
       ['src/components/ScheduleExtractDialog.tsx', /aria-label="Close schedule extraction dialog"/],
       ['src/components/admin/AgentMetricsDashboard.tsx', /aria-label="Close agent metrics dashboard"/],
       ['src/components/features/TaskPanelView.tsx', /aria-label="Close task panel"/],
@@ -314,7 +314,7 @@ describe('frontend stability guards', () => {
     assert.doesNotMatch(timeline, /<div\s+key={`note-\$\{item\.data\.id\}`}/);
 
     assert.match(traces, /<button\s+key={trace\.id}/);
-    assert.match(traces, /aria-expanded={selectedTrace\?\.id === trace\.id}/);
+    assert.match(traces, /aria-label={`Select trace \$\{trace\.inputText \|\| trace\.id\}`}/);
     assert.doesNotMatch(traces, /<div\s+key={trace\.id}/);
 
     assert.match(taskPanel, /<button\s+key={plan\.id}/);

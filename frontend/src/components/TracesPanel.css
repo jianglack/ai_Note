@@ -1,212 +1,146 @@
-.traces-overlay {
-  position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 8888;
-  animation: traceFadeIn 0.2s ease-out;
+.traces-workbench-main {
+  background: var(--color-paper-0, #fbf7ee);
 }
 
-@keyframes traceFadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-.traces-panel {
-  background: #fff;
-  border-radius: 16px;
-  width: 800px;
-  max-width: 90vw;
-  height: 80vh;
+.traces-content {
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  overflow: hidden;
+  gap: 14px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 18px 24px;
 }
 
-.traces-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.traces-header h2 {
-  margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.traces-header-actions {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-
-.traces-btn-secondary {
-  padding: 6px 12px;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  font-size: 13px;
-  color: #555;
-}
-
-.traces-btn-secondary:hover {
-  background: #f5f5f5;
-}
-
-.traces-close {
-  width: 32px;
-  height: 32px;
-  border: none;
-  background: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #999;
-  border-radius: 6px;
-}
-
-.traces-close:hover {
-  background: #f0f0f0;
-  color: #333;
-}
-
-/* 统计卡片 */
 .traces-stats {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
-  padding: 16px 20px;
-  border-bottom: 1px solid #f0f0f0;
 }
 
 .stat-card {
-  flex: 1;
-  background: #f8f9fa;
-  border-radius: 10px;
-  padding: 12px 16px;
-  text-align: center;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid rgba(96, 76, 49, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 252, 246, 0.82);
 }
 
 .stat-value {
+  color: #2f2921;
   font-size: 22px;
   font-weight: 700;
-  color: #333;
+  line-height: 1.15;
 }
 
 .stat-label {
-  font-size: 12px;
-  color: #888;
   margin-top: 4px;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
 }
 
-/* 追踪列表 */
-.traces-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 12px 20px;
+.traces-error-banner {
+  padding: 10px 12px;
+  border: 1px solid rgba(174, 61, 53, 0.22);
+  border-radius: 8px;
+  background: rgba(174, 61, 53, 0.08);
+  color: #9d3a33;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .traces-loading,
 .traces-empty {
-  text-align: center;
-  color: #999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
   padding: 40px 20px;
+  color: var(--color-text-secondary, #7a6b58);
   font-size: 14px;
   line-height: 1.6;
+  text-align: center;
 }
 
 .traces-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  min-height: 0;
 }
 
 .trace-item {
-  display: block;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
   width: 100%;
-  text-align: left;
-  font-family: inherit;
-  background: transparent;
-  border-radius: 8px;
-  padding: 10px 12px;
-  cursor: pointer;
-  transition: background 0.15s;
+  min-width: 0;
+  padding: 11px 12px;
   border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--color-text, #2f2921);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .trace-item:hover {
-  background: #f8f9fa;
+  border-color: rgba(96, 76, 49, 0.16);
+  background: rgba(255, 252, 246, 0.68);
 }
 
 .trace-item.trace-selected {
-  background: #f0f4ff;
-  border-color: #d0d8f0;
+  border-color: rgba(163, 93, 56, 0.36);
+  background: #fffaf1;
 }
 
 .trace-item.trace-error {
-  background: #fff5f5;
-}
-
-.trace-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+  background: rgba(174, 61, 53, 0.07);
 }
 
 .trace-status {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 6px;
-  border-radius: 4px;
   flex-shrink: 0;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 650;
+  line-height: 1.4;
 }
 
 .status-ok {
-  background: #e6f9ee;
-  color: #1a8a4a;
+  background: rgba(95, 143, 115, 0.16);
+  color: #456f55;
 }
 
 .status-error {
-  background: #ffe5e5;
-  color: #d32f2f;
+  background: rgba(174, 61, 53, 0.14);
+  color: #9d3a33;
 }
 
 .trace-input {
-  flex: 1;
-  font-size: 13px;
-  color: #333;
-  white-space: nowrap;
+  min-width: 0;
   overflow: hidden;
+  color: #2f2921;
+  font-size: 13px;
   text-overflow: ellipsis;
-}
-
-.trace-meta {
-  font-size: 12px;
-  color: #888;
   white-space: nowrap;
-  flex-shrink: 0;
 }
 
+.trace-meta,
 .trace-time {
-  font-size: 12px;
-  color: #aaa;
-  white-space: nowrap;
   flex-shrink: 0;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
-/* 展开详情 */
 .trace-detail {
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid #eee;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
 }
 
 .detail-row {
@@ -221,30 +155,61 @@
 }
 
 .detail-label {
-  color: #888;
-  font-size: 12px;
-  flex-shrink: 0;
   min-width: 40px;
+  flex-shrink: 0;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
 }
 
 .detail-value {
-  color: #333;
+  color: #2f2921;
 }
 
 .detail-text {
-  background: #f8f9fa;
+  width: 100%;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 7px;
+  background: rgba(255, 252, 246, 0.74);
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
 }
 
 .detail-error {
-  color: #d32f2f;
-  background: #fff5f5;
+  width: 100%;
   padding: 8px 10px;
-  border-radius: 6px;
+  border-radius: 7px;
+  background: rgba(174, 61, 53, 0.08);
+  color: #9d3a33;
   font-size: 12px;
+}
+
+.traces-rail-stats,
+.traces-rail-empty {
+  display: grid;
+  gap: 8px;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.traces-rail-stats strong {
+  color: #2f2921;
+  font-size: 16px;
+}
+
+@media (max-width: 760px) {
+  .traces-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .trace-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .trace-meta,
+  .trace-time {
+    grid-column: 2;
+  }
 }

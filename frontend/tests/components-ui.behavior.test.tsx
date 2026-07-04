@@ -14,6 +14,9 @@ const apiMocks = vi.hoisted(() => ({
   toggleWorkflow: vi.fn(),
   runWorkflow: vi.fn(),
   getWorkflowRuns: vi.fn(),
+  getAgentTraces: vi.fn(),
+  getTraceStats: vi.fn(),
+  clearChatMemory: vi.fn(),
   updateScheduleStatus: vi.fn(),
   updateMemory: vi.fn(),
 }));
@@ -33,6 +36,9 @@ vi.mock('../src/api', () => ({
   toggleWorkflow: apiMocks.toggleWorkflow,
   runWorkflow: apiMocks.runWorkflow,
   getWorkflowRuns: apiMocks.getWorkflowRuns,
+  getAgentTraces: apiMocks.getAgentTraces,
+  getTraceStats: apiMocks.getTraceStats,
+  clearChatMemory: apiMocks.clearChatMemory,
   updateScheduleStatus: apiMocks.updateScheduleStatus,
   updateMemory: apiMocks.updateMemory,
 }));
@@ -126,6 +132,7 @@ import GraphView from '../src/components/GraphView';
 import MindMapCanvas, { branchesToFlowData } from '../src/components/MindMapCanvas';
 import SettingsPage from '../src/components/SettingsPage';
 import TimelineView from '../src/components/TimelineView';
+import TracesPanel from '../src/components/TracesPanel';
 import WorkflowsView from '../src/components/features/WorkflowsView';
 import { useToastStore } from '../src/stores/toastStore';
 import { useUiStore } from '../src/stores/uiStore';
@@ -281,6 +288,51 @@ describe('core component behavior', () => {
         expect.objectContaining({ data: expect.objectContaining({ label: 'Map' }) }),
       ]),
     }));
+  });
+
+  it('TracesPanel shows selected trace details in the workbench detail panel', async () => {
+    apiMocks.getAgentTraces.mockResolvedValueOnce([{
+      id: 'trace-1',
+      inputText: 'Summarize note',
+      outputText: 'Done',
+      status: 'OK',
+      model: 'test-model',
+      inputTokens: 10,
+      outputTokens: 20,
+      totalTokens: 30,
+      latencyMs: 150,
+      toolsCalled: JSON.stringify([{ name: 'searchNotes' }]),
+      errorMessage: null,
+      createdAt: '2026-07-04T10:00:00Z',
+    }]);
+    apiMocks.getTraceStats.mockResolvedValueOnce({
+      todayCalls: 1,
+      todayTokens: 30,
+      totalCalls: 1,
+      totalTokens: 30,
+    });
+
+    render(<TracesPanel onClose={vi.fn()} />);
+
+    await screen.findByText('Summarize note');
+    await userEvent.click(screen.getByRole('button', { name: /Select trace/ }));
+
+    expect(screen.getByRole('complementary', { name: '调用详情' })).toHaveTextContent('test-model');
+    expect(screen.getByRole('complementary', { name: '调用详情' })).toHaveTextContent('searchNotes');
+  });
+
+  it('TracesPanel surfaces load failures', async () => {
+    apiMocks.getAgentTraces.mockRejectedValueOnce(new Error('trace api down'));
+    apiMocks.getTraceStats.mockResolvedValueOnce({
+      todayCalls: 0,
+      todayTokens: 0,
+      totalCalls: 0,
+      totalTokens: 0,
+    });
+
+    render(<TracesPanel onClose={vi.fn()} />);
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('trace api down');
   });
 
   it('WorkflowsView closes create and result dialogs with Escape', async () => {
