@@ -182,7 +182,7 @@ describe('workflow dialogs card actions and trash behavior', () => {
     const onRestore = vi.fn();
     const onPermanentDelete = vi.fn();
 
-    const { container } = render(
+    render(
       <TrashView
         notes={[makeNote({ tags: [{ id: 'tag-1', name: 'urgent' }] })]}
         onClose={onClose}
@@ -193,15 +193,19 @@ describe('workflow dialogs card actions and trash behavior', () => {
 
     expect(screen.getByText('Alpha')).toBeInTheDocument();
     expect(screen.getByText('urgent')).toBeInTheDocument();
+    expect(screen.getByRole('dialog', { name: '回收站' })).toBeInTheDocument();
 
-    await user.click(container.querySelector('.restore-button')!);
+    await user.click(screen.getByRole('button', { name: '选择回收站笔记 Alpha' }));
+    expect(screen.getByRole('complementary', { name: '笔记预览' })).toHaveTextContent('Preview body');
+
+    await user.click(screen.getByRole('button', { name: '恢复笔记 Alpha' }));
     expect(onRestore).toHaveBeenCalledWith('note-1');
 
-    await user.click(container.querySelector('.delete-button')!);
+    await user.click(screen.getByRole('button', { name: '永久删除笔记 Alpha' }));
     expect(dialogMocks.askConfirm).toHaveBeenCalledWith(expect.objectContaining({ danger: true }));
     expect(onPermanentDelete).toHaveBeenCalledWith('note-1');
 
-    await user.click(screen.getByLabelText('Close trash'));
+    await user.click(screen.getByRole('button', { name: '关闭回收站' }));
     expect(onClose).toHaveBeenCalled();
   });
 });

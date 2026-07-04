@@ -286,7 +286,7 @@ describe('frontend stability guards', () => {
 
   it('labels feature panel close buttons', () => {
     const closeButtonChecks = [
-      ['src/TrashView.tsx', /aria-label="Close trash"/],
+      ['src/TrashView.tsx', /backLabel="关闭回收站"/],
       ['src/components/GraphView.tsx', /backLabel="关闭关系图谱"/],
       ['src/components/TimelineView.tsx', /backLabel="关闭时间线"/],
       ['src/components/TracesPanel.tsx', /backLabel="关闭调用追踪"/],
@@ -319,6 +319,13 @@ describe('frontend stability guards', () => {
   it('task tools use the shared workbench shell', () => {
     assert.match(read('src/components/features/TaskPanelView.tsx'), /ToolWorkbenchShell/);
     assert.match(read('src/components/features/TaskScheduleView.tsx'), /ToolWorkbenchShell/);
+  });
+
+  it('recycle bin uses the shared workbench shell and detail panel', () => {
+    const trashView = read('src/TrashView.tsx');
+
+    assert.match(trashView, /ToolWorkbenchShell/);
+    assert.match(trashView, /ToolDetailPanel/);
   });
 
   it('uses semantic buttons for feature panel selectable rows', () => {
