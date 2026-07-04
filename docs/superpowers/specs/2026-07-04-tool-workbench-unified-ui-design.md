@@ -1,28 +1,32 @@
 # Tool Workbench Unified UI Design
 
 Date: 2026-07-04
-Status: Approved for implementation planning
+Status: Approved, audited, and ready for implementation planning
 
 ## Background
 
-The left sidebar currently groups several AI and productivity tools under "视图", "工具", and "其他", but the destination pages are visually inconsistent:
+The left sidebar currently groups several AI and productivity tools under "视图", "工具", and "其他", but their destinations are not one coherent UI system.
 
-- Some tools are full-screen views with their own ad hoc headers.
-- Some tools still use older modal or drawer styles.
-- Some tools are embedded inside the main note surface.
-- Graph, timeline, and trace views are especially different from the warm paper style used by the rest of the application.
+Current code facts from the audit:
 
-The approved direction is to keep the existing product structure and tool capabilities, but unify the presentation through one shared "Tool Workbench" shell.
+- `frontend/src/App.tsx` opens most tools through individual Zustand booleans from `frontend/src/stores/uiStore.ts`.
+- `GraphView`, `TimelineView`, and `TracesPanel` still use old overlay/drawer CSS with white/blue/gray styling and `z-index: 8888`.
+- `CanvasView`, `WorkflowsView`, and `EvalDashView` already use `features.css`, but they each own their own page header and layout.
+- `TaskPanelView` and `TaskScheduleView` are full-screen but rely heavily on inline styles.
+- `AgentMetricsDashboard` has a warm paper palette but still reads like a separate admin page.
+- `TrashView` is embedded inside `EditorPane` through `viewMode='trash'`, not opened as the same kind of tool overlay as the rest.
+- `ScheduleForm` has accessible dialog behavior, but its CSS is still old white/blue/orange styling.
+
+The approved design direction is to keep the existing product structure and tool capabilities, but unify the presentation through one shared "Tool Workbench" shell.
 
 ## Goals
 
-1. Make all sidebar tools feel like part of the same product.
-2. Remove the duplicated AI memory entry from the main toolbar path and keep tool discovery in the sidebar/settings areas.
-3. Prioritize redesign of:
+1. Make all sidebar tool destinations feel like the same product area.
+2. Prioritize implementation for:
    - 关系图谱
    - 时间线
    - 调用追踪
-4. Put the remaining tools into the same migration plan:
+3. Put the remaining sidebar tools into the same migration path:
    - 画布
    - 创建日程
    - 工作流
@@ -31,287 +35,298 @@ The approved direction is to keep the existing product structure and tool capabi
    - 评估中心
    - Agent 指标
    - 回收站
-5. Preserve existing backend APIs and business behavior unless a tool already has a known bug.
-6. Avoid another isolated UI system. The new shell should reuse the app's existing warm paper palette, compact controls, and restrained visual language.
+4. Preserve existing backend APIs, data loading, and user-visible behavior unless the implementation plan calls out a UI-only state fix.
+5. Use the existing warm paper token system and `features.css` conventions. Do not introduce a new design dependency.
+6. Keep the AI 记忆 management entry in Settings as the canonical management surface; do not add a duplicate AI memory tool entry back into the editor toolbar.
 
 ## Non-Goals
 
 - Do not redesign the note editor.
-- Do not change memory, RAG, agent, workflow, or schedule backend semantics as part of this UI pass.
-- Do not replace existing graph, timeline, trace, or workflow data models.
-- Do not introduce a new design system dependency.
-- Do not implement feature behavior while writing this design document.
+- Do not redesign backend memory, RAG, agent, workflow, evaluation, or schedule semantics.
+- Do not replace `react-force-graph-2d`, `react-window`, or existing data APIs.
+- Do not change authentication or routing architecture.
+- Do not move every tool to URL routes in this pass.
 
-## Approved Direction
+## Executable Architecture Decision
 
-Use a shared full-screen Tool Workbench for complex tools.
+Use a shared full-screen Tool Workbench shell, but keep the current `App.tsx` boolean-opened overlay model for the first implementation.
 
-Common structure:
+Reason:
 
-- Top bar with back button, tool title, short scope text, status chips, and primary actions.
-- Left control rail for scope, filters, search, legends, and mode controls.
-- Main content area for graph canvas, timeline list, trace list, dashboard cards, or table content.
-- Optional right detail panel for selected nodes, records, traces, tasks, or deleted notes.
-- Shared empty, loading, error, and permission states.
+- The current app already opens graph, timeline, trace, canvas, workflow, eval, task, schedule, metrics, and settings through Zustand flags.
+- Replacing that with a route model would be a separate navigation refactor.
+- A shared shell can be introduced safely while each tool keeps its current props and data flow.
 
-Create/edit actions that are short forms can use a shared Paper Dialog instead of becoming separate full-screen pages. "创建日程" is treated as a lightweight creation action, not a full-screen tool page.
-
-## Visual Rules
-
-The workbench should match the existing application rather than the old white/blue admin style.
-
-Use these visual constraints:
-
-- Warm paper backgrounds based on the current app tokens.
-- 8px border radius for controls and panels unless an existing component requires otherwise.
-- Subtle borders instead of heavy shadows.
-- Icon buttons for close, refresh, export, filter, and view mode actions.
-- Text labels for clear commands only, such as "保存", "恢复", "导出", or "运行评估".
-- No nested cards inside cards.
-- No black floating overlays for graph node details.
-- No oversized dashboard cards that make operational tools feel like marketing pages.
-- Chinese UI text for all visible labels in these tools.
-- Responsive behavior must avoid overlapping toolbar text and action buttons.
+The first implementation should create reusable layout primitives, then migrate tools one at a time.
 
 ## Shared Components
 
-### ToolWorkbenchShell
+### `ToolWorkbenchShell`
 
-Purpose:
+Create in:
 
-Provide one full-screen frame for complex tools.
+- `frontend/src/components/workbench/ToolWorkbenchShell.tsx`
+- `frontend/src/components/workbench/ToolWorkbenchShell.css`
+- `frontend/src/components/workbench/index.ts`
 
 Responsibilities:
 
-- Render the top bar.
-- Render the optional left rail.
-- Render the main content slot.
-- Render the optional right detail slot.
-- Own shared keyboard-safe and responsive layout behavior.
+- Render one full-screen fixed workbench layer.
+- Render top bar, title, subtitle, status chips, primary actions, secondary actions, optional left rail, main slot, and optional right detail panel.
+- Keep z-index consistent with existing full-screen tools.
+- Close on Escape only when `closeOnEscape` is true.
+- Keep focus and labels accessible enough for existing test standards.
 
-Inputs:
+Required prop shape:
 
-- `title`
-- `subtitle`
-- `scopeLabel`
-- `statusChips`
-- `primaryActions`
-- `secondaryActions`
-- `leftRail`
-- `main`
-- `detail`
-- `onBack`
+```ts
+interface ToolAction {
+  key: string;
+  label: string;
+  icon?: React.ReactNode;
+  variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
+  disabled?: boolean;
+  onClick: () => void;
+}
 
-### ToolControlRail
+interface ToolWorkbenchShellProps {
+  title: string;
+  subtitle?: string;
+  icon?: React.ReactNode;
+  chips?: React.ReactNode;
+  primaryActions?: ToolAction[];
+  secondaryActions?: ToolAction[];
+  leftRail?: React.ReactNode;
+  detailPanel?: React.ReactNode;
+  detailPanelLabel?: string;
+  children: React.ReactNode;
+  onBack: () => void;
+  backLabel?: string;
+  className?: string;
+  mainClassName?: string;
+  closeOnEscape?: boolean;
+}
+```
 
-Purpose:
+### `ToolControlRail`
 
-Provide consistent filter/search/navigation structure inside tool pages.
+Create in:
 
-Typical sections:
+- `frontend/src/components/workbench/ToolControlRail.tsx`
 
-- 范围
-- 搜索
-- 筛选
-- 状态
-- 图例
-- 操作
+Responsibilities:
 
-### ToolDetailPanel
+- Render consistent rail sections for scope, search, filters, status, legends, and secondary operations.
+- Avoid owning business logic.
 
-Purpose:
+Required prop shape:
 
-Replace tool-specific ad hoc popovers and side details.
+```ts
+interface ToolControlRailSection {
+  key: string;
+  title: string;
+  content: React.ReactNode;
+}
 
-Rules:
+interface ToolControlRailProps {
+  sections: ToolControlRailSection[];
+  footer?: React.ReactNode;
+}
+```
 
-- It should show only the selected object's information.
-- It should not inject unrelated RAG, memory, or note content.
-- Destructive actions must be visually separated and confirmed when needed.
+### `ToolDetailPanel`
 
-### PaperDialog
+Create in:
 
-Purpose:
+- `frontend/src/components/workbench/ToolDetailPanel.tsx`
 
-Provide one consistent modal style for short creation/edit forms.
+Responsibilities:
 
-Used for:
+- Render a consistent right-side panel for selected graph nodes, timeline items, traces, task plans, or deleted notes.
+- Provide one empty state for "no selection".
+- Keep destructive actions visually separated.
 
-- 创建日程
-- Edit schedule
-- Small workflow or task creation forms, where applicable
+Required prop shape:
 
-Rules:
+```ts
+interface ToolDetailPanelProps {
+  title: string;
+  subtitle?: string;
+  meta?: React.ReactNode;
+  actions?: React.ReactNode;
+  dangerActions?: React.ReactNode;
+  children?: React.ReactNode;
+  empty?: boolean;
+  emptyMessage?: string;
+}
+```
 
-- Keep the backdrop quiet.
-- Use the same paper palette and 8px controls.
-- Use icon close button.
-- Do not force lightweight forms into full-screen navigation.
+### `PaperDialog`
+
+Do not build a second dialog framework unless implementation review proves it is needed. First attempt should restyle `ScheduleForm.css` to match the existing `.dialog-*` and `.lp-modal-*` warm paper conventions.
+
+If reuse becomes awkward, create:
+
+- `frontend/src/components/workbench/PaperDialog.tsx`
+
+## Visual Rules
+
+- Use existing tokens from `frontend/src/tailwind.css`: `--color-paper-*`, `--color-border`, `--color-text`, `--color-text-secondary`, `--color-accent`, `--color-sage`, and status colors.
+- Default control radius: 8px.
+- Top bar height: stable, about 64px to 72px.
+- Left rail width: 232px to 260px.
+- Right detail panel width: 280px to 340px.
+- Main region must use `min-width: 0` and `min-height: 0` so canvas/list content does not overflow.
+- Avoid nested cards inside cards.
+- Remove old black modal backdrops from graph, timeline, and traces.
+- Remove old blue focus/accent color from graph and timeline UI.
+- Use Chinese visible labels.
+- Use icon buttons for close/back, refresh, export, and filter actions where practical.
 
 ## Tool Mapping
 
-| Sidebar Entry | Target Pattern | Notes |
+| Sidebar Entry | Target Pattern | Implementation Notes |
 | --- | --- | --- |
-| 关系图谱 | Canvas workbench | First priority. Keep graph behavior, replace old overlay/detail UI with left rail and right detail panel. |
-| 时间线 | List-detail workbench | First priority. Date groups in main area, filters in rail, selected event preview on the right. |
-| 画布 | Canvas workbench | Keep existing list/editor modes, but move into shared shell. |
-| 创建日程 | PaperDialog | Lightweight form action. Can be opened from sidebar, note context, or task context. |
-| 工作流 | Dashboard workbench | Templates/status filters on the left, runs/cards in main area, run detail on the right. |
-| 任务中心 | List-detail workbench | Plans/tasks in main area, task or plan detail on the right. |
-| 定时任务 | List-detail workbench | Schedule status/frequency filters, list/table main area, edit/history detail panel. |
-| 评估中心 | Dashboard workbench | Dataset/run filters, metrics and result comparisons in main area. |
-| Agent 指标 | Dashboard workbench | Keep metrics content, but remove admin-page visual style. |
-| 调用追踪 | Dashboard/list workbench | First priority. Trace filters in rail, trace list in main area, selected call chain on right. |
-| 回收站 | List-detail workbench | Move out of embedded note surface into full-screen tool page with preview/actions. |
+| 关系图谱 | Canvas workbench | First priority. Keep `ForceGraph2D`, remote graph fallback, local wiki-link fallback, selected-note centering, and node click behavior. Replace overlay/panel CSS with shell, rail legend, and right detail panel. |
+| 时间线 | List-detail workbench | First priority. Keep `VariableSizeList`, date grouping, note opening, schedule editing, and schedule status updates. Move from right drawer to full workbench. Add selected item detail before opening note/schedule. |
+| 调用追踪 | Dashboard/list workbench | First priority. Keep `getAgentTraces`, `getTraceStats`, and `clearChatMemory`. Add error state instead of only `console.error`. Move selected trace detail to right panel. |
+| 画布 | Canvas workbench | Second wave. Keep canvas list/editor modes and node editing logic. Wrap list and editor views in shell. |
+| 创建日程 | Paper dialog | Restyle `ScheduleForm.css`. Keep existing focus trap, labels, Escape handling, save behavior, and tests. |
+| 工作流 | Dashboard workbench | Second wave. Keep tabs, create modal, run polling, run detail modal. Wrap with shell and later replace local modals with PaperDialog-compatible styling. |
+| 任务中心 | List-detail workbench | Second wave. Keep plan detail and `PlanApprovalCard`; remove local full-screen header styles. |
+| 定时任务 | List-detail workbench | Second wave. Keep create/toggle/delete behavior; move inline form into shell content or PaperDialog based on implementation complexity. |
+| 评估中心 | Dashboard workbench | Second wave. Keep dataset/runs/detail flow and polling; move existing stats/content into shell layout. |
+| Agent 指标 | Dashboard workbench | Second wave. Keep metrics polling and cards/table; remove breadcrumb/admin framing and use shell top bar. |
+| 回收站 | List-detail workbench | Second wave. First keep `viewMode='trash'` behavior working. Then open recycle bin through shell without breaking `EditorPane` tests. |
 
-## Priority Plan
+## Implementation Phases
 
-### Phase 1: Shared Shell Foundation
+### Phase 1: Shared Workbench Foundation
 
-Create shared workbench layout and styling primitives.
+Files to create:
 
-Expected implementation scope:
+- `frontend/src/components/workbench/ToolWorkbenchShell.tsx`
+- `frontend/src/components/workbench/ToolWorkbenchShell.css`
+- `frontend/src/components/workbench/ToolControlRail.tsx`
+- `frontend/src/components/workbench/ToolDetailPanel.tsx`
+- `frontend/src/components/workbench/index.ts`
+- `frontend/tests/tool-workbench.behavior.test.tsx`
 
-- New shared workbench component files.
-- New shared workbench CSS or integration into the existing feature CSS layer.
-- No tool behavior changes.
-- Add a route/state adapter if current tool navigation requires it.
+Files to modify:
+
+- `frontend/src/App.tsx` only if the shell requires a shared wrapper or import side effect.
 
 Acceptance:
 
-- A simple smoke test can render the shell with title, rail, content, and detail panel.
-- The shell matches the warm paper app style at desktop width.
-- Existing unrelated views still render.
+- Shell renders title, subtitle, back button, actions, left rail, main content, and detail panel.
+- Escape calls `onBack` when `closeOnEscape` is true.
+- Shell uses warm paper tokens and does not require any backend API.
 
 ### Phase 2: First-Priority Tool Migration
 
-Migrate:
+Files to modify:
 
-- 关系图谱
-- 时间线
-- 调用追踪
-
-Acceptance:
-
-- Each tool opens as a full-screen workbench.
-- Each tool has consistent top bar, left rail, main content, and right detail behavior.
-- Old black graph overlays and old trace/timeline visual language are removed.
-- Existing data loading and refresh behavior still works.
-
-### Phase 3: Remaining Tool Migration
-
-Migrate:
-
-- 画布
-- 工作流
-- 任务中心
-- 定时任务
-- 评估中心
-- Agent 指标
-- 回收站
+- `frontend/src/components/GraphView.tsx`
+- `frontend/src/components/GraphView.css`
+- `frontend/src/components/TimelineView.tsx`
+- `frontend/src/components/TimelineView.css`
+- `frontend/src/components/TracesPanel.tsx`
+- `frontend/src/components/TracesPanel.css`
+- `frontend/tests/components-ui.behavior.test.tsx`
+- `frontend/tests/frontendStability.test.ts`
 
 Acceptance:
 
-- All sidebar tool destinations share the same shell structure.
-- Tool-specific actions remain available.
-- Empty/loading/error states are consistent.
-- The sidebar no longer opens a mix of unrelated visual systems.
+- Graph, timeline, and traces open as full-screen workbenches.
+- Existing click/open behavior still works.
+- Trace loading failure is visible in the UI.
+- Selected graph/timeline/trace details appear in the right detail panel.
+- Old overlay classes are either removed or no longer provide black backdrop/old white panel styling.
 
-### Phase 4: Form and Dialog Unification
+### Phase 3: Existing Warm Tool Migration
 
-Migrate short forms to PaperDialog where appropriate.
+Files to modify:
 
-Primary target:
-
-- 创建日程
-
-Possible later targets:
-
-- Small workflow creation forms.
-- Small task creation forms.
-- Schedule edit forms.
+- `frontend/src/components/features/CanvasView.tsx`
+- `frontend/src/components/features/WorkflowsView.tsx`
+- `frontend/src/components/features/EvalDashView.tsx`
+- `frontend/src/components/features/features.css`
+- `frontend/src/components/admin/AgentMetricsDashboard.tsx`
+- `frontend/src/components/admin/agent-metrics.css`
 
 Acceptance:
 
-- The schedule form no longer uses old white/blue/orange styling.
-- The dialog is visually consistent with the workbench.
-- The form remains fast to open and does not require full-screen navigation.
+- These tools use the same top bar and page frame.
+- Tool-specific cards, tables, and modals remain functional.
+- Agent Metrics no longer shows settings/admin breadcrumb as the main identity.
 
-## Interaction Rules
+### Phase 4: Inline Style and Recycle Bin Migration
 
-- Sidebar entries should open the corresponding tool directly.
-- Back returns to the previous note/editor context.
-- Refresh, export, filter, and close/back should use familiar icon buttons with accessible labels.
-- Tool-specific primary actions should appear in the top bar or right detail panel, not scattered across the page.
-- Selecting a graph node, timeline item, trace, task, or deleted note updates the right detail panel instead of opening unrelated popovers.
-- Destructive actions such as permanent delete require confirmation.
+Files to modify:
 
-## Data and State Boundaries
+- `frontend/src/components/features/TaskPanelView.tsx`
+- `frontend/src/components/features/TaskScheduleView.tsx`
+- `frontend/src/TrashView.tsx`
+- `frontend/src/components/EditorPane.tsx`
+- `frontend/src/hooks/useNotes.ts`
+- `frontend/src/stores/uiStore.ts`
+- `frontend/tests/workflow-dialogs-trash.behavior.test.tsx`
+- `frontend/tests/stores.behavior.test.ts`
 
-The redesign is UI-level only.
+Acceptance:
 
-Important boundaries:
+- Task center and scheduled tasks use the shared shell.
+- Recycle bin appears as a workbench tool while existing restore/delete tests still pass.
+- Permanent delete still requires confirmation.
 
-- Graph data remains graph data.
-- Timeline events remain timeline events.
-- Trace data remains trace data.
-- RAG note content must not be shown as user profile memory unless explicitly provided by the relevant memory UI.
-- Selected-note workflows must stay scoped to the current note where applicable.
-- The workbench shell does not own business logic. It only standardizes layout, controls, and state presentation.
+### Phase 5: Form Unification
 
-## Error, Loading, and Empty States
+Files to modify:
 
-Every migrated tool should expose four states through shared patterns:
+- `frontend/src/components/ScheduleForm.css`
+- `frontend/src/components/ScheduleForm.tsx` only if class hooks or button labels need small adjustments.
+- `frontend/tests/schedule-form.behavior.test.tsx`
+- `frontend/tests/frontendStability.test.ts`
 
-- Loading: quiet skeleton or spinner in the main content area.
-- Empty: short explanation plus one relevant action.
-- Error: readable error message, retry action, and optional details disclosure.
-- Permission or unavailable: clear message without stack traces in the UI.
+Acceptance:
 
-For trace and agent tooling, backend failures should remain observable and must not be silently swallowed.
+- Schedule form matches the warm paper dialog style.
+- Existing accessibility behavior remains intact.
+- Existing save/create/edit tests pass.
 
-## Testing Plan
+## Test-First Requirements
 
-Unit/component tests:
+For each phase:
 
-- ToolWorkbenchShell renders title, subtitle, actions, rail, main content, and detail content.
-- PaperDialog renders title, close action, primary action, and form content.
-- Migrated tools still render existing loaded, empty, and error states.
+1. Write or update the relevant tests first.
+2. Run the focused frontend test file and verify the new/changed test fails for the intended reason.
+3. Implement the minimum code to pass.
+4. Run the focused test again.
+5. Run `npm test`.
+6. Run `npm run build`.
+7. Run `npm run lint` before the final implementation commit.
 
-Integration or UI tests:
+Minimum required new/updated tests:
 
-- Sidebar opens graph, timeline, and trace workbench views.
-- Graph node selection updates the right detail panel.
-- Timeline item selection updates the right detail panel.
-- Trace selection updates the right detail panel.
-- Schedule creation opens PaperDialog, not the old styled modal.
-- Deleted note preview and restore/delete actions appear inside the recycle bin workbench.
+- `tool-workbench.behavior.test.tsx`: shell rendering and Escape close.
+- `components-ui.behavior.test.tsx`: graph/timeline migration behavior.
+- A trace test, either in `components-ui.behavior.test.tsx` or a new `traces-panel.behavior.test.tsx`.
+- `schedule-form.behavior.test.tsx`: schedule dialog remains accessible after restyle.
+- `workflow-dialogs-trash.behavior.test.tsx`: recycle bin behavior still works after migration.
+- `frontendStability.test.ts`: old close labels/class assumptions updated to new workbench selectors.
 
-Visual verification:
+## Rollback Plan
 
-- Desktop width: top bar actions do not overlap.
-- Narrow width: detail panel collapses or moves below content.
-- Tool pages use warm paper palette and do not introduce blue/admin styling.
+- The shared shell is additive in Phase 1.
+- Each migrated tool keeps its existing public props.
+- If one tool migration fails, revert that tool file and CSS while leaving the shell in place.
+- Do not delete old CSS until the migrated component no longer imports or depends on it.
 
-## Risks
+## Definition of Done
 
-- Several current tools own their own layout and CSS. Migrating them all at once would be risky.
-- Inline styles in task and schedule views may require careful extraction.
-- The graph view may need more responsive work than the list-based tools.
-- If shared shell props become too generic, tool pages may become harder to read. Keep the shell focused on layout, not business logic.
-
-## Open Decisions for Implementation Planning
-
-1. Whether to build the shell as plain CSS modules/CSS files or fold it into the existing `features.css` style layer.
-2. Whether to route all tools through one route state or keep current sidebar state and only swap components.
-3. How aggressively to remove old CSS after each tool migration.
-
-The implementation plan should resolve these after reading the current frontend routing/state code.
-
-## Approval Notes
-
-The approved scope is:
-
-- Prioritize 关系图谱, 时间线, and 调用追踪.
-- Include the other sidebar tools in the same migration plan.
-- Keep 创建日程 as a lightweight unified dialog unless implementation review reveals a strong reason to promote it to a full-screen page.
+- All sidebar tools either use the shared workbench shell or have a documented later migration task in the implementation plan.
+- First-priority tools are migrated in code.
+- The schedule form no longer looks like the old white/blue/orange modal.
+- No duplicate AI memory toolbar entry is reintroduced.
+- `npm test`, `npm run build`, and `npm run lint` pass.
+- Manual browser review confirms graph, timeline, trace, schedule form, and at least one second-wave tool match the unified warm paper style.
