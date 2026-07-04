@@ -14,6 +14,7 @@ const apiMocks = vi.hoisted(() => ({
   toggleWorkflow: vi.fn(),
   runWorkflow: vi.fn(),
   getWorkflowRuns: vi.fn(),
+  updateScheduleStatus: vi.fn(),
   updateMemory: vi.fn(),
 }));
 
@@ -32,6 +33,7 @@ vi.mock('../src/api', () => ({
   toggleWorkflow: apiMocks.toggleWorkflow,
   runWorkflow: apiMocks.runWorkflow,
   getWorkflowRuns: apiMocks.getWorkflowRuns,
+  updateScheduleStatus: apiMocks.updateScheduleStatus,
   updateMemory: apiMocks.updateMemory,
 }));
 
@@ -196,7 +198,7 @@ describe('core component behavior', () => {
     expect(useUiStore.getState().isSettingsOpen).toBe(false);
   });
 
-  it('TimelineView opens a selected note and closes the panel', async () => {
+  it('TimelineView selects an item before opening it from the detail panel', async () => {
     const user = userEvent.setup();
     const onSelectNote = vi.fn();
     const onClose = vi.fn();
@@ -213,7 +215,13 @@ describe('core component behavior', () => {
       />,
     );
 
-    await user.click(screen.getByRole('button', { name: 'Open timeline note Alpha' }));
+    await user.click(screen.getByRole('button', { name: 'Select timeline note Alpha' }));
+
+    expect(onSelectNote).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('complementary', { name: '时间线详情' })).toHaveTextContent('Alpha');
+
+    await user.click(screen.getByRole('button', { name: '打开笔记' }));
 
     expect(onSelectNote).toHaveBeenCalledWith(alpha);
     expect(onClose).toHaveBeenCalled();

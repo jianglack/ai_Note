@@ -288,7 +288,7 @@ describe('frontend stability guards', () => {
     const closeButtonChecks = [
       ['src/TrashView.tsx', /aria-label="Close trash"/],
       ['src/components/GraphView.tsx', /backLabel="关闭关系图谱"/],
-      ['src/components/TimelineView.tsx', /aria-label="Close timeline"/],
+      ['src/components/TimelineView.tsx', /backLabel="关闭时间线"/],
       ['src/components/TracesPanel.tsx', /aria-label="Close traces panel"/],
       ['src/components/ScheduleExtractDialog.tsx', /aria-label="Close schedule extraction dialog"/],
       ['src/components/admin/AgentMetricsDashboard.tsx', /aria-label="Close agent metrics dashboard"/],
@@ -310,7 +310,7 @@ describe('frontend stability guards', () => {
     const agentMetrics = read('src/components/admin/AgentMetricsDashboard.tsx');
 
     assert.match(timeline, /<button\s+key={`note-\$\{item\.data\.id\}`}/);
-    assert.match(timeline, /aria-label={`Open timeline note \$\{item\.data\.title \|\| 'Untitled'\}`}/);
+    assert.match(timeline, /aria-label={`Select timeline note \$\{item\.data\.title \|\| 'Untitled'\}`}/);
     assert.doesNotMatch(timeline, /<div\s+key={`note-\$\{item\.data\.id\}`}/);
 
     assert.match(traces, /<button\s+key={trace\.id}/);
