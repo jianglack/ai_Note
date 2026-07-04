@@ -59,6 +59,23 @@ Reason:
 
 The first implementation should create reusable layout primitives, then migrate tools one at a time.
 
+## First-Priority Selection Policy
+
+Graph, timeline, and trace migration intentionally changes the first click from "open immediately and close the panel" to "select item and show the right detail panel".
+
+New behavior:
+
+- Graph node click selects the node. The right panel exposes "打开笔记" or "编辑日程" when the node is actionable.
+- Timeline row click selects the note or schedule. The right panel exposes "打开笔记" or "编辑日程".
+- Trace row click selects the trace. The right panel shows call details, output, tools, and errors.
+- Back/close still returns to the previous note/editor context.
+
+Reason:
+
+- The approved workbench design depends on a stable right detail panel.
+- Opening immediately would make the detail panel unreachable for graph and timeline items.
+- This is a UI state behavior change only. It does not change graph, timeline, schedule, note, or trace data APIs.
+
 ## Shared Components
 
 ### `ToolWorkbenchShell`
@@ -187,8 +204,8 @@ If reuse becomes awkward, create:
 
 | Sidebar Entry | Target Pattern | Implementation Notes |
 | --- | --- | --- |
-| 关系图谱 | Canvas workbench | First priority. Keep `ForceGraph2D`, remote graph fallback, local wiki-link fallback, selected-note centering, and node click behavior. Replace overlay/panel CSS with shell, rail legend, and right detail panel. |
-| 时间线 | List-detail workbench | First priority. Keep `VariableSizeList`, date grouping, note opening, schedule editing, and schedule status updates. Move from right drawer to full workbench. Add selected item detail before opening note/schedule. |
+| 关系图谱 | Canvas workbench | First priority. Keep `ForceGraph2D`, remote graph fallback, local wiki-link fallback, and selected-note centering. Change node click to select-first, then open from right detail panel. Replace overlay/panel CSS with shell, rail legend, and right detail panel. |
+| 时间线 | List-detail workbench | First priority. Keep `VariableSizeList`, date grouping, note opening, schedule editing, and schedule status updates. Change row click to select-first, then open/edit from right detail panel. Move from right drawer to full workbench. |
 | 调用追踪 | Dashboard/list workbench | First priority. Keep `getAgentTraces`, `getTraceStats`, and `clearChatMemory`. Add error state instead of only `console.error`. Move selected trace detail to right panel. |
 | 画布 | Canvas workbench | Second wave. Keep canvas list/editor modes and node editing logic. Wrap list and editor views in shell. |
 | 创建日程 | Paper dialog | Restyle `ScheduleForm.css`. Keep existing focus trap, labels, Escape handling, save behavior, and tests. |
@@ -238,7 +255,7 @@ Files to modify:
 Acceptance:
 
 - Graph, timeline, and traces open as full-screen workbenches.
-- Existing click/open behavior still works.
+- Graph and timeline items use select-first interaction with explicit open/edit actions in the right panel.
 - Trace loading failure is visible in the UI.
 - Selected graph/timeline/trace details appear in the right detail panel.
 - Old overlay classes are either removed or no longer provide black backdrop/old white panel styling.
