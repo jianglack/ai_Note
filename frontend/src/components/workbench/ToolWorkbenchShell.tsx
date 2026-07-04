@@ -1,3 +1,4 @@
+import { ChevronLeftIcon } from '@heroicons/react/24/outline';
 import { useEffect, type ReactNode } from 'react';
 import './ToolWorkbenchShell.css';
 
@@ -79,7 +80,7 @@ export default function ToolWorkbenchShell({
       <header className="twb-topbar">
         <div className="twb-title-group">
           <button type="button" className="twb-back" aria-label={backLabel || `关闭${title}`} onClick={onBack}>
-            <span aria-hidden="true">‹</span>
+            <ChevronLeftIcon className="twb-back-icon" aria-hidden="true" />
           </button>
           {icon && <span className="twb-title-icon">{icon}</span>}
           <div className="twb-title-copy">

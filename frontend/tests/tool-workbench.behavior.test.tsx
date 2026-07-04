@@ -33,6 +33,10 @@ describe('ToolWorkbenchShell', () => {
     expect(screen.getByRole('dialog', { name: '关系图谱' })).toBeInTheDocument();
     expect(screen.getByText('当前空间 · 2 篇笔记')).toBeInTheDocument();
     expect(screen.getByText('范围')).toBeInTheDocument();
+    const backButton = document.querySelector('.twb-back');
+    expect(backButton).toBeInTheDocument();
+    expect(backButton?.querySelector('svg.twb-back-icon')).toBeInTheDocument();
+    expect(backButton).not.toHaveTextContent(/\S/);
     expect(screen.getByText('Graph canvas')).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: '节点详情' })).toHaveTextContent('Alpha');
 

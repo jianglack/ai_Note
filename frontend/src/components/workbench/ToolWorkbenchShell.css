@@ -57,6 +57,13 @@
   outline-offset: 2px;
 }
 
+.twb-back-icon {
+  display: block;
+  width: 18px;
+  height: 18px;
+  stroke-width: 2.2;
+}
+
 .twb-title-icon {
   display: inline-flex;
   align-items: center;
