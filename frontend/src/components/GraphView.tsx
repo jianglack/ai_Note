@@ -7,6 +7,11 @@ import {
   type Note,
   type Schedule,
 } from '../api';
+import {
+  ToolControlRail,
+  ToolDetailPanel,
+  ToolWorkbenchShell,
+} from './workbench';
 
 interface GraphViewProps {
   notes: Note[];
@@ -101,6 +106,7 @@ export default function GraphView({
   const fgRef = useRef<any>(null);
   const [remoteGraph, setRemoteGraph] = useState<KnowledgeGraphResponse | null>(null);
   const [graphError, setGraphError] = useState<string | null>(null);
+  const [selectedNode, setSelectedNode] = useState<GraphNode | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -169,21 +175,56 @@ export default function GraphView({
     }
   }, [selectedNoteId, nodes]);
 
+  useEffect(() => {
+    if (!selectedNoteId) {
+      return;
+    }
+
+    const node = nodes.find((n) => n.refId === selectedNoteId || n.id === selectedNoteId);
+    if (node) {
+      setSelectedNode(node);
+    }
+  }, [nodes, selectedNoteId]);
+
+  useEffect(() => {
+    if (!selectedNode) {
+      return;
+    }
+
+    const currentNode = nodes.find((node) => node.id === selectedNode.id);
+    if (!currentNode) {
+      setSelectedNode(null);
+      return;
+    }
+
+    if (currentNode !== selectedNode) {
+      setSelectedNode(currentNode);
+    }
+  }, [nodes, selectedNode]);
+
   const handleNodeClick = useCallback((node: GraphNode) => {
-    if (node.type === 'schedule' && node.scheduleRef) {
-      onSelectSchedule(node.scheduleRef);
+    setSelectedNode(node);
+  }, []);
+
+  const openSelectedNode = useCallback(() => {
+    if (!selectedNode) {
+      return;
+    }
+
+    if (selectedNode.type === 'schedule' && selectedNode.scheduleRef) {
+      onSelectSchedule(selectedNode.scheduleRef);
       onClose();
       return;
     }
 
-    if (node.noteRef) {
-      onSelectNote(node.noteRef);
+    if (selectedNode.noteRef) {
+      onSelectNote(selectedNode.noteRef);
       onClose();
     }
-  }, [onClose, onSelectNote, onSelectSchedule]);
+  }, [onClose, onSelectNote, onSelectSchedule, selectedNode]);
 
   const paintNode = useCallback((node: any, ctx: CanvasRenderingContext2D, globalScale: number) => {
-    const isSelected = node.isSelected || node.id === selectedNoteId || node.refId === selectedNoteId;
+    const isSelected = node.isSelected || node.id === selectedNode?.id || node.refId === selectedNode?.refId;
     const hasLinks = links.some((l) => (
       l.source === node.id ||
       l.target === node.id ||
@@ -202,27 +243,27 @@ export default function GraphView({
       ctx.lineTo(node.x, node.y + size);
       ctx.lineTo(node.x - size, node.y);
       ctx.closePath();
-      ctx.fillStyle = '#f59e0b';
+      ctx.fillStyle = '#d99a3e';
       ctx.fill();
-      ctx.strokeStyle = '#d97706';
+      ctx.strokeStyle = '#9f6330';
       ctx.lineWidth = 1.5;
       ctx.stroke();
     } else {
       ctx.beginPath();
       ctx.arc(node.x, node.y, type === 'note' ? radius : radius - 1, 0, 2 * Math.PI);
       ctx.fillStyle = isSelected
-        ? '#4a90e2'
+        ? '#a35d38'
         : type === 'tag'
-          ? '#10b981'
+          ? '#4f8f77'
           : type === 'folder'
-            ? '#64748b'
+            ? '#786d93'
             : hasLinks
-              ? '#7c3aed'
-              : '#94a3b8';
+              ? '#5f7d89'
+              : '#b4a895';
       ctx.fill();
 
       if (isSelected) {
-        ctx.strokeStyle = '#2563eb';
+        ctx.strokeStyle = '#7f4227';
         ctx.lineWidth = 2;
         ctx.stroke();
       }
@@ -230,11 +271,11 @@ export default function GraphView({
 
     const fontSize = Math.max(10 / globalScale, 3);
     ctx.font = `${isSelected ? 'bold ' : ''}${fontSize}px sans-serif`;
-    ctx.fillStyle = isSelected ? '#1e40af' : '#374151';
+    ctx.fillStyle = isSelected ? '#68331f' : '#4a4033';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
     ctx.fillText(node.label.length > 12 ? `${node.label.slice(0, 12)}...` : node.label, node.x, node.y + radius + 2);
-  }, [links, selectedNoteId]);
+  }, [links, selectedNode]);
 
   const width = containerRef.current?.clientWidth || 800;
   const height = containerRef.current?.clientHeight || 600;
@@ -247,45 +288,96 @@ export default function GraphView({
       : 'Loading graph';
 
   return (
-    <div className="graph-overlay">
-      <div className="graph-panel">
-        <div className="graph-header">
-          <div>
-            <h2>Knowledge Graph</h2>
-            <span className="graph-stats">
-              {nodes.length} nodes · {links.length} links · {graphSource}
-            </span>
-          </div>
-          <button type="button" className="graph-close" aria-label="Close graph view" onClick={onClose}>x</button>
-        </div>
-        <div className="graph-legend">
-          <span><span className="legend-dot selected" />Selected note</span>
-          <span><span className="legend-dot linked" />Linked note</span>
-          <span><span className="legend-dot isolated" />Isolated note</span>
-          <span><span className="legend-diamond" />Schedule</span>
-          <span className="graph-hint">Click node to open · Wheel to zoom · Drag to pan</span>
-        </div>
-        <div className="graph-canvas" ref={containerRef}>
-          <ForceGraph2D
-            ref={fgRef}
-            graphData={{ nodes, links }}
-            width={width}
-            height={height - 110}
-            nodeCanvasObject={paintNode}
-            nodeCanvasObjectMode={() => 'replace'}
-            nodeLabel="label"
-            onNodeClick={handleNodeClick}
-            linkColor={() => '#cbd5e1'}
-            linkWidth={1.5}
-            linkDirectionalArrowLength={4}
-            linkDirectionalArrowRelPos={1}
-            backgroundColor="#f8fafc"
-            d3AlphaDecay={0.02}
-            d3VelocityDecay={0.3}
-            cooldownTicks={100}
-          />
-        </div>
+    <ToolWorkbenchShell
+      title="关系图谱"
+      subtitle="查看笔记、日程和引用之间的连接"
+      chips={(
+        <span className="graph-stats">
+          {nodes.length} nodes · {links.length} links · {graphSource}
+        </span>
+      )}
+      onBack={onClose}
+      backLabel="关闭关系图谱"
+      closeOnEscape
+      leftRail={(
+        <ToolControlRail
+          sections={[
+            {
+              key: 'legend',
+              title: '图例',
+              content: (
+                <div className="graph-legend-list">
+                  <span><span className="legend-dot selected" />当前选中</span>
+                  <span><span className="legend-dot linked" />有关联笔记</span>
+                  <span><span className="legend-dot isolated" />孤立笔记</span>
+                  <span><span className="legend-diamond" />日程</span>
+                </div>
+              ),
+            },
+            {
+              key: 'controls',
+              title: '操作',
+              content: (
+                <div className="graph-help">
+                  <p>点击节点查看详情。</p>
+                  <p>滚轮缩放，拖动画布平移。</p>
+                </div>
+              ),
+            },
+            {
+              key: 'source',
+              title: '数据源',
+              content: (
+                <div className="graph-source">
+                  <strong>{graphSource}</strong>
+                  {graphError && <span>{graphError}</span>}
+                </div>
+              ),
+            },
+          ]}
+        />
+      )}
+      detailPanel={(
+        <ToolDetailPanel
+          title="节点详情"
+          subtitle={selectedNode?.type === 'schedule' ? '日程' : selectedNode?.type === 'note' ? '笔记' : selectedNode?.type}
+          empty={!selectedNode}
+          emptyMessage="选择一个节点查看关系和来源。"
+          actions={selectedNode?.noteRef || selectedNode?.scheduleRef ? (
+            <button type="button" className="twb-action twb-action-primary" onClick={openSelectedNode}>
+              {selectedNode.type === 'schedule' ? '编辑日程' : '打开笔记'}
+            </button>
+          ) : undefined}
+        >
+          {selectedNode && (
+            <div className="graph-detail">
+              <div className="graph-detail-title">{selectedNode.label}</div>
+              <div className="graph-detail-meta">ID: {selectedNode.refId || selectedNode.id}</div>
+            </div>
+          )}
+        </ToolDetailPanel>
+      )}
+    >
+      <div className="graph-canvas" ref={containerRef}>
+        <ForceGraph2D
+          ref={fgRef}
+          graphData={{ nodes, links }}
+          width={width}
+          height={height}
+          nodeCanvasObject={paintNode}
+          nodeCanvasObjectMode={() => 'replace'}
+          nodeLabel="label"
+          onNodeClick={handleNodeClick}
+          linkColor={() => 'rgba(120, 101, 75, 0.42)'}
+          linkWidth={1.5}
+          linkDirectionalArrowLength={4}
+          linkDirectionalArrowRelPos={1}
+          backgroundColor="rgba(0,0,0,0)"
+          d3AlphaDecay={0.02}
+          d3VelocityDecay={0.3}
+          cooldownTicks={100}
+        />
       </div>
-    </div>
+    </ToolWorkbenchShell>
   );
 }

@@ -219,7 +219,7 @@ describe('core component behavior', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('GraphView falls back to local wiki links and opens clicked note nodes', async () => {
+  it('GraphView selects a node before opening it from the detail panel', async () => {
     apiMocks.getKnowledgeGraph.mockRejectedValueOnce(new Error('graph offline'));
     const onSelectNote = vi.fn();
     const onClose = vi.fn();
@@ -240,7 +240,14 @@ describe('core component behavior', () => {
     await waitFor(() => {
       expect(screen.getByText(/2 nodes/)).toHaveTextContent('1 links');
     });
+
     await userEvent.click(screen.getByRole('button', { name: 'Beta' }));
+
+    expect(onSelectNote).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole('complementary', { name: '节点详情' })).toHaveTextContent('Beta');
+
+    await userEvent.click(screen.getByRole('button', { name: '打开笔记' }));
 
     expect(onSelectNote).toHaveBeenCalledWith(beta);
     expect(onClose).toHaveBeenCalled();
