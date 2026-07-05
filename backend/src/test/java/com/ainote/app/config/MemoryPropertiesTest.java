@@ -22,6 +22,8 @@ class MemoryPropertiesTest {
         assertThat(properties.getRetrieval().getMode()).isEqualTo(MemoryProperties.RetrievalMode.LEGACY);
         assertThat(properties.getAudit().isEnabled()).isTrue();
         assertThat(properties.getChatHistory().getWriteMode()).isEqualTo(MemoryProperties.ChatHistoryWriteMode.APPEND);
+        assertThat(properties.getCapture().getAdvisor().isEnabled()).isFalse();
+        assertThat(properties.getCapture().getAdvisor().getMinConfidence()).isEqualTo(0.82);
         assertThat(properties.getMaxPerUser()).isEqualTo(50);
         assertThat(properties.getSimilarityThreshold()).isEqualTo(0.85);
         assertThat(properties.getDecayHalfLifeDays()).isEqualTo(30.0);
@@ -36,6 +38,8 @@ class MemoryPropertiesTest {
         values.put("app.memory.retrieval.mode", "query_relevant");
         values.put("app.memory.audit.enabled", "false");
         values.put("app.memory.chat-history.write-mode", "legacy_rewrite");
+        values.put("app.memory.capture.advisor.enabled", "true");
+        values.put("app.memory.capture.advisor.min-confidence", "0.9");
         values.put("app.memory.max-per-user", "25");
         values.put("app.memory.similarity-threshold", "0.91");
         values.put("app.memory.decay-half-life-days", "12.5");
@@ -50,6 +54,8 @@ class MemoryPropertiesTest {
         assertThat(properties.getRetrieval().getMode()).isEqualTo(MemoryProperties.RetrievalMode.QUERY_RELEVANT);
         assertThat(properties.getAudit().isEnabled()).isFalse();
         assertThat(properties.getChatHistory().getWriteMode()).isEqualTo(MemoryProperties.ChatHistoryWriteMode.LEGACY_REWRITE);
+        assertThat(properties.getCapture().getAdvisor().isEnabled()).isTrue();
+        assertThat(properties.getCapture().getAdvisor().getMinConfidence()).isEqualTo(0.9);
         assertThat(properties.getMaxPerUser()).isEqualTo(25);
         assertThat(properties.getSimilarityThreshold()).isEqualTo(0.91);
         assertThat(properties.getDecayHalfLifeDays()).isEqualTo(12.5);

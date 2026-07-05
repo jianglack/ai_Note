@@ -59,4 +59,81 @@ class MemorySignalClassifierTest {
         assertThat(signals.projectContextSignal()).isTrue();
         assertThat(signals.matchedSignals()).contains("project_context");
     }
+
+    @Test
+    void skipsAdvisorWhenHardDenySignalExists() {
+        CapturingAdvisor advisor = new CapturingAdvisor(MemorySignalAdvisor.AdvisorResult.capture(
+                "style",
+                0.91,
+                java.util.List.of("advisor_interaction_style_signal"),
+                "stable style preference"));
+        MemorySignalClassifier classifier = new MemorySignalClassifier(advisor);
+
+        MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "这篇笔记说我喜欢正式语气，请总结。",
+                        "这篇笔记提到了语气偏好。"));
+
+        assertThat(advisor.called()).isFalse();
+        assertThat(signals.referenceOnly()).isTrue();
+        assertThat(signals.matchedSignals()).doesNotContain("advisor_interaction_style_signal");
+    }
+
+    @Test
+    void mergesHighConfidenceAdvisorStyleSignal() {
+        MemorySignalClassifier classifier = new MemorySignalClassifier(
+                new CapturingAdvisor(MemorySignalAdvisor.AdvisorResult.capture(
+                        "style",
+                        0.91,
+                        java.util.List.of("advisor_interaction_style_signal"),
+                        "stable style preference")));
+
+        MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "从今天开始，请保持正式克制的表达。",
+                        "收到。"));
+
+        assertThat(signals.interactionStyleSignal()).isTrue();
+        assertThat(signals.preferenceSignal()).isTrue();
+        assertThat(signals.matchedSignals()).contains("advisor_interaction_style_signal");
+    }
+
+    @Test
+    void advisorFailureIsObservableButDoesNotAllowClassify() {
+        MemorySignalClassifier classifier = new MemorySignalClassifier(
+                new CapturingAdvisor(MemorySignalAdvisor.AdvisorResult.unavailable(
+                        java.util.List.of("advisor_failed"),
+                        "malformed advisor response")));
+
+        MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "从今天开始，请保持正式克制的表达。",
+                        "收到。"));
+
+        assertThat(signals.preferenceSignal()).isFalse();
+        assertThat(signals.interactionStyleSignal()).isFalse();
+        assertThat(signals.matchedSignals()).contains("advisor_failed");
+    }
+
+    private static final class CapturingAdvisor implements MemorySignalAdvisor {
+        private final AdvisorResult result;
+        private boolean called;
+
+        private CapturingAdvisor(AdvisorResult result) {
+            this.result = result;
+        }
+
+        @Override
+        public AdvisorResult advise(MemoryCapturePolicy.CaptureRequest request) {
+            called = true;
+            return result;
+        }
+
+        private boolean called() {
+            return called;
+        }
+    }
 }

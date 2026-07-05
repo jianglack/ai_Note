@@ -19,6 +19,16 @@ public class MemorySignalClassifier {
             "^(项目上下文|项目背景|project context|project background)[:：].+",
             Pattern.CASE_INSENSITIVE);
 
+    private final MemorySignalAdvisor signalAdvisor;
+
+    public MemorySignalClassifier(MemorySignalAdvisor signalAdvisor) {
+        this.signalAdvisor = signalAdvisor == null ? MemorySignalAdvisor.disabled() : signalAdvisor;
+    }
+
+    MemorySignalClassifier() {
+        this(MemorySignalAdvisor.disabled());
+    }
+
     public SignalClassification classify(MemoryCapturePolicy.CaptureRequest request) {
         String userId = request == null ? "" : request.userId();
         String userMessage = normalize(request == null ? "" : request.userMessage());
@@ -42,6 +52,31 @@ public class MemorySignalClassifier {
         boolean interactionStyleSignal = interactionStyleCorrection || stableStylePreference || oneOffStylePreference;
         boolean projectContextSignal = isProjectContext(userMessage);
         boolean preferenceSignal = looksLikePreference(compact) || interactionStyleSignal;
+        boolean hardDeny = !validUser
+                || blankMessage
+                || sensitive
+                || forgetRequest
+                || referenceOnly
+                || transientOperation
+                || oneOffScope;
+
+        if (!hardDeny) {
+            MemorySignalAdvisor.AdvisorResult advice = signalAdvisor.advise(request);
+            if (shouldExposeAdviceSignals(advice)) {
+                matchedSignals.addAll(advice.signals());
+            }
+            if (canMergeAdvice(advice)) {
+                String memoryType = advice.memoryType();
+                if ("style".equals(memoryType)) {
+                    interactionStyleSignal = true;
+                    preferenceSignal = true;
+                } else if ("project_context".equals(memoryType)) {
+                    projectContextSignal = true;
+                } else if ("preference".equals(memoryType)) {
+                    preferenceSignal = true;
+                }
+            }
+        }
 
         addSignal(matchedSignals, !validUser, "missing_user");
         addSignal(matchedSignals, blankMessage, "blank_message");
@@ -72,6 +107,22 @@ public class MemorySignalClassifier {
                 interactionStyleSignal,
                 projectContextSignal,
                 List.copyOf(matchedSignals));
+    }
+
+    private boolean shouldExposeAdviceSignals(MemorySignalAdvisor.AdvisorResult advice) {
+        return advice != null
+                && advice.signals() != null
+                && !advice.signals().isEmpty()
+                && !advice.signals().contains("advisor_disabled");
+    }
+
+    private boolean canMergeAdvice(MemorySignalAdvisor.AdvisorResult advice) {
+        return advice != null
+                && advice.available()
+                && advice.shouldCapture()
+                && ("preference".equals(advice.memoryType())
+                || "style".equals(advice.memoryType())
+                || "project_context".equals(advice.memoryType()));
     }
 
     private void addSignal(List<String> matchedSignals, boolean condition, String signal) {

@@ -46,6 +46,7 @@ public class MemoryProperties {
     public static class Capture {
         private boolean enabled = true;
         private CaptureMode mode = CaptureMode.LEGACY;
+        private Advisor advisor = new Advisor();
 
         public boolean isEnabled() {
             return enabled;
@@ -61,6 +62,35 @@ public class MemoryProperties {
 
         public void setMode(CaptureMode mode) {
             this.mode = mode == null ? CaptureMode.LEGACY : mode;
+        }
+
+        public Advisor getAdvisor() {
+            return advisor;
+        }
+
+        public void setAdvisor(Advisor advisor) {
+            this.advisor = advisor == null ? new Advisor() : advisor;
+        }
+    }
+
+    public static class Advisor {
+        private boolean enabled = false;
+        private double minConfidence = 0.82;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public double getMinConfidence() {
+            return minConfidence;
+        }
+
+        public void setMinConfidence(double minConfidence) {
+            this.minConfidence = minConfidence <= 0 ? 0.82 : minConfidence;
         }
     }
 

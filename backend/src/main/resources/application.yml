@@ -143,6 +143,9 @@ app:
     capture:
       enabled: ${MEMORY_CAPTURE_ENABLED:true}
       mode: ${MEMORY_CAPTURE_MODE:policy}
+      advisor:
+        enabled: ${MEMORY_CAPTURE_ADVISOR_ENABLED:false}
+        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.82}
     retrieval:
       mode: ${MEMORY_RETRIEVAL_MODE:query_relevant}
     audit:

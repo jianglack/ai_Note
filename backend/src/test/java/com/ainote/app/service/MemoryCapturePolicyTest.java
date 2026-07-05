@@ -147,4 +147,25 @@ class MemoryCapturePolicyTest {
         assertThat(decision.allowed()).isFalse();
         assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_SENSITIVE);
     }
+
+    @Test
+    void advisorOnlyStableStyleSignalShouldBeAllowed() {
+        MemorySignalAdvisor advisor = request -> MemorySignalAdvisor.AdvisorResult.capture(
+                "style",
+                0.91,
+                java.util.List.of("advisor_interaction_style_signal"),
+                "stable style preference");
+        MemoryCapturePolicy policy = new MemoryCapturePolicy(new MemorySignalClassifier(advisor));
+
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "从今天开始，请保持正式克制的表达。",
+                        "收到。"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE);
+        assertThat(decision.reason()).isEqualTo("implicit_interaction_style");
+        assertThat(decision.matchedSignals()).contains("advisor_interaction_style_signal");
+    }
 }

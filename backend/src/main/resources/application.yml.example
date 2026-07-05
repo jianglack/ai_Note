@@ -11,6 +11,8 @@
 #   DEEPSEEK_EMBEDDING_MODEL      - Defaults to DEEPSEEK_MODEL
 #   DEEPSEEK_EMBEDDING_BASE_URL   - Defaults to DEEPSEEK_BASE_URL
 #   COHERE_API_KEY                - Cohere reranking, disabled if absent
+#   MEMORY_CAPTURE_ADVISOR_ENABLED        - Defaults to false
+#   MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE - Defaults to 0.82
 
 app:
   deepseek:
@@ -22,3 +24,9 @@ app:
 
   cohere:
     api-key: ${COHERE_API_KEY:}
+
+  memory:
+    capture:
+      advisor:
+        enabled: ${MEMORY_CAPTURE_ADVISOR_ENABLED:false}
+        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.82}
