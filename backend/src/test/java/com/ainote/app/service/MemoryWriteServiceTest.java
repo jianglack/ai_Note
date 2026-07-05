@@ -67,6 +67,10 @@ class MemoryWriteServiceTest {
         assertThat(saved.getStatus()).isEqualTo("active");
         assertThat(saved.getMemoryType()).isEqualTo("preference");
         assertThat(saved.getSource()).isEqualTo("policy_extracted");
+        assertThat(saved.getContentHash()).matches("sha256:[a-f0-9]{64}");
+        assertThat(saved.getSourceTraceId()).matches("memory-capture-[a-f0-9]{24}");
+        assertThat(saved.getSourceMessageIds()).contains("user_message_hash", "sha256:");
+        assertThat(saved.getMetadataJson()).contains("capture_reason", "explicit");
         assertThat(saved.getEvidenceExcerpt()).contains("记住");
         verify(semanticMemoryRepository).updateEmbedding(100L, "[0.1,0.2]");
 
@@ -74,6 +78,8 @@ class MemoryWriteServiceTest {
         verify(memoryEventRepository).save(eventCaptor.capture());
         assertThat(eventCaptor.getValue().getEventType()).isEqualTo("CREATED");
         assertThat(eventCaptor.getValue().getActor()).isEqualTo("assistant");
+        assertThat(eventCaptor.getValue().getTraceId()).isEqualTo(saved.getSourceTraceId());
+        assertThat(eventCaptor.getValue().getAfterJson()).contains("contentHash");
     }
 
     @Test
@@ -118,5 +124,61 @@ class MemoryWriteServiceTest {
         assertThat(eventCaptor.getAllValues())
                 .extracting(MemoryEvent::getEventType)
                 .contains("SUPERSEDED", "CREATED");
+        assertThat(eventCaptor.getAllValues())
+                .allSatisfy(event -> assertThat(event.getTraceId()).matches("memory-capture-[a-f0-9]{24}"));
+    }
+
+    @Test
+    void reinforcesExactPreferenceWithProvenanceAndEventTrace() {
+        SemanticMemory existing = new SemanticMemory();
+        existing.setId(42L);
+        existing.setUserId("user-1");
+        existing.setCategory("preference");
+        existing.setMemoryType("preference");
+        existing.setContent("prefers Chinese replies");
+        existing.setStatus("active");
+        existing.setTimesReinforced(1);
+
+        MemoryCandidateExtractor.MemoryCandidate candidate = new MemoryCandidateExtractor.MemoryCandidate(
+                "preference",
+                "preference",
+                "prefers Chinese replies",
+                0.95,
+                "user",
+                "璁颁綇锛屾垜甯屾湜浣犵敤涓枃鍥炵瓟",
+                false);
+        when(semanticMemoryRepository.findByUserIdAndContent("user-1", "prefers Chinese replies"))
+                .thenReturn(List.of(existing));
+
+        MemoryWriteService.MemoryWriteResult result = service.writeCandidates("user-1", List.of(candidate), "explicit");
+
+        assertThat(result.reinforced()).isEqualTo(1);
+        assertThat(existing.getTimesReinforced()).isEqualTo(2);
+        assertThat(existing.getContentHash()).matches("sha256:[a-f0-9]{64}");
+        assertThat(existing.getSourceTraceId()).matches("memory-capture-[a-f0-9]{24}");
+
+        ArgumentCaptor<MemoryEvent> eventCaptor = ArgumentCaptor.forClass(MemoryEvent.class);
+        verify(memoryEventRepository).save(eventCaptor.capture());
+        MemoryEvent event = eventCaptor.getValue();
+        assertThat(event.getEventType()).isEqualTo("REINFORCED");
+        assertThat(event.getTraceId()).isEqualTo(existing.getSourceTraceId());
+    }
+
+    @Test
+    void recordsCaptureFailureAsLedgerEvent() {
+        service.recordCaptureFailure(
+                "user-1",
+                "capture_exception",
+                new IllegalStateException("extractor down"),
+                "memory-capture-deadbeefdeadbeefdeadbeef");
+
+        ArgumentCaptor<MemoryEvent> eventCaptor = ArgumentCaptor.forClass(MemoryEvent.class);
+        verify(memoryEventRepository).save(eventCaptor.capture());
+        MemoryEvent event = eventCaptor.getValue();
+        assertThat(event.getEventType()).isEqualTo("CAPTURE_FAILED");
+        assertThat(event.getActor()).isEqualTo("system");
+        assertThat(event.getReason()).isEqualTo("capture_exception");
+        assertThat(event.getTraceId()).isEqualTo("memory-capture-deadbeefdeadbeefdeadbeef");
+        assertThat(event.getAfterJson()).contains("IllegalStateException", "extractor down");
     }
 }

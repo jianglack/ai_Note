@@ -6,6 +6,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 import java.util.List;
 import java.util.Locale;
 
@@ -63,6 +67,16 @@ public class MemoryOrchestrator {
         } catch (Exception e) {
             log.warn("memory_capture_event=failed user_id={} error={} message={}",
                     userId, e.getClass().getSimpleName(), e.getMessage(), e);
+            try {
+                writeService.recordCaptureFailure(
+                        userId,
+                        "capture_exception",
+                        e,
+                        "memory-capture-" + shortHash(userId, userMessage, aiResponse));
+            } catch (Exception ledgerError) {
+                log.warn("memory_capture_event=failure_ledger_write_failed user_id={} error={}",
+                        userId, ledgerError.getClass().getSimpleName(), ledgerError);
+            }
         }
     }
 
@@ -84,5 +98,23 @@ public class MemoryOrchestrator {
                 candidateCount,
                 writeCount,
                 durationMs);
+    }
+
+    private String shortHash(String userId, String userMessage, String aiResponse) {
+        return sha256(nullSafe(userId) + "\u001f" + nullSafe(userMessage) + "\u001f" + nullSafe(aiResponse))
+                .substring(0, 24);
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(nullSafe(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private String nullSafe(String value) {
+        return value == null ? "" : value;
     }
 }

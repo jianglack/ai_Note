@@ -79,6 +79,11 @@ class MemoryOrchestratorTest {
                             .contains("memory_capture_event=failed")
                             .contains("user_id=user-1")
                             .contains("IllegalStateException"));
+            verify(writeService).recordCaptureFailure(
+                    eq("user-1"),
+                    eq("capture_exception"),
+                    any(IllegalStateException.class),
+                    any());
         } finally {
             logger.detachAppender(appender);
         }

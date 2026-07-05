@@ -11,7 +11,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 import java.util.List;
 
 @Service
@@ -53,20 +57,24 @@ public class MemoryWriteService {
             if (!exact.isEmpty()) {
                 SemanticMemory memory = exact.get(0);
                 reinforce(memory, candidate);
+                applyGovernanceMetadata(memory, candidate, reason);
                 semanticMemoryRepository.save(memory);
-                recordEvent(userId, memory.getId(), "REINFORCED", "assistant", reason, null, snapshot(memory));
+                recordEvent(userId, memory.getId(), "REINFORCED", "assistant", reason, null,
+                        snapshot(memory), memory.getSourceTraceId());
                 reinforced++;
                 continue;
             }
 
             Long supersedesId = null;
+            String candidateTraceId = traceIdFor(userId, candidate);
             if (candidate.correction()) {
                 for (SemanticMemory old : semanticMemoryRepository.findByUserIdAndCategory(userId, candidate.category())) {
                     if (isActive(old)) {
                         String before = snapshot(old);
                         old.setStatus("superseded");
                         semanticMemoryRepository.save(old);
-                        recordEvent(userId, old.getId(), "SUPERSEDED", "assistant", reason, before, snapshot(old));
+                        recordEvent(userId, old.getId(), "SUPERSEDED", "assistant", reason, before,
+                                snapshot(old), candidateTraceId);
                         if (supersedesId == null) {
                             supersedesId = old.getId();
                         }
@@ -76,9 +84,11 @@ public class MemoryWriteService {
             }
 
             SemanticMemory memory = toSemanticMemory(userId, candidate, supersedesId);
+            applyGovernanceMetadata(memory, candidate, reason);
             SemanticMemory saved = semanticMemoryRepository.save(memory);
             persistEmbedding(saved);
-            recordEvent(userId, saved.getId(), "CREATED", "assistant", reason, null, snapshot(saved));
+            recordEvent(userId, saved.getId(), "CREATED", "assistant", reason, null,
+                    snapshot(saved), saved.getSourceTraceId());
             created++;
         }
 
@@ -105,6 +115,35 @@ public class MemoryWriteService {
         memory.setTimesReinforced(1);
         memory.setDecayScore(candidate.confidence());
         return memory;
+    }
+
+    public void recordCaptureFailure(String userId, String reason, Throwable error, String traceId) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+        String resolvedTraceId = traceId == null || traceId.isBlank()
+                ? "memory-capture-" + sha256(userId + "\u001f" + safe(reason) + "\u001f" + errorClass(error))
+                        .substring(0, 24)
+                : traceId;
+        MemoryEvent event = new MemoryEvent();
+        event.setUserId(userId);
+        event.setEventType("CAPTURE_FAILED");
+        event.setActor("system");
+        event.setReason(reason);
+        event.setTraceId(resolvedTraceId);
+        event.setAfterJson("{\"error_class\":\"" + jsonEscape(errorClass(error))
+                + "\",\"message\":\"" + jsonEscape(errorMessage(error)) + "\"}");
+        memoryEventRepository.save(event);
+    }
+
+    private void applyGovernanceMetadata(SemanticMemory memory,
+                                         MemoryCandidateExtractor.MemoryCandidate candidate,
+                                         String reason) {
+        memory.setContentHash("sha256:" + sha256(candidate.content()));
+        memory.setSourceTraceId(traceIdFor(memory.getUserId(), candidate));
+        memory.setSourceMessageIds("{\"user_message_hash\":\"sha256:" + sha256(candidate.evidenceExcerpt()) + "\"}");
+        memory.setMetadataJson("{\"capture_reason\":\"" + jsonEscape(reason)
+                + "\",\"policy_source\":\"memory_write_service\"}");
     }
 
     private void reinforce(SemanticMemory memory, MemoryCandidateExtractor.MemoryCandidate candidate) {
@@ -152,7 +191,8 @@ public class MemoryWriteService {
                              String actor,
                              String reason,
                              String beforeJson,
-                             String afterJson) {
+                             String afterJson,
+                             String traceId) {
         MemoryEvent event = new MemoryEvent();
         event.setUserId(userId);
         event.setMemoryId(memoryId);
@@ -161,6 +201,7 @@ public class MemoryWriteService {
         event.setReason(reason);
         event.setBeforeJson(beforeJson);
         event.setAfterJson(afterJson);
+        event.setTraceId(traceId);
         memoryEventRepository.save(event);
     }
 
@@ -168,12 +209,45 @@ public class MemoryWriteService {
         return "{\"id\":" + memory.getId()
                 + ",\"status\":\"" + safe(memory.getStatus())
                 + "\",\"category\":\"" + safe(memory.getCategory())
+                + "\",\"contentHash\":\"" + safe(memory.getContentHash())
+                + "\",\"sourceTraceId\":\"" + safe(memory.getSourceTraceId())
                 + "\",\"content\":\"" + safe(memory.getContent()).replace("\"", "\\\"")
                 + "\"}";
     }
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private String traceIdFor(String userId, MemoryCandidateExtractor.MemoryCandidate candidate) {
+        return "memory-capture-" + sha256(safe(userId)
+                + "\u001f" + safe(candidate.evidenceExcerpt())
+                + "\u001f" + safe(candidate.content())).substring(0, 24);
+    }
+
+    private String sha256(String value) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            return HexFormat.of().formatHex(digest.digest(safe(value).getBytes(StandardCharsets.UTF_8)));
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    private String jsonEscape(String value) {
+        return safe(value)
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r");
+    }
+
+    private String errorClass(Throwable error) {
+        return error == null ? "Unknown" : error.getClass().getSimpleName();
+    }
+
+    private String errorMessage(Throwable error) {
+        return error == null || error.getMessage() == null ? "" : error.getMessage();
     }
 
     public record MemoryWriteResult(int created, int reinforced, int superseded, int skipped) {
