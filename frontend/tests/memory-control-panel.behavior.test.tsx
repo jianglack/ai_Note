@@ -70,7 +70,7 @@ describe('MemoryControlPanel behavior', () => {
           actor: 'assistant',
           reason: 'explicit_memory',
           beforeJson: null,
-          afterJson: '{"content":"用户希望回答简洁、直接。"}',
+          afterJson: '{"content":"用户希望回答简洁、直接。","metadata":{"policy_signals":["explicit_remember"]}}',
           traceId: 'memory-capture-abc',
           createdAt: '2026-07-03T10:05:00',
         },
@@ -177,6 +177,7 @@ describe('MemoryControlPanel behavior', () => {
     expect(await screen.findByText('事件记录')).toBeInTheDocument();
     expect(screen.getByText('CREATED')).toBeInTheDocument();
     expect(screen.getByText('explicit_memory')).toBeInTheDocument();
+    expect(screen.getByText('explicit_remember')).toBeInTheDocument();
     expect(screen.getByText('memory-capture-abc')).toBeInTheDocument();
     expect(apiMocks.getMemoryEvents).toHaveBeenCalledWith({ limit: 50 });
   });

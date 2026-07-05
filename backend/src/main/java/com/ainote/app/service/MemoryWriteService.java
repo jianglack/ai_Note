@@ -139,11 +139,16 @@ public class MemoryWriteService {
     private void applyGovernanceMetadata(SemanticMemory memory,
                                          MemoryCandidateExtractor.MemoryCandidate candidate,
                                          String reason) {
+        String policyReason = candidate.policyReason().isBlank() ? reason : candidate.policyReason();
         memory.setContentHash("sha256:" + sha256(candidate.content()));
         memory.setSourceTraceId(traceIdFor(memory.getUserId(), candidate));
         memory.setSourceMessageIds("{\"user_message_hash\":\"sha256:" + sha256(candidate.evidenceExcerpt()) + "\"}");
         memory.setMetadataJson("{\"capture_reason\":\"" + jsonEscape(reason)
-                + "\",\"policy_source\":\"memory_write_service\"}");
+                + "\",\"policy_reason\":\"" + jsonEscape(policyReason)
+                + "\",\"decision_type\":\"" + jsonEscape(candidate.decisionType())
+                + "\",\"candidate_confidence\":" + candidate.confidence()
+                + ",\"policy_signals\":" + jsonArray(candidate.policySignals())
+                + ",\"policy_source\":\"memory_write_service\"}");
     }
 
     private void reinforce(SemanticMemory memory, MemoryCandidateExtractor.MemoryCandidate candidate) {
@@ -211,7 +216,8 @@ public class MemoryWriteService {
                 + "\",\"category\":\"" + safe(memory.getCategory())
                 + "\",\"contentHash\":\"" + safe(memory.getContentHash())
                 + "\",\"sourceTraceId\":\"" + safe(memory.getSourceTraceId())
-                + "\",\"content\":\"" + safe(memory.getContent()).replace("\"", "\\\"")
+                + "\",\"metadata\":" + jsonObjectOrEmpty(memory.getMetadataJson())
+                + ",\"content\":\"" + safe(memory.getContent()).replace("\"", "\\\"")
                 + "\"}";
     }
 
@@ -240,6 +246,31 @@ public class MemoryWriteService {
                 .replace("\"", "\\\"")
                 .replace("\n", "\\n")
                 .replace("\r", "\\r");
+    }
+
+    private String jsonArray(List<String> values) {
+        if (values == null || values.isEmpty()) {
+            return "[]";
+        }
+        StringBuilder builder = new StringBuilder("[");
+        for (int i = 0; i < values.size(); i++) {
+            if (i > 0) {
+                builder.append(',');
+            }
+            builder.append('"').append(jsonEscape(values.get(i))).append('"');
+        }
+        return builder.append(']').toString();
+    }
+
+    private String jsonObjectOrEmpty(String value) {
+        if (value == null || value.isBlank()) {
+            return "{}";
+        }
+        String trimmed = value.trim();
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            return trimmed;
+        }
+        return "{\"raw\":\"" + jsonEscape(trimmed) + "\"}";
     }
 
     private String errorClass(Throwable error) {

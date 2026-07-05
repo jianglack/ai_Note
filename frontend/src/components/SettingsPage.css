@@ -644,6 +644,26 @@
   white-space: nowrap;
 }
 
+.memory-event-policy {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+  color: var(--color-ink-500, #9a8b73);
+  font-size: 11px;
+}
+
+.memory-signal-chip {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(184, 69, 46, 0.08);
+  color: var(--color-accent, #b8452e);
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 11px;
+  line-height: 1.5;
+}
+
 .memory-event-snapshot {
   margin-top: 8px;
   border-top: 1px solid rgba(224, 212, 184, 0.75);

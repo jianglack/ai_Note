@@ -45,7 +45,10 @@ public class MemoryCandidateExtractor {
                 confidence,
                 scope,
                 userMessage,
-                correction
+                correction,
+                decision.matchedSignals(),
+                decision.type().name(),
+                decision.reason()
         ));
     }
 
@@ -197,6 +200,24 @@ public class MemoryCandidateExtractor {
                                   double confidence,
                                   String scope,
                                   String evidenceExcerpt,
-                                  boolean correction) {
+                                  boolean correction,
+                                  List<String> policySignals,
+                                  String decisionType,
+                                  String policyReason) {
+        public MemoryCandidate {
+            policySignals = policySignals == null ? List.of() : List.copyOf(policySignals);
+            decisionType = decisionType == null ? "" : decisionType;
+            policyReason = policyReason == null ? "" : policyReason;
+        }
+
+        public MemoryCandidate(String memoryType,
+                               String category,
+                               String content,
+                               double confidence,
+                               String scope,
+                               String evidenceExcerpt,
+                               boolean correction) {
+            this(memoryType, category, content, confidence, scope, evidenceExcerpt, correction, List.of(), "", "");
+        }
     }
 }

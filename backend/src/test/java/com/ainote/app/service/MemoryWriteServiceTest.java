@@ -181,4 +181,37 @@ class MemoryWriteServiceTest {
         assertThat(event.getTraceId()).isEqualTo("memory-capture-deadbeefdeadbeefdeadbeef");
         assertThat(event.getAfterJson()).contains("IllegalStateException", "extractor down");
     }
+
+    @Test
+    void writesPolicyExplanationIntoMetadataAndEventSnapshot() {
+        MemoryCandidateExtractor.MemoryCandidate candidate = new MemoryCandidateExtractor.MemoryCandidate(
+                "style",
+                "preference",
+                "希望交互风格严肃一些，少开玩笑",
+                0.75,
+                "user",
+                "以后回答请严肃一些，少开玩笑。",
+                false,
+                List.of("stable_style_preference", "preference_signal"),
+                MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE.name(),
+                "implicit_interaction_style");
+        when(semanticMemoryRepository.findByUserIdAndContent("user-1", "希望交互风格严肃一些，少开玩笑"))
+                .thenReturn(List.of());
+
+        service.writeCandidates("user-1", List.of(candidate), "implicit_interaction_style");
+
+        ArgumentCaptor<SemanticMemory> memoryCaptor = ArgumentCaptor.forClass(SemanticMemory.class);
+        verify(semanticMemoryRepository).save(memoryCaptor.capture());
+        SemanticMemory saved = memoryCaptor.getValue();
+        assertThat(saved.getMetadataJson())
+                .contains("\"decision_type\":\"ALLOW_IMPLICIT_LOW_CONFIDENCE\"")
+                .contains("\"policy_reason\":\"implicit_interaction_style\"")
+                .contains("\"policy_signals\":[\"stable_style_preference\",\"preference_signal\"]");
+
+        ArgumentCaptor<MemoryEvent> eventCaptor = ArgumentCaptor.forClass(MemoryEvent.class);
+        verify(memoryEventRepository).save(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getAfterJson())
+                .contains("\"metadata\"")
+                .contains("\"policy_signals\":[\"stable_style_preference\",\"preference_signal\"]");
+    }
 }

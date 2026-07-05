@@ -71,6 +71,31 @@ function downloadMemoryExport(payload: unknown) {
   URL.revokeObjectURL(url);
 }
 
+function parseEventSnapshot(value: string | null): Record<string, unknown> | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function getPolicySignals(event: MemoryEventRecord): string[] {
+  const snapshot = parseEventSnapshot(event.afterJson);
+  const metadata = snapshot?.metadata;
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return [];
+  }
+  const signals = (metadata as Record<string, unknown>).policy_signals;
+  if (!Array.isArray(signals)) {
+    return [];
+  }
+  return signals.filter((signal): signal is string => typeof signal === 'string' && signal.trim().length > 0);
+}
+
 export default function MemoryControlPanel() {
   const addToast = useToastStore(state => state.addToast);
   const [memories, setMemories] = useState<MemoryRecord[]>([]);
@@ -375,7 +400,9 @@ export default function MemoryControlPanel() {
           <p className="memory-empty">暂无记忆事件。新建、禁用、删除或纠正记忆后会出现在这里。</p>
         ) : (
           <ol className="memory-event-list">
-            {memoryEvents.map(event => (
+            {memoryEvents.map(event => {
+              const policySignals = getPolicySignals(event);
+              return (
               <li className="memory-event-item" key={event.id}>
                 <div className="memory-event-icon" aria-hidden="true">
                   <QueueListIcon />
@@ -404,6 +431,16 @@ export default function MemoryControlPanel() {
                       <dd>{event.actor || 'system'}</dd>
                     </div>
                   </dl>
+                  {policySignals.length > 0 && (
+                    <div className="memory-event-policy" aria-label="策略信号">
+                      <span>策略信号</span>
+                      {policySignals.map(signal => (
+                        <span className="memory-signal-chip" key={`${event.id}-${signal}`}>
+                          {signal}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   {(event.beforeJson || event.afterJson) && (
                     <details className="memory-event-snapshot">
                       <summary>变更快照</summary>
@@ -413,7 +450,8 @@ export default function MemoryControlPanel() {
                   )}
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ol>
         )}
       </section>

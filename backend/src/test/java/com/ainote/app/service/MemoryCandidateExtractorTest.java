@@ -77,6 +77,10 @@ class MemoryCandidateExtractorTest {
         assertThat(candidates.get(0).scope()).isEqualTo("user");
         assertThat(candidates.get(0).content()).isEqualTo("希望交互风格严肃一些，少开玩笑");
         assertThat(candidates.get(0).correction()).isFalse();
+        assertThat(candidates.get(0).decisionType())
+                .isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE.name());
+        assertThat(candidates.get(0).policyReason()).isEqualTo("implicit_interaction_style");
+        assertThat(candidates.get(0).policySignals()).contains("stable_style_preference");
     }
 
     @Test

@@ -72,6 +72,7 @@ class MemoryCapturePolicyTest {
         assertThat(decision.allowed()).isTrue();
         assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE);
         assertThat(decision.reason()).contains("interaction_style");
+        assertThat(decision.matchedSignals()).contains("stable_style_preference");
     }
 
     @Test
@@ -84,6 +85,7 @@ class MemoryCapturePolicyTest {
 
         assertThat(decision.allowed()).isFalse();
         assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TOOL_RESULT);
+        assertThat(decision.matchedSignals()).contains("reference_only", "preference_signal");
     }
 
     @Test
