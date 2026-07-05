@@ -48,6 +48,7 @@ public class MemorySignalClassifier {
         boolean preferenceCorrection = looksLikePreferenceCorrection(compact);
         boolean stableStylePreference = looksLikeStableStylePreference(userMessage, compact);
         boolean oneOffStylePreference = oneOffScope && looksLikeStyleDirective(userMessage, compact);
+        boolean assistantFeedback = isAssistantFeedback(compact);
         boolean correctionSignal = preferenceCorrection || interactionStyleCorrection;
         boolean interactionStyleSignal = interactionStyleCorrection || stableStylePreference || oneOffStylePreference;
         boolean projectContextSignal = isProjectContext(userMessage);
@@ -58,7 +59,8 @@ public class MemorySignalClassifier {
                 || forgetRequest
                 || referenceOnly
                 || transientOperation
-                || oneOffScope;
+                || oneOffScope
+                || assistantFeedback;
 
         if (!hardDeny) {
             MemorySignalAdvisor.AdvisorResult advice = signalAdvisor.advise(request);
@@ -85,6 +87,7 @@ public class MemorySignalClassifier {
         addSignal(matchedSignals, referenceOnly, "reference_only");
         addSignal(matchedSignals, transientOperation, "transient_operation");
         addSignal(matchedSignals, oneOffScope, "one_off_scope");
+        addSignal(matchedSignals, assistantFeedback, "assistant_feedback");
         addSignal(matchedSignals, explicitRemember, "explicit_remember");
         addSignal(matchedSignals, preferenceCorrection, "preference_correction");
         addSignal(matchedSignals, interactionStyleCorrection, "interaction_style_correction");
@@ -101,6 +104,7 @@ public class MemorySignalClassifier {
                 referenceOnly,
                 transientOperation,
                 oneOffScope,
+                assistantFeedback,
                 explicitRemember,
                 preferenceSignal,
                 correctionSignal,
@@ -284,6 +288,23 @@ public class MemorySignalClassifier {
                 || compact.contains("forthisreply");
     }
 
+    private boolean isAssistantFeedback(String compact) {
+        boolean feedbackVerb = compact.contains("ilikethis")
+                || compact.contains("ilovethis")
+                || compact.contains("thisisgood")
+                || compact.contains("goodanswer")
+                || compact.contains("greatanswer")
+                || compact.contains("thanks")
+                || compact.contains("thankyou");
+        boolean answerReference = compact.contains("thisanswer")
+                || compact.contains("thisreply")
+                || compact.contains("thisresponse")
+                || compact.contains("youranswer")
+                || compact.contains("yourreply")
+                || compact.contains("yourresponse");
+        return answerReference && feedbackVerb;
+    }
+
     private boolean isProjectContext(String userMessage) {
         return PROJECT_CONTEXT_LABEL.matcher(userMessage).find();
     }
@@ -310,6 +331,7 @@ public class MemorySignalClassifier {
             boolean referenceOnly,
             boolean transientOperation,
             boolean oneOffScope,
+            boolean assistantFeedback,
             boolean explicitRemember,
             boolean preferenceSignal,
             boolean correctionSignal,

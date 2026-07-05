@@ -41,6 +41,9 @@ public class MemoryCapturePolicy {
         if (signals.oneOffScope()) {
             return CaptureDecision.deny(DecisionType.DENY_TRANSIENT, "one_off_instruction", matchedSignals);
         }
+        if (signals.assistantFeedback()) {
+            return CaptureDecision.deny(DecisionType.DENY_TRANSIENT, "assistant_feedback", matchedSignals);
+        }
         if (signals.explicitRemember()) {
             return CaptureDecision.allow(DecisionType.ALLOW_EXPLICIT, "explicit_memory", 0.95, matchedSignals);
         }

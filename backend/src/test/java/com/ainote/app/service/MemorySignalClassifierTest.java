@@ -118,6 +118,18 @@ class MemorySignalClassifierTest {
         assertThat(signals.matchedSignals()).contains("advisor_failed");
     }
 
+    @Test
+    void classifiesPositiveFeedbackAboutThisAnswerAsAssistantFeedback() {
+        MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "I like this answer, thanks.",
+                        "Glad it helped."));
+
+        assertThat(signals.assistantFeedback()).isTrue();
+        assertThat(signals.matchedSignals()).contains("assistant_feedback");
+    }
+
     private static final class CapturingAdvisor implements MemorySignalAdvisor {
         private final AdvisorResult result;
         private boolean called;

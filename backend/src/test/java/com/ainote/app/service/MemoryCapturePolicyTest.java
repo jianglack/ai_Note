@@ -149,6 +149,20 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void positiveFeedbackAboutThisAnswerShouldNotBecomePreference() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "I like this answer, thanks.",
+                        "Glad it helped."));
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TRANSIENT);
+        assertThat(decision.reason()).isEqualTo("assistant_feedback");
+        assertThat(decision.matchedSignals()).contains("assistant_feedback");
+    }
+
+    @Test
     void advisorOnlyStableStyleSignalShouldBeAllowed() {
         MemorySignalAdvisor advisor = request -> MemorySignalAdvisor.AdvisorResult.capture(
                 "style",

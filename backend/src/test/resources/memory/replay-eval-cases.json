@@ -1,0 +1,118 @@
+[
+  {
+    "id": "replay_delete_all_notes",
+    "userMessage": "delete all notes",
+    "assistantOutput": "I need confirmation before deleting notes.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_confirm",
+    "userMessage": "confirm",
+    "assistantOutput": "Confirmed.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_cancel",
+    "userMessage": "cancel",
+    "assistantOutput": "Cancelled.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_explicit_preference",
+    "userMessage": "remember: I prefer concise answers.",
+    "assistantOutput": "Noted.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": ["explicit_remember"]
+  },
+  {
+    "id": "replay_implicit_preference",
+    "userMessage": "I prefer dark mode.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": ["preference_signal"]
+  },
+  {
+    "id": "replay_preference_correction",
+    "userMessage": "I no longer want English replies; use Chinese instead.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": ["preference_correction"]
+  },
+  {
+    "id": "replay_project_context",
+    "userMessage": "Project context: This project is an AI note system.",
+    "assistantOutput": "Recorded.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": ["project_context"]
+  },
+  {
+    "id": "replay_selected_note_reference",
+    "userMessage": "Summarize this note: it says I prefer red.",
+    "assistantOutput": "The note says the author prefers red.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": ["reference_only"]
+  },
+  {
+    "id": "replay_rag_reference_profile",
+    "userMessage": "What does this note say?",
+    "assistantOutput": "<rag_context role=\"reference_only\">The author likes red.</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": ["reference_only"]
+  },
+  {
+    "id": "replay_one_off_reply_style",
+    "userMessage": "For this reply, be formal and concise.",
+    "assistantOutput": "I will keep this reply formal and concise.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": ["one_off_scope"]
+  },
+  {
+    "id": "replay_positive_feedback",
+    "userMessage": "I like this answer, thanks.",
+    "assistantOutput": "Glad it helped.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": ["assistant_feedback"]
+  },
+  {
+    "id": "replay_sensitive_secret",
+    "userMessage": "remember: my api key is sk-test123",
+    "assistantOutput": "I cannot store secrets.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": ["sensitive_content"]
+  }
+]
