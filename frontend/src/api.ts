@@ -487,6 +487,22 @@ export type MemoryListResponse = {
   nextCursor: string | null;
 };
 
+export type MemoryEventRecord = {
+  id: number;
+  memoryId: number | null;
+  eventType: string;
+  actor: string | null;
+  reason: string | null;
+  beforeJson: string | null;
+  afterJson: string | null;
+  traceId: string | null;
+  createdAt: string | null;
+};
+
+export type MemoryEventListResponse = {
+  items: MemoryEventRecord[];
+};
+
 export type MemoryListParams = {
   type?: string;
   status?: MemoryStatus | string;
@@ -510,6 +526,16 @@ export async function getMemories(params: MemoryListParams = {}): Promise<Memory
       status: params.status || undefined,
       query: params.query || undefined,
       cursor: params.cursor || undefined,
+    },
+  });
+  return res.data;
+}
+
+export async function getMemoryEvents(params: { memoryId?: number; limit?: number } = {}): Promise<MemoryEventListResponse> {
+  const res = await api.get('/api/memories/events', {
+    params: {
+      memoryId: params.memoryId,
+      limit: params.limit,
     },
   });
   return res.data;

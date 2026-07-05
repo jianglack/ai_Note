@@ -4,6 +4,7 @@ import com.ainote.app.entity.MemoryEvent;
 import com.ainote.app.entity.SemanticMemory;
 import com.ainote.app.model.memory.MemoryForgetRequest;
 import com.ainote.app.model.memory.MemoryForgetResponse;
+import com.ainote.app.model.memory.MemoryEventListResponse;
 import com.ainote.app.model.memory.MemoryListResponse;
 import com.ainote.app.model.memory.MemoryUpdateRequest;
 import com.ainote.app.repository.MemoryEventRepository;
@@ -91,6 +92,39 @@ class MemoryControlServiceTest {
     }
 
     @Test
+    void listEventsReturnsCurrentUserLedgerRowsWithOptionalMemoryFilter() {
+        MemoryEvent event = event("user-1", 11L, "CREATED");
+        when(memoryEventRepository.findByUserIdAndMemoryIdOrderByCreatedAtDesc(
+                eq("user-1"), eq(11L), any(PageRequest.class)))
+                .thenReturn(List.of(event));
+
+        MemoryEventListResponse response = service.listEvents("user-1", 11L, 25);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).memoryId()).isEqualTo(11L);
+        assertThat(response.items().get(0).eventType()).isEqualTo("CREATED");
+        assertThat(response.items().get(0).traceId()).isEqualTo("trace-11");
+        verify(memoryEventRepository).findByUserIdAndMemoryIdOrderByCreatedAtDesc(
+                eq("user-1"), eq(11L), any(PageRequest.class));
+    }
+
+    @Test
+    void listEventsReturnsRecentCurrentUserLedgerRowsWithoutMemoryFilter() {
+        MemoryEvent event = event("user-1", 11L, "CREATED");
+        when(memoryEventRepository.findByUserIdOrderByCreatedAtDesc(
+                eq("user-1"), any(PageRequest.class)))
+                .thenReturn(List.of(event));
+
+        MemoryEventListResponse response = service.listEvents("user-1", null, 50);
+
+        assertThat(response.items()).hasSize(1);
+        assertThat(response.items().get(0).eventType()).isEqualTo("CREATED");
+        assertThat(response.items().get(0).traceId()).isEqualTo("trace-11");
+        verify(memoryEventRepository).findByUserIdOrderByCreatedAtDesc(
+                eq("user-1"), any(PageRequest.class));
+    }
+
+    @Test
     void deleteMemorySoftDeletesAndRecordsEvent() {
         SemanticMemory memory = memory("user-1", 12L, "active");
         when(semanticMemoryRepository.findByIdAndUserId(12L, "user-1")).thenReturn(Optional.of(memory));
@@ -147,5 +181,18 @@ class MemoryControlServiceTest {
         memory.setContent("prefers markdown");
         memory.setConfidence(0.9);
         return memory;
+    }
+
+    private static MemoryEvent event(String userId, Long memoryId, String eventType) {
+        MemoryEvent event = new MemoryEvent();
+        event.setId(101L);
+        event.setUserId(userId);
+        event.setMemoryId(memoryId);
+        event.setEventType(eventType);
+        event.setActor("assistant");
+        event.setReason("explicit_memory");
+        event.setAfterJson("{\"content\":\"prefers markdown\"}");
+        event.setTraceId("trace-" + memoryId);
+        return event;
     }
 }

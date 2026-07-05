@@ -1,6 +1,8 @@
 package com.ainote.app.controller;
 
 import com.ainote.app.model.memory.MemoryListResponse;
+import com.ainote.app.model.memory.MemoryEventListResponse;
+import com.ainote.app.model.memory.MemoryEventResponse;
 import com.ainote.app.model.memory.MemoryResponse;
 import com.ainote.app.model.memory.MemoryUpdateRequest;
 import com.ainote.app.model.memory.MemoryForgetRequest;
@@ -57,6 +59,37 @@ class MemoryControllerTest {
 
         Mockito.verify(memoryControlService)
                 .listMemories("user-1", "preference", "active", "markdown", null);
+    }
+
+    @Test
+    void listEventsUsesCurrentUserAndOptionalMemoryFilter() throws Exception {
+        Mockito.when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        Mockito.when(memoryControlService.listEvents("user-1", 1L, 25))
+                .thenReturn(new MemoryEventListResponse(List.of(memoryEventResponse())));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/memories/events")
+                        .param("memoryId", "1")
+                        .param("limit", "25"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].id").value(101))
+                .andExpect(jsonPath("$.items[0].eventType").value("CREATED"))
+                .andExpect(jsonPath("$.items[0].traceId").value("memory-capture-abc"));
+
+        Mockito.verify(memoryControlService).listEvents("user-1", 1L, 25);
+    }
+
+    @Test
+    void listEventsCanReturnRecentLedgerRowsWithoutMemoryFilter() throws Exception {
+        Mockito.when(securityUtils.getCurrentUserId()).thenReturn("user-1");
+        Mockito.when(memoryControlService.listEvents("user-1", null, 50))
+                .thenReturn(new MemoryEventListResponse(List.of(memoryEventResponse())));
+
+        mockMvc.perform(MockMvcRequestBuilders.get("/api/memories/events")
+                        .param("limit", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items[0].eventType").value("CREATED"));
+
+        Mockito.verify(memoryControlService).listEvents("user-1", null, 50);
     }
 
     @Test
@@ -137,5 +170,18 @@ class MemoryControllerTest {
                 null,
                 LocalDateTime.parse("2026-07-03T10:00:00"),
                 LocalDateTime.parse("2026-07-03T10:00:00"));
+    }
+
+    private static MemoryEventResponse memoryEventResponse() {
+        return new MemoryEventResponse(
+                101L,
+                1L,
+                "CREATED",
+                "assistant",
+                "explicit_memory",
+                null,
+                "{\"content\":\"prefers markdown\"}",
+                "memory-capture-abc",
+                LocalDateTime.parse("2026-07-03T10:05:00"));
     }
 }

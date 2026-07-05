@@ -5,15 +5,18 @@ import {
   CheckCircleIcon,
   EyeSlashIcon,
   MagnifyingGlassIcon,
+  QueueListIcon,
   TrashIcon,
 } from '@heroicons/react/24/outline';
 import {
   deleteMemory,
   exportMemories,
+  getMemoryEvents,
   getMemories,
   previewContext,
   updateMemory,
   type ContextPreviewResponse,
+  type MemoryEventRecord,
   type MemoryListParams,
   type MemoryRecord,
   type MemoryStatus,
@@ -85,6 +88,9 @@ export default function MemoryControlPanel() {
   const [preview, setPreview] = useState<ContextPreviewResponse | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
+  const [memoryEvents, setMemoryEvents] = useState<MemoryEventRecord[]>([]);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   const activeCount = useMemo(
     () => memories.filter(memory => memory.status === 'active' || !memory.status).length,
@@ -114,6 +120,25 @@ export default function MemoryControlPanel() {
     void loadMemories();
   }, [loadMemories]);
 
+  const loadMemoryEvents = useCallback(async () => {
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      const response = await getMemoryEvents({ limit: 50 });
+      setMemoryEvents(response.items);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '记忆事件加载失败';
+      setEventsError(message);
+      addToast({ type: 'failed', title: '记忆事件加载失败', message });
+    } finally {
+      setEventsLoading(false);
+    }
+  }, [addToast]);
+
+  useEffect(() => {
+    void loadMemoryEvents();
+  }, [loadMemoryEvents]);
+
   const applyFilters = (next: MemoryListParams = {
     type: typeFilter,
     status: statusFilter,
@@ -141,6 +166,7 @@ export default function MemoryControlPanel() {
         reason: `user ${nextStatus === 'active' ? 'enabled' : 'disabled'} memory from control panel`,
       });
       setMemories(current => current.map(item => item.id === updated.id ? updated : item));
+      void loadMemoryEvents();
       addToast({
         type: 'success',
         title: nextStatus === 'active' ? '记忆已启用' : '记忆已禁用',
@@ -167,6 +193,7 @@ export default function MemoryControlPanel() {
     try {
       await deleteMemory(memory.id);
       setMemories(current => current.filter(item => item.id !== memory.id));
+      void loadMemoryEvents();
       addToast({ type: 'success', title: '记忆已删除' });
     } catch (err) {
       const message = err instanceof Error ? err.message : '记忆删除失败';
@@ -317,6 +344,77 @@ export default function MemoryControlPanel() {
               <pre>{preview.finalContext || '本次最终上下文为空。'}</pre>
             </details>
           </div>
+        )}
+      </section>
+
+      <section className="memory-events-panel" aria-label="记忆事件记录">
+        <div className="memory-events-header">
+          <div>
+            <h2>事件记录</h2>
+            <p>查看长期记忆的创建、强化、替换、删除和抽取失败记录，用于验证治理链路。</p>
+          </div>
+          <button
+            type="button"
+            className="memory-icon-button"
+            onClick={() => void loadMemoryEvents()}
+            aria-label="刷新记忆事件"
+            title="刷新记忆事件"
+            disabled={eventsLoading}
+          >
+            <ArrowPathIcon aria-hidden="true" />
+          </button>
+        </div>
+
+        <div className="memory-events-summary" aria-live="polite">
+          <span>{memoryEvents.length} 条事件</span>
+          {eventsLoading && <span>加载中</span>}
+          {eventsError && <span className="memory-error">{eventsError}</span>}
+        </div>
+
+        {memoryEvents.length === 0 && !eventsLoading ? (
+          <p className="memory-empty">暂无记忆事件。新建、禁用、删除或纠正记忆后会出现在这里。</p>
+        ) : (
+          <ol className="memory-event-list">
+            {memoryEvents.map(event => (
+              <li className="memory-event-item" key={event.id}>
+                <div className="memory-event-icon" aria-hidden="true">
+                  <QueueListIcon />
+                </div>
+                <div className="memory-event-main">
+                  <div className="memory-event-topline">
+                    <span className={`memory-event-type memory-event-type-${event.eventType.toLowerCase()}`}>
+                      {event.eventType}
+                    </span>
+                    <span className="memory-muted">{formatDate(event.createdAt)}</span>
+                    {event.memoryId !== null && (
+                      <span className="memory-muted">Memory #{event.memoryId}</span>
+                    )}
+                  </div>
+                  <dl className="memory-event-meta">
+                    <div>
+                      <dt>原因</dt>
+                      <dd>{event.reason || 'n/a'}</dd>
+                    </div>
+                    <div>
+                      <dt>Trace</dt>
+                      <dd>{event.traceId || 'n/a'}</dd>
+                    </div>
+                    <div>
+                      <dt>Actor</dt>
+                      <dd>{event.actor || 'system'}</dd>
+                    </div>
+                  </dl>
+                  {(event.beforeJson || event.afterJson) && (
+                    <details className="memory-event-snapshot">
+                      <summary>变更快照</summary>
+                      {event.beforeJson && <pre>{event.beforeJson}</pre>}
+                      {event.afterJson && <pre>{event.afterJson}</pre>}
+                    </details>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
         )}
       </section>
 

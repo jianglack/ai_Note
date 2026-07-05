@@ -2,6 +2,7 @@ package com.ainote.app.controller;
 
 import com.ainote.app.model.memory.MemoryForgetRequest;
 import com.ainote.app.model.memory.MemoryForgetResponse;
+import com.ainote.app.model.memory.MemoryEventListResponse;
 import com.ainote.app.model.memory.MemoryListResponse;
 import com.ainote.app.model.memory.MemoryResponse;
 import com.ainote.app.model.memory.MemoryUpdateRequest;
@@ -43,6 +44,12 @@ public class MemoryController {
             @RequestParam(required = false) String cursor) {
         return memoryControlService.listMemories(
                 securityUtils.getCurrentUserId(), type, status, query, cursor);
+    }
+
+    @GetMapping("/events")
+    public MemoryEventListResponse events(@RequestParam(required = false) Long memoryId,
+                                          @RequestParam(required = false) Integer limit) {
+        return memoryControlService.listEvents(securityUtils.getCurrentUserId(), memoryId, limit);
     }
 
     @PatchMapping("/{id}")

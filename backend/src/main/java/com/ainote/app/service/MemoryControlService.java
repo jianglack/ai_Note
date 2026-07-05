@@ -2,6 +2,8 @@ package com.ainote.app.service;
 
 import com.ainote.app.entity.MemoryEvent;
 import com.ainote.app.entity.SemanticMemory;
+import com.ainote.app.model.memory.MemoryEventListResponse;
+import com.ainote.app.model.memory.MemoryEventResponse;
 import com.ainote.app.model.memory.MemoryForgetRequest;
 import com.ainote.app.model.memory.MemoryForgetResponse;
 import com.ainote.app.model.memory.MemoryListResponse;
@@ -80,6 +82,18 @@ public class MemoryControlService {
         SemanticMemory saved = semanticMemoryRepository.save(memory);
         recordEvent(userId, saved.getId(), "UPDATED", "user", request.reason(), before, snapshot(saved));
         return toResponse(saved);
+    }
+
+    @Transactional(readOnly = true)
+    public MemoryEventListResponse listEvents(String userId, Long memoryId, Integer limit) {
+        int size = normalizeLimit(limit);
+        List<MemoryEvent> rows = memoryId == null
+                ? memoryEventRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, size))
+                : memoryEventRepository.findByUserIdAndMemoryIdOrderByCreatedAtDesc(
+                        userId, memoryId, PageRequest.of(0, size));
+        return new MemoryEventListResponse(rows.stream()
+                .map(this::toEventResponse)
+                .toList());
     }
 
     public void deleteMemory(String userId, Long id) {
@@ -162,6 +176,19 @@ public class MemoryControlService {
                 memory.getUpdatedAt());
     }
 
+    private MemoryEventResponse toEventResponse(MemoryEvent event) {
+        return new MemoryEventResponse(
+                event.getId(),
+                event.getMemoryId(),
+                event.getEventType(),
+                event.getActor(),
+                event.getReason(),
+                event.getBeforeJson(),
+                event.getAfterJson(),
+                event.getTraceId(),
+                event.getCreatedAt());
+    }
+
     private String snapshot(SemanticMemory memory) {
         return "{\"id\":" + memory.getId()
                 + ",\"status\":\"" + nullSafe(memory.getStatus())
@@ -179,6 +206,13 @@ public class MemoryControlService {
         } catch (NumberFormatException ignored) {
             return 0;
         }
+    }
+
+    private int normalizeLimit(Integer limit) {
+        if (limit == null) {
+            return PAGE_SIZE;
+        }
+        return Math.max(1, Math.min(100, limit));
     }
 
     private String normalizeBlank(String value) {

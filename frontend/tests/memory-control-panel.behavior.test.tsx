@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const apiMocks = vi.hoisted(() => ({
   deleteMemory: vi.fn(),
   exportMemories: vi.fn(),
+  getMemoryEvents: vi.fn(),
   getMemories: vi.fn(),
   previewContext: vi.fn(),
   updateMemory: vi.fn(),
@@ -17,6 +18,7 @@ const dialogMocks = vi.hoisted(() => ({
 vi.mock('../src/api', () => ({
   deleteMemory: apiMocks.deleteMemory,
   exportMemories: apiMocks.exportMemories,
+  getMemoryEvents: apiMocks.getMemoryEvents,
   getMemories: apiMocks.getMemories,
   previewContext: apiMocks.previewContext,
   updateMemory: apiMocks.updateMemory,
@@ -59,6 +61,21 @@ describe('MemoryControlPanel behavior', () => {
     vi.clearAllMocks();
     useToastStore.setState({ toasts: [] });
     apiMocks.getMemories.mockResolvedValue({ items: [makeMemory()], nextCursor: null });
+    apiMocks.getMemoryEvents.mockResolvedValue({
+      items: [
+        {
+          id: 101,
+          memoryId: 1,
+          eventType: 'CREATED',
+          actor: 'assistant',
+          reason: 'explicit_memory',
+          beforeJson: null,
+          afterJson: '{"content":"用户希望回答简洁、直接。"}',
+          traceId: 'memory-capture-abc',
+          createdAt: '2026-07-03T10:05:00',
+        },
+      ],
+    });
     apiMocks.exportMemories.mockResolvedValue({ items: [makeMemory()], nextCursor: null });
     apiMocks.previewContext.mockResolvedValue({
       query: '总结这篇笔记',
@@ -152,5 +169,15 @@ describe('MemoryControlPanel behavior', () => {
     expect(screen.getByText('长期记忆')).toBeInTheDocument();
     expect(screen.getByText('判断问题类型')).toBeInTheDocument();
     expect(screen.getAllByText('<user_memory>Prefers concise answers</user_memory>')).toHaveLength(2);
+  });
+
+  it('shows the memory event ledger with trace ids for frontend verification', async () => {
+    render(<MemoryControlPanel />);
+
+    expect(await screen.findByText('事件记录')).toBeInTheDocument();
+    expect(screen.getByText('CREATED')).toBeInTheDocument();
+    expect(screen.getByText('explicit_memory')).toBeInTheDocument();
+    expect(screen.getByText('memory-capture-abc')).toBeInTheDocument();
+    expect(apiMocks.getMemoryEvents).toHaveBeenCalledWith({ limit: 50 });
   });
 });

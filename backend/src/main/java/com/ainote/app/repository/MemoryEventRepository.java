@@ -1,6 +1,7 @@
 package com.ainote.app.repository;
 
 import com.ainote.app.entity.MemoryEvent;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -10,6 +11,10 @@ import java.util.List;
 public interface MemoryEventRepository extends JpaRepository<MemoryEvent, Long> {
 
     List<MemoryEvent> findByUserIdOrderByCreatedAtDesc(String userId);
+
+    List<MemoryEvent> findByUserIdOrderByCreatedAtDesc(String userId, Pageable pageable);
+
+    List<MemoryEvent> findByUserIdAndMemoryIdOrderByCreatedAtDesc(String userId, Long memoryId, Pageable pageable);
 
     List<MemoryEvent> findByMemoryIdOrderByCreatedAtDesc(Long memoryId);
 }
