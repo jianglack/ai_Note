@@ -78,7 +78,7 @@ class MemorySignalClassifierTest {
 
         assertThat(signals.oneOffScope()).isTrue();
         assertThat(signals.interactionStyleSignal()).isTrue();
-        assertThat(signals.matchedSignals()).contains("one_off_scope", "stable_style_preference");
+        assertThat(signals.matchedSignals()).contains("one_off_scope", "one_off_style_preference");
     }
 
     @Test

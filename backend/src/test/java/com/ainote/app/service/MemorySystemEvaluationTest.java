@@ -28,8 +28,11 @@ class MemorySystemEvaluationTest {
                         "should_remember_explicit_preference",
                         "should_supersede_corrected_preference",
                         "should_capture_interaction_style_correction",
+                        "should_capture_stable_style_preference",
+                        "should_capture_explicit_project_context",
                         "should_not_capture_one_off_style_instruction",
                         "should_not_remember_selected_note_summary",
+                        "should_not_capture_reference_note_even_with_preference_words",
                         "should_not_remember_rag_reference_as_profile"
                 );
     }

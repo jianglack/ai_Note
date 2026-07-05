@@ -55,9 +55,45 @@ class MemoryCandidateExtractorTest {
         List<MemoryCandidateExtractor.MemoryCandidate> candidates = extractor.extract(request, decision);
 
         assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).memoryType()).isEqualTo("style");
         assertThat(candidates.get(0).category()).isEqualTo("preference");
         assertThat(candidates.get(0).correction()).isTrue();
         assertThat(candidates.get(0).content()).isEqualTo("希望交互风格严肃深刻，避免俏皮");
+    }
+
+    @Test
+    void extractsStableStylePreferenceCandidate() {
+        MemoryCapturePolicy.CaptureRequest request = new MemoryCapturePolicy.CaptureRequest(
+                "user-1",
+                "以后回答请严肃一些，少开玩笑。",
+                "收到。");
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(request);
+
+        List<MemoryCandidateExtractor.MemoryCandidate> candidates = extractor.extract(request, decision);
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).memoryType()).isEqualTo("style");
+        assertThat(candidates.get(0).category()).isEqualTo("preference");
+        assertThat(candidates.get(0).scope()).isEqualTo("user");
+        assertThat(candidates.get(0).content()).isEqualTo("希望交互风格严肃一些，少开玩笑");
+        assertThat(candidates.get(0).correction()).isFalse();
+    }
+
+    @Test
+    void extractsProjectContextCandidate() {
+        MemoryCapturePolicy.CaptureRequest request = new MemoryCapturePolicy.CaptureRequest(
+                "user-1",
+                "项目上下文：这个项目是一个 AI 笔记系统。",
+                "已记录。");
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(request);
+
+        List<MemoryCandidateExtractor.MemoryCandidate> candidates = extractor.extract(request, decision);
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).memoryType()).isEqualTo("project_context");
+        assertThat(candidates.get(0).category()).isEqualTo("project_context");
+        assertThat(candidates.get(0).scope()).isEqualTo("project");
+        assertThat(candidates.get(0).content()).isEqualTo("这个项目是一个 AI 笔记系统。");
     }
 
     @Test

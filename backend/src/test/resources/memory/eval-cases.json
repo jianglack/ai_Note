@@ -44,8 +44,26 @@
     "assistantOutput": "收到，切换模式。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": true
+  },
+  {
+    "id": "should_capture_stable_style_preference",
+    "userMessage": "以后回答请严肃一些，少开玩笑。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false
+  },
+  {
+    "id": "should_capture_explicit_project_context",
+    "userMessage": "项目上下文：这个项目是一个 AI 笔记系统。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false
   },
   {
     "id": "should_not_capture_one_off_style_instruction",
@@ -58,6 +76,13 @@
     "id": "should_not_remember_selected_note_summary",
     "userMessage": "这篇笔记重点是什么？",
     "assistantOutput": "这篇笔记的重点是项目排期。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT"
+  },
+  {
+    "id": "should_not_capture_reference_note_even_with_preference_words",
+    "userMessage": "这篇笔记说我喜欢红色，请总结。",
+    "assistantOutput": "这篇笔记提到了颜色偏好。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT"
   },

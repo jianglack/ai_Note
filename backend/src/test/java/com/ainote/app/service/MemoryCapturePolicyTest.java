@@ -62,6 +62,43 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void stableStylePreferenceWithoutRememberKeywordShouldBeAllowed() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "以后回答请严肃一些，少开玩笑。",
+                        "收到。"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE);
+        assertThat(decision.reason()).contains("interaction_style");
+    }
+
+    @Test
+    void referenceOnlyStillWinsOverPreferenceSignal() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "这篇笔记说我喜欢红色，请总结。",
+                        "这篇笔记提到了颜色偏好。"));
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TOOL_RESULT);
+    }
+
+    @Test
+    void explicitProjectContextShouldBeAllowed() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "项目上下文：这个项目是一个 AI 笔记系统。",
+                        "已记录。"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.reason()).contains("project_context");
+    }
+
+    @Test
     void oneOffStyleInstructionShouldNotBecomeLongTermMemory() {
         MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
                 new MemoryCapturePolicy.CaptureRequest(
