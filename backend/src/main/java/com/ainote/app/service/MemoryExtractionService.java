@@ -556,6 +556,11 @@ public class MemoryExtractionService {
      */
     private void extractSemanticFromConversationText(String userId, String conversationText) {
         try {
+            if (isGovernedCaptureMode()) {
+                logExtractionResult(userId, "skipped", 0, 0, 0, 0, System.nanoTime(),
+                        "orchestrator_policy_owns_semantic_capture");
+                return;
+            }
             List<ChatMessage> messages = List.of(
                     SystemMessage.from(promptLoader.load("semantic-extraction.txt")),
                     UserMessage.from(conversationText)
@@ -607,5 +612,10 @@ public class MemoryExtractionService {
             cleaned = cleaned.substring(0, cleaned.length() - 3);
         }
         return cleaned.trim();
+    }
+
+    private boolean isGovernedCaptureMode() {
+        return memoryProperties.getOrchestrator().isEnabled()
+                && memoryProperties.getCapture().getMode() == MemoryProperties.CaptureMode.POLICY;
     }
 }

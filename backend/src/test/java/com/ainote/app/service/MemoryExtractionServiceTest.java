@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyDouble;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -187,6 +188,27 @@ class MemoryExtractionServiceTest {
         } finally {
             logger.detachAppender(appender);
         }
+    }
+
+    @Test
+    void episodicSummaryDoesNotExtractSemanticMemoriesWhenOrchestratorPolicyOwnsCapture() {
+        memoryProperties.getOrchestrator().setEnabled(true);
+        memoryProperties.getCapture().setMode(MemoryProperties.CaptureMode.POLICY);
+        when(promptLoader.load("episodic-summary.txt")).thenReturn("summarize episode");
+        when(chatModel.chat(any(ChatRequest.class)))
+                .thenReturn(chatResponse("""
+                        {"summary":"User asked about RAG notes."}
+                        """))
+                .thenReturn(chatResponse("""
+                        [
+                          {"category":"preference","content":"likes unrelated RAG note content","confidence":0.9}
+                        ]
+                        """));
+
+        service.generateEpisodicSummaryFromText("user-1", "USER: summarize selected note\nAI: RAG note details", 1);
+
+        verify(chatModel, times(1)).chat(any(ChatRequest.class));
+        verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
     }
 
     private static ChatResponse chatResponse(String text) {
