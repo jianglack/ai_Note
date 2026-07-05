@@ -4,9 +4,14 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class MemoryCandidateExtractor {
+
+    private static final Pattern CHINESE_CONTRASTIVE_STYLE = Pattern.compile(
+            "^(?:现在|以后|接下来|之后)?(?:请)?(?:不要|别|少一点|少点)(?<avoid>[^，,。；;]+)[，,。；;]?(?:要|改成|改为|多一点|多点)(?<prefer>[^，,。；;]+)$");
 
     public List<MemoryCandidate> extract(MemoryCapturePolicy.CaptureRequest request,
                                          MemoryCapturePolicy.CaptureDecision decision) {
@@ -35,6 +40,11 @@ public class MemoryCandidateExtractor {
     }
 
     private String normalizeContent(String userMessage) {
+        String contrastiveStyle = normalizeContrastiveStyle(userMessage);
+        if (!contrastiveStyle.isBlank()) {
+            return contrastiveStyle;
+        }
+
         String content = userMessage
                 .replaceFirst("(?i)^\\s*(remember|keep in mind)[:,，]?\\s*", "")
                 .replaceFirst("^\\s*(请)?记住[:,，]?\\s*", "")
@@ -45,6 +55,28 @@ public class MemoryCandidateExtractor {
             content = content.substring(0, 240).trim();
         }
         return content;
+    }
+
+    private String normalizeContrastiveStyle(String userMessage) {
+        String normalized = userMessage == null ? "" : userMessage.trim();
+        Matcher matcher = CHINESE_CONTRASTIVE_STYLE.matcher(normalized);
+        if (!matcher.find()) {
+            return "";
+        }
+
+        String avoid = cleanupStyleFragment(matcher.group("avoid"));
+        String prefer = cleanupStyleFragment(matcher.group("prefer"));
+        if (avoid.isBlank() || prefer.isBlank()) {
+            return "";
+        }
+        return "希望交互风格" + prefer + "，避免" + avoid;
+    }
+
+    private String cleanupStyleFragment(String value) {
+        return value == null ? "" : value
+                .replaceFirst("^这么", "")
+                .replaceFirst("^太", "")
+                .trim();
     }
 
     private String inferCategory(String content) {
@@ -72,9 +104,14 @@ public class MemoryCandidateExtractor {
         return normalized.contains("不再")
                 || normalized.contains("改为")
                 || normalized.contains("以后不要")
+                || isContrastiveCorrection(text)
                 || normalized.contains("nolonger")
                 || normalized.contains("instead")
                 || normalized.contains("rather");
+    }
+
+    private boolean isContrastiveCorrection(String text) {
+        return CHINESE_CONTRASTIVE_STYLE.matcher(text == null ? "" : text.trim()).find();
     }
 
     public record MemoryCandidate(String memoryType,

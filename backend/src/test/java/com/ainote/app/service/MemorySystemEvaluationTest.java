@@ -27,6 +27,8 @@ class MemorySystemEvaluationTest {
                         "should_not_remember_cancel",
                         "should_remember_explicit_preference",
                         "should_supersede_corrected_preference",
+                        "should_capture_interaction_style_correction",
+                        "should_not_capture_one_off_style_instruction",
                         "should_not_remember_selected_note_summary",
                         "should_not_remember_rag_reference_as_profile"
                 );

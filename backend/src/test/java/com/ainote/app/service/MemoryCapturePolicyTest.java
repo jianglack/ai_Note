@@ -49,6 +49,42 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void styleCorrectionWithoutRememberKeywordShouldBeAllowed() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "现在不要这么俏皮，要严肃深刻",
+                        "收到，切换模式。"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE);
+        assertThat(decision.reason()).contains("correction");
+    }
+
+    @Test
+    void oneOffStyleInstructionShouldNotBecomeLongTermMemory() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "这次回答不要这么俏皮，要严肃深刻",
+                        "好的，这次我会严肃一些。"));
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.reason()).contains("one_off");
+    }
+
+    @Test
+    void negativeOnlyStyleInstructionShouldNotBecomeLongTermMemory() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "不要这么俏皮",
+                        "好的。"));
+
+        assertThat(decision.allowed()).isFalse();
+    }
+
+    @Test
     void selectedNoteAndRagReferenceContentShouldNotBecomeUserProfile() {
         MemoryCapturePolicy.CaptureDecision selectedNoteDecision = policy.evaluate(
                 new MemoryCapturePolicy.CaptureRequest("user-1", "总结这篇笔记", "这篇笔记说作者喜欢 Rust"));

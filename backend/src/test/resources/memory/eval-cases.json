@@ -39,6 +39,22 @@
     "expectedCorrection": true
   },
   {
+    "id": "should_capture_interaction_style_correction",
+    "userMessage": "现在不要这么俏皮，要严肃深刻",
+    "assistantOutput": "收到，切换模式。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true
+  },
+  {
+    "id": "should_not_capture_one_off_style_instruction",
+    "userMessage": "这次回答不要这么俏皮，要严肃深刻",
+    "assistantOutput": "好的，这次我会严肃一些。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT"
+  },
+  {
     "id": "should_not_remember_selected_note_summary",
     "userMessage": "这篇笔记重点是什么？",
     "assistantOutput": "这篇笔记的重点是项目排期。",

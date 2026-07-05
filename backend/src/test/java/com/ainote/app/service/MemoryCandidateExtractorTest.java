@@ -45,6 +45,22 @@ class MemoryCandidateExtractorTest {
     }
 
     @Test
+    void extractsImplicitStyleCorrectionCandidate() {
+        MemoryCapturePolicy.CaptureRequest request = new MemoryCapturePolicy.CaptureRequest(
+                "user-1",
+                "现在不要这么俏皮，要严肃深刻",
+                "收到，切换模式。");
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(request);
+
+        List<MemoryCandidateExtractor.MemoryCandidate> candidates = extractor.extract(request, decision);
+
+        assertThat(candidates).hasSize(1);
+        assertThat(candidates.get(0).category()).isEqualTo("preference");
+        assertThat(candidates.get(0).correction()).isTrue();
+        assertThat(candidates.get(0).content()).isEqualTo("希望交互风格严肃深刻，避免俏皮");
+    }
+
+    @Test
     void deniedPolicyProducesNoCandidates() {
         MemoryCapturePolicy.CaptureRequest request =
                 new MemoryCapturePolicy.CaptureRequest("user-1", "取消", "已取消");

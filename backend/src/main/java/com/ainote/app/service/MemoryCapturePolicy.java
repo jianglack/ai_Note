@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
@@ -10,6 +11,9 @@ public class MemoryCapturePolicy {
 
     private static final Pattern SENSITIVE_PATTERN = Pattern.compile(
             "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})");
+    private static final Pattern INTERACTION_STYLE_SIGNAL = Pattern.compile(
+            "(回答|回复|语气|口吻|风格|格式|详细|简短|严肃|深刻|正式|专业|俏皮|轻松|幽默|活泼|啰嗦|精简|简洁|"
+                    + "answer|reply|tone|style|format|formal|serious|concise|detailed|professional)");
 
     public CaptureDecision evaluate(CaptureRequest request) {
         String userMessage = normalize(request.userMessage());
@@ -31,11 +35,17 @@ public class MemoryCapturePolicy {
         if (isTransientOperation(compact)) {
             return CaptureDecision.deny(DecisionType.DENY_TRANSIENT, "operation_or_confirmation");
         }
+        if (isOneOffInstruction(compact)) {
+            return CaptureDecision.deny(DecisionType.DENY_TRANSIENT, "one_off_instruction");
+        }
         if (isExplicitRemember(compact)) {
             return CaptureDecision.allow(DecisionType.ALLOW_EXPLICIT, "explicit_memory", 0.95);
         }
         if (looksLikePreferenceCorrection(compact)) {
             return CaptureDecision.allow(DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE, "correction_preference", 0.85);
+        }
+        if (looksLikeInteractionStyleCorrection(userMessage, compact)) {
+            return CaptureDecision.allow(DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE, "correction_interaction_style", 0.85);
         }
         if (looksLikePreference(compact)) {
             return CaptureDecision.allow(DecisionType.ALLOW_IMPLICIT_LOW_CONFIDENCE, "implicit_preference", 0.65);
@@ -74,6 +84,52 @@ public class MemoryCapturePolicy {
                 || compact.contains("rather");
     }
 
+    private boolean looksLikeInteractionStyleCorrection(String userMessage, String compact) {
+        boolean hasNegativeDirective = compact.contains("不要")
+                || compact.contains("别")
+                || compact.contains("少一点")
+                || compact.contains("少点")
+                || compact.contains("not")
+                || compact.contains("less");
+        boolean hasPositiveReplacement = compact.contains("改成")
+                || compact.contains("改为")
+                || compact.contains("多一点")
+                || compact.contains("多点")
+                || compact.contains("more")
+                || compact.contains("instead")
+                || hasStandaloneChineseWantAfterNegativeDirective(compact);
+        return hasNegativeDirective
+                && hasPositiveReplacement
+                && INTERACTION_STYLE_SIGNAL.matcher(userMessage).find();
+    }
+
+    private boolean hasStandaloneChineseWantAfterNegativeDirective(String compact) {
+        int negativeIndex = firstNegativeDirectiveIndex(compact);
+        if (negativeIndex < 0) {
+            return false;
+        }
+        int wantIndex = compact.indexOf("要", negativeIndex + 1);
+        while (wantIndex >= 0) {
+            boolean partOfNegative = wantIndex > 0 && compact.charAt(wantIndex - 1) == '不';
+            if (!partOfNegative) {
+                return true;
+            }
+            wantIndex = compact.indexOf("要", wantIndex + 1);
+        }
+        return false;
+    }
+
+    private int firstNegativeDirectiveIndex(String compact) {
+        int best = -1;
+        for (String token : List.of("不要", "别", "少一点", "少点")) {
+            int index = compact.indexOf(token);
+            if (index >= 0 && (best < 0 || index < best)) {
+                best = index;
+            }
+        }
+        return best;
+    }
+
     private boolean isForgetRequest(String compact) {
         return compact.contains("忘记")
                 || compact.contains("不要记住")
@@ -110,6 +166,15 @@ public class MemoryCapturePolicy {
                 || compact.contains("thisnote")
                 || compact.contains("whatdoesthisnotesay")
                 || compact.contains("summarizethisnote");
+    }
+
+    private boolean isOneOffInstruction(String compact) {
+        return compact.contains("这次")
+                || compact.contains("本次")
+                || compact.contains("当前这次")
+                || compact.contains("thisonce")
+                || compact.contains("thisreply")
+                || compact.contains("forthisreply");
     }
 
     private boolean isRagReference(String text) {
