@@ -130,6 +130,29 @@ class MemorySignalClassifierTest {
         assertThat(signals.matchedSignals()).contains("assistant_feedback");
     }
 
+    @Test
+    void classifiesChinesePositiveFeedbackAboutThisAnswerAsAssistantFeedback() {
+        MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "我喜欢这个回答，谢谢。",
+                        "不客气。"));
+
+        assertThat(signals.assistantFeedback()).isTrue();
+        assertThat(signals.matchedSignals()).contains("assistant_feedback");
+    }
+
+    @Test
+    void classifiesCommonChineseConfirmationsAsTransientOperations() {
+        for (String message : java.util.List.of("可以", "好的")) {
+            MemorySignalClassifier.SignalClassification signals = classifier.classify(
+                    new MemoryCapturePolicy.CaptureRequest("user-1", message, "已继续。"));
+
+            assertThat(signals.transientOperation()).as(message).isTrue();
+            assertThat(signals.matchedSignals()).as(message).contains("transient_operation");
+        }
+    }
+
     private static final class CapturingAdvisor implements MemorySignalAdvisor {
         private final AdvisorResult result;
         private boolean called;

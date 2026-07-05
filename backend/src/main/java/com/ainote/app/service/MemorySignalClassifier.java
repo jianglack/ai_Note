@@ -248,6 +248,7 @@ public class MemorySignalClassifier {
 
     private boolean isTransientOperation(String compact) {
         if (compact.equals("确认") || compact.equals("確定") || compact.equals("取消")
+                || compact.equals("可以") || compact.equals("好的") || compact.equals("好") || compact.equals("行")
                 || compact.equals("ok") || compact.equals("yes") || compact.equals("no")
                 || compact.equals("confirm") || compact.equals("cancel")) {
             return true;
@@ -294,6 +295,11 @@ public class MemorySignalClassifier {
                 || compact.contains("thisisgood")
                 || compact.contains("goodanswer")
                 || compact.contains("greatanswer")
+                || compact.contains("喜欢")
+                || compact.contains("很好")
+                || compact.contains("不错")
+                || compact.contains("有帮助")
+                || compact.contains("谢谢")
                 || compact.contains("thanks")
                 || compact.contains("thankyou");
         boolean answerReference = compact.contains("thisanswer")
@@ -301,7 +307,15 @@ public class MemorySignalClassifier {
                 || compact.contains("thisresponse")
                 || compact.contains("youranswer")
                 || compact.contains("yourreply")
-                || compact.contains("yourresponse");
+                || compact.contains("yourresponse")
+                || compact.contains("这个回答")
+                || compact.contains("这次回答")
+                || compact.contains("你的回答")
+                || compact.contains("这个回复")
+                || compact.contains("这次回复")
+                || compact.contains("你的回复")
+                || compact.contains("这个答案")
+                || compact.contains("你的答案");
         return answerReference && feedbackVerb;
     }
 

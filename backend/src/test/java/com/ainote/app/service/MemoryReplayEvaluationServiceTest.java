@@ -108,10 +108,24 @@ class MemoryReplayEvaluationServiceTest {
                         "replay_rag_reference_profile",
                         "replay_one_off_reply_style",
                         "replay_positive_feedback",
-                        "replay_sensitive_secret");
+                        "replay_sensitive_secret",
+                        "replay_cn_delete_all_notes",
+                        "replay_cn_confirm_can",
+                        "replay_cn_confirm_ok",
+                        "replay_cn_explicit_preference",
+                        "replay_cn_stable_style",
+                        "replay_cn_style_correction",
+                        "replay_cn_project_context",
+                        "replay_cn_selected_note_reference",
+                        "replay_cn_rag_reference_profile",
+                        "replay_cn_one_off_reply_style",
+                        "replay_cn_positive_feedback",
+                        "replay_cn_sensitive_secret",
+                        "replay_cn_forget_request");
+
+        assertThat(cases).hasSizeGreaterThanOrEqualTo(25);
 
         MemoryReplayEvaluationService.EvaluationReport report = evaluator.evaluate(cases);
-
         assertThat(report.totalCases()).isGreaterThanOrEqualTo(12);
         assertThat(report.shouldNotRememberPrecision()).isEqualTo(1.0);
         assertThat(report.shouldRememberRecall()).isEqualTo(1.0);

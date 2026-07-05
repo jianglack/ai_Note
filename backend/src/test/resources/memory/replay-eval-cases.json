@@ -114,5 +114,130 @@
     "expectedDecisionType": "DENY_SENSITIVE",
     "expectedPolicyReason": "sensitive_content",
     "expectedSignals": ["sensitive_content"]
+  },
+  {
+    "id": "replay_cn_delete_all_notes",
+    "userMessage": "删除全部笔记",
+    "assistantOutput": "需要你确认后我才会删除。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_cn_confirm_can",
+    "userMessage": "可以",
+    "assistantOutput": "已继续。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_cn_confirm_ok",
+    "userMessage": "好的",
+    "assistantOutput": "已继续。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": ["transient_operation"]
+  },
+  {
+    "id": "replay_cn_explicit_preference",
+    "userMessage": "记住，我希望所有回答都先给结论。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": ["explicit_remember"]
+  },
+  {
+    "id": "replay_cn_stable_style",
+    "userMessage": "以后回答请严肃一点，少开玩笑。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": ["stable_style_preference"]
+  },
+  {
+    "id": "replay_cn_style_correction",
+    "userMessage": "现在不要这么俏皮，要严肃深刻",
+    "assistantOutput": "收到，后续会更严肃深刻。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_interaction_style",
+    "expectedSignals": ["interaction_style_correction"]
+  },
+  {
+    "id": "replay_cn_project_context",
+    "userMessage": "项目上下文：这个项目是企业内部 AI 笔记系统。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": ["project_context"]
+  },
+  {
+    "id": "replay_cn_selected_note_reference",
+    "userMessage": "这篇笔记说我喜欢红色，请总结。",
+    "assistantOutput": "这篇笔记提到颜色偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": ["reference_only"]
+  },
+  {
+    "id": "replay_cn_rag_reference_profile",
+    "userMessage": "这份资料里说了什么？",
+    "assistantOutput": "<rag_context role=\"reference_only\">用户喜欢红色。</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": ["reference_only"]
+  },
+  {
+    "id": "replay_cn_one_off_reply_style",
+    "userMessage": "这次回答请严肃一点。",
+    "assistantOutput": "这次我会严肃回答。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": ["one_off_scope"]
+  },
+  {
+    "id": "replay_cn_positive_feedback",
+    "userMessage": "我喜欢这个回答，谢谢。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": ["assistant_feedback"]
+  },
+  {
+    "id": "replay_cn_sensitive_secret",
+    "userMessage": "记住，我的 API key 是 sk-test123",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": ["sensitive_content"]
+  },
+  {
+    "id": "replay_cn_forget_request",
+    "userMessage": "忘记我喜欢深色模式这件事",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": ["forget_request"]
   }
 ]

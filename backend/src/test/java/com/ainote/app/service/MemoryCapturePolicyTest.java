@@ -163,6 +163,33 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void chinesePositiveFeedbackAboutThisAnswerShouldNotBecomePreference() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "我喜欢这个回答，谢谢。",
+                        "不客气。"));
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TRANSIENT);
+        assertThat(decision.reason()).isEqualTo("assistant_feedback");
+        assertThat(decision.matchedSignals()).contains("assistant_feedback");
+    }
+
+    @Test
+    void commonChineseConfirmationsShouldBeTransientOperations() {
+        for (String message : java.util.List.of("可以", "好的")) {
+            MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                    new MemoryCapturePolicy.CaptureRequest("user-1", message, "已继续。"));
+
+            assertThat(decision.allowed()).as(message).isFalse();
+            assertThat(decision.type()).as(message).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TRANSIENT);
+            assertThat(decision.reason()).as(message).isEqualTo("operation_or_confirmation");
+            assertThat(decision.matchedSignals()).as(message).contains("transient_operation");
+        }
+    }
+
+    @Test
     void advisorOnlyStableStyleSignalShouldBeAllowed() {
         MemorySignalAdvisor advisor = request -> MemorySignalAdvisor.AdvisorResult.capture(
                 "style",
