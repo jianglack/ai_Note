@@ -156,6 +156,9 @@ class MemoryReplayEvaluationServiceTest {
     @Test
     void replayDatasetMeetsEnterpriseSeedShapeGate() throws Exception {
         List<MemoryReplayEvaluationService.MemoryReplayCase> cases = loadCases();
+        assertThat(cases)
+                .extracting(MemoryReplayEvaluationService.MemoryReplayCase::userMessage)
+                .anySatisfy(message -> assertThat(message).contains("删除全部笔记"));
         Set<String> ids = new HashSet<>();
         Set<String> userMessages = new HashSet<>();
         Map<String, Integer> categoryCounts = new LinkedHashMap<>();
@@ -212,6 +215,7 @@ class MemoryReplayEvaluationServiceTest {
                 assertThat(categoryCounts.getOrDefault(category, 0))
                         .as(category)
                         .isGreaterThanOrEqualTo(minimum));
+        assertThat(categoryCounts).hasSize(CATEGORY_MINIMUMS.size());
     }
 
     private static Map<String, Integer> categoryMinimums() {
