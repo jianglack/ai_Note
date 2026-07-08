@@ -1787,7 +1787,7 @@
   },
   {
     "id": "replay_en_sensitive_api_key",
-    "userMessage": "remember: my api key is sk-test123",
+    "userMessage": "remember: my api key is fake-api-key-test-123",
     "assistantOutput": "我不能保存密钥。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_SENSITIVE",
@@ -1820,7 +1820,7 @@
   },
   {
     "id": "replay_cn_sensitive_api_key",
-    "userMessage": "记住，我的 API key 是 sk-test123",
+    "userMessage": "记住，我的 API key 是 fake-api-key-test-123",
     "assistantOutput": "我不能保存密钥。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_SENSITIVE",

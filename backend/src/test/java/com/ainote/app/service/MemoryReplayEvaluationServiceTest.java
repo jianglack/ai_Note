@@ -28,6 +28,7 @@ class MemoryReplayEvaluationServiceTest {
     private static final Pattern CASE_ID_PATTERN =
             Pattern.compile("^replay_(cn|en)_[a-z]+(?:_[a-z]+)*_[a-z0-9]+(?:_[a-z0-9]+)*$");
     private static final Pattern CJK_PATTERN = Pattern.compile("\\p{IsHan}");
+    private static final String REPLACEMENT_CHARACTER = "\uFFFD";
     private static final Set<String> VALID_DECISION_TYPES = EnumSet.allOf(MemoryCapturePolicy.DecisionType.class)
             .stream()
             .map(Enum::name)
@@ -164,6 +165,7 @@ class MemoryReplayEvaluationServiceTest {
         Map<String, Integer> categoryCounts = new LinkedHashMap<>();
 
         for (MemoryReplayEvaluationService.MemoryReplayCase replayCase : cases) {
+            assertNoReplacementCharacters(replayCase);
             assertThat(replayCase.id()).as("id").isNotBlank();
             assertThat(replayCase.id()).as(replayCase.id()).matches(CASE_ID_PATTERN);
             assertThat(ids.add(replayCase.id())).as("duplicate id " + replayCase.id()).isTrue();
@@ -250,6 +252,22 @@ class MemoryReplayEvaluationServiceTest {
             }
         }
         return "";
+    }
+
+    private static void assertNoReplacementCharacters(MemoryReplayEvaluationService.MemoryReplayCase replayCase) {
+        assertThat(replayCase.id()).as(replayCase.id() + " id").doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.userMessage()).as(replayCase.id() + " userMessage")
+                .doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.assistantOutput()).as(replayCase.id() + " assistantOutput")
+                .doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.expectedDecisionType()).as(replayCase.id() + " expectedDecisionType")
+                .doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.expectedMemoryType()).as(replayCase.id() + " expectedMemoryType")
+                .doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.expectedPolicyReason()).as(replayCase.id() + " expectedPolicyReason")
+                .doesNotContain(REPLACEMENT_CHARACTER);
+        assertThat(replayCase.expectedSignals()).as(replayCase.id() + " expectedSignals")
+                .allSatisfy(signal -> assertThat(signal).doesNotContain(REPLACEMENT_CHARACTER));
     }
 
     private List<MemoryReplayEvaluationService.MemoryReplayCase> loadCases() throws Exception {
