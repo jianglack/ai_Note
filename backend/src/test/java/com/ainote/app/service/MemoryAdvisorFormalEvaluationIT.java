@@ -26,43 +26,51 @@ class MemoryAdvisorFormalEvaluationIT {
         String modelName = value("DEEPSEEK_MODEL", "deepseek-chat");
         String baseUrl = value("DEEPSEEK_BASE_URL", "https://api.deepseek.com/v1");
 
-        MemoryAdvisorFormalEvaluationService service = new MemoryAdvisorFormalEvaluationService(
-                new MemoryAdvisorProductionQualityService(
-                        new MemoryAdvisorReplayEvaluationService(),
-                        new MemoryReplayEvaluationService(new MemoryCapturePolicy(), new MemoryCandidateExtractor())),
+        MemoryAdvisorProductionQualityService productionQualityService = new MemoryAdvisorProductionQualityService(
+                new MemoryAdvisorReplayEvaluationService(),
+                new MemoryReplayEvaluationService(new MemoryCapturePolicy(), new MemoryCandidateExtractor()));
+        MemoryAdvisorFormalEvaluationService formalEvaluationService = new MemoryAdvisorFormalEvaluationService(
+                productionQualityService,
                 costTrackingService(),
                 new JiTokenCountEstimator(new JiTokenService()),
+                OBJECT_MAPPER);
+        MemoryAdvisorFormalBatchEvaluationService service = new MemoryAdvisorFormalBatchEvaluationService(
+                formalEvaluationService,
+                productionQualityService,
                 OBJECT_MAPPER);
         List<MemoryReplayEvaluationService.MemoryReplayCase> cases =
                 MemoryReplayDatasetLoader.loadActiveDataset().cases();
 
-        MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest request = request(apiKey, modelName);
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request = request(apiKey, modelName);
         MemorySignalAdvisor advisor = hasText(apiKey)
                 ? realAdvisor(apiKey, modelName, baseUrl)
                 : requestPayload -> MemorySignalAdvisor.AdvisorResult.unavailable(
                 List.of("api_key_missing"), "api key missing");
 
-        MemoryAdvisorFormalEvaluationService.FormalEvaluationReport report =
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport report =
                 service.run(cases, advisor, request);
 
         assertThat(report.reportPath()).isNotBlank();
         assertThat(Files.exists(Path.of(report.reportPath()))).isTrue();
-        if (report.status() == MemoryAdvisorFormalEvaluationService.RunStatus.COMPLETED) {
+        if (report.status() == MemoryAdvisorFormalBatchEvaluationService.BatchRunStatus.COMPLETED) {
+            assertThat(Files.exists(Path.of(report.progressPath()))).isTrue();
+            assertThat(report.evaluatedCases()).isEqualTo(report.selectedCases());
             assertThat(report.readinessReport()).isNotNull();
             assertThat(report.readinessReport().run().modelName()).isEqualTo(modelName);
             assertThat(report.readinessReport().run().promptVersion())
                     .isEqualTo(LlmMemorySignalAdvisor.PROMPT_VERSION);
         } else {
-            assertThat(report.blockReasons()).isNotEmpty();
+            assertThat(report.preflightReport().blockReasons()).isNotEmpty();
             assertThat(report.readinessReport()).isNull();
         }
     }
 
-    private MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest request(
+    private MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request(
             String apiKey,
             String modelName) {
-        return new MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest(
-                value("MEMORY_ADVISOR_FORMAL_EVAL_RUN_ID", "memory-advisor-formal-eval"),
+        MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest formalRequest =
+                new MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest(
+                        value("MEMORY_ADVISOR_FORMAL_EVAL_RUN_ID", "memory-advisor-formal-eval"),
                 enabled(),
                 hasText(apiKey),
                 modelName,
@@ -71,11 +79,20 @@ class MemoryAdvisorFormalEvaluationIT {
                 intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES", 4000),
                 intValue("MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES", 4000),
                 intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_INPUT_TOKENS", 2_000_000),
-                intValue("MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE", 96),
+                intValue("MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE", 256),
                 doubleValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_COST_YUAN", 20.0),
                 booleanValue("MEMORY_ADVISOR_FORMAL_EVAL_REQUIRE_KNOWN_PRICE", true),
                 value("MEMORY_ADVISOR_FORMAL_EVAL_REPORT_DIR", "target/memory-advisor-formal-eval"),
                 thresholds());
+        return new MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest(
+                formalRequest,
+                intValue("MEMORY_ADVISOR_FORMAL_EVAL_BATCH_SIZE", 25),
+                longValue("MEMORY_ADVISOR_FORMAL_EVAL_PER_CASE_TIMEOUT_MILLIS", 180_000L),
+                booleanValue("MEMORY_ADVISOR_FORMAL_EVAL_RESUME", true),
+                value("MEMORY_ADVISOR_FORMAL_EVAL_PROGRESS_PATH",
+                        Path.of(formalRequest.reportDirectory(), formalRequest.runId() + ".progress.jsonl").toString()),
+                value("MEMORY_ADVISOR_FORMAL_EVAL_BATCH_REPORT_PATH",
+                        Path.of(formalRequest.reportDirectory(), formalRequest.runId() + ".batch.json").toString()));
     }
 
     private MemoryAdvisorProductionQualityService.AdvisorQualityThresholds thresholds() {
@@ -107,7 +124,7 @@ class MemoryAdvisorFormalEvaluationIT {
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(0.2)
-                .maxTokens(256)
+                .maxTokens(intValue("MEMORY_ADVISOR_FORMAL_EVAL_MODEL_MAX_TOKENS", 256))
                 .timeout(Duration.ofSeconds(120))
                 .logRequests(false)
                 .logResponses(false)

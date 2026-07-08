@@ -36,28 +36,27 @@ public class MemoryAdvisorFormalEvaluationService {
     public FormalEvaluationReport run(List<MemoryReplayEvaluationService.MemoryReplayCase> cases,
                                       MemorySignalAdvisor advisor,
                                       FormalEvaluationRequest request) {
+        FormalEvaluationReport preflightReport = preflight(cases, request, false);
         FormalEvaluationRequest safeRequest = request == null ? FormalEvaluationRequest.defaults() : request;
-        List<MemoryReplayEvaluationService.MemoryReplayCase> replayCases = cases == null ? List.of() : cases;
-        List<MemoryReplayEvaluationService.MemoryReplayCase> selectedCases = selectCases(replayCases, safeRequest.maxCases());
-        FormalEvaluationBudget budget = estimateBudget(selectedCases, safeRequest);
-        List<String> blockReasons = blockReasons(selectedCases, safeRequest, budget);
-        Path reportPath = reportPath(safeRequest);
+        Path reportPath = Path.of(preflightReport.reportPath());
 
-        if (!blockReasons.isEmpty()) {
+        if (preflightReport.status() == RunStatus.BLOCKED) {
             FormalEvaluationReport report = new FormalEvaluationReport(
                     RunStatus.BLOCKED,
                     safeRequest.runId(),
                     safeRequest.modelName(),
                     safeRequest.promptVersion(),
                     safeRequest.datasetVersion(),
-                    budget,
-                    blockReasons,
+                    preflightReport.budget(),
+                    preflightReport.blockReasons(),
                     null,
                     reportPath.toString());
             writeReport(reportPath, report);
             return report;
         }
 
+        List<MemoryReplayEvaluationService.MemoryReplayCase> replayCases = cases == null ? List.of() : cases;
+        List<MemoryReplayEvaluationService.MemoryReplayCase> selectedCases = selectCases(replayCases, safeRequest.maxCases());
         MemoryAdvisorProductionQualityService.AdvisorReadinessReport readinessReport =
                 productionQualityService.evaluate(
                         selectedCases,
@@ -75,11 +74,41 @@ public class MemoryAdvisorFormalEvaluationService {
                 safeRequest.modelName(),
                 safeRequest.promptVersion(),
                 safeRequest.datasetVersion(),
-                budget,
+                preflightReport.budget(),
                 List.of(),
                 readinessReport,
                 reportPath.toString());
         writeReport(reportPath, report);
+        return report;
+    }
+
+    public FormalEvaluationReport preflight(List<MemoryReplayEvaluationService.MemoryReplayCase> cases,
+                                            FormalEvaluationRequest request) {
+        return preflight(cases, request, true);
+    }
+
+    private FormalEvaluationReport preflight(List<MemoryReplayEvaluationService.MemoryReplayCase> cases,
+                                             FormalEvaluationRequest request,
+                                             boolean writeReport) {
+        FormalEvaluationRequest safeRequest = request == null ? FormalEvaluationRequest.defaults() : request;
+        List<MemoryReplayEvaluationService.MemoryReplayCase> replayCases = cases == null ? List.of() : cases;
+        List<MemoryReplayEvaluationService.MemoryReplayCase> selectedCases = selectCases(replayCases, safeRequest.maxCases());
+        FormalEvaluationBudget budget = estimateBudget(selectedCases, safeRequest);
+        List<String> blockReasons = blockReasons(selectedCases, safeRequest, budget);
+        Path reportPath = reportPath(safeRequest);
+        FormalEvaluationReport report = new FormalEvaluationReport(
+                blockReasons.isEmpty() ? RunStatus.READY : RunStatus.BLOCKED,
+                safeRequest.runId(),
+                safeRequest.modelName(),
+                safeRequest.promptVersion(),
+                safeRequest.datasetVersion(),
+                budget,
+                blockReasons,
+                null,
+                reportPath.toString());
+        if (writeReport) {
+            writeReport(reportPath, report);
+        }
         return report;
     }
 
@@ -194,6 +223,7 @@ public class MemoryAdvisorFormalEvaluationService {
     }
 
     public enum RunStatus {
+        READY,
         BLOCKED,
         COMPLETED
     }

@@ -18,8 +18,14 @@
 #   MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES            - Defaults to 4000
 #   MEMORY_ADVISOR_FORMAL_EVAL_MAX_COST_YUAN        - Defaults to 20.0
 #   MEMORY_ADVISOR_FORMAL_EVAL_MAX_INPUT_TOKENS     - Defaults to 2000000
-#   MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE - Defaults to 96
+#   MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE - Defaults to 256
 #   MEMORY_ADVISOR_FORMAL_EVAL_REPORT_DIR           - Defaults to target/memory-advisor-formal-eval
+#   MEMORY_ADVISOR_FORMAL_EVAL_BATCH_SIZE           - Defaults to 25
+#   MEMORY_ADVISOR_FORMAL_EVAL_PER_CASE_TIMEOUT_MILLIS - Defaults to 180000
+#   MEMORY_ADVISOR_FORMAL_EVAL_RESUME               - Defaults to true
+#   MEMORY_ADVISOR_FORMAL_EVAL_PROGRESS_PATH        - Defaults to <report-dir>/<run-id>.progress.jsonl
+#   MEMORY_ADVISOR_FORMAL_EVAL_BATCH_REPORT_PATH    - Defaults to <report-dir>/<run-id>.batch.json
+#   MEMORY_ADVISOR_FORMAL_EVAL_MODEL_MAX_TOKENS     - Defaults to 256
 
 app:
   deepseek:
