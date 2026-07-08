@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import com.ainote.app.config.MemoryProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
@@ -101,6 +102,12 @@ class LlmMemorySignalAdvisorTest {
                 .map(message -> ((UserMessage) message).singleText())
                 .findFirst()
                 .orElse("");
+        String systemPrompt = requestCaptor.getValue().messages().stream()
+                .filter(SystemMessage.class::isInstance)
+                .map(message -> ((SystemMessage) message).text())
+                .findFirst()
+                .orElse("");
+        assertThat(systemPrompt).contains(LlmMemorySignalAdvisor.PROMPT_VERSION);
         assertThat(prompt)
                 .contains("reference_only")
                 .contains("selected note")

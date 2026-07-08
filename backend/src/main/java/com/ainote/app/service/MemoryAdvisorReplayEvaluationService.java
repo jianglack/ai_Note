@@ -38,6 +38,7 @@ public class MemoryAdvisorReplayEvaluationService {
                                 && hasText(result.expectedMemoryType())
                                 && result.memoryTypeMatches()),
                         memoryTypeCount),
+                percentile95(results),
                 List.copyOf(failures),
                 List.copyOf(results));
     }
@@ -48,7 +49,9 @@ public class MemoryAdvisorReplayEvaluationService {
                 "user-1",
                 replayCase.userMessage(),
                 replayCase.assistantOutput());
+        long startedAt = System.nanoTime();
         MemorySignalAdvisor.AdvisorResult advisorResult = advisor.advise(request);
+        long latencyMillis = Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
         boolean available = advisorResult != null && advisorResult.available();
         boolean actualShouldCapture = available && advisorResult.shouldCapture();
         String actualMemoryType = advisorResult == null ? "none" : advisorResult.memoryType();
@@ -81,7 +84,8 @@ public class MemoryAdvisorReplayEvaluationService {
                 actualMemoryType,
                 available,
                 captureDecisionMatches,
-                memoryTypeMatches);
+                memoryTypeMatches,
+                latencyMillis);
     }
 
     private static boolean hasText(String value) {
@@ -102,6 +106,18 @@ public class MemoryAdvisorReplayEvaluationService {
         return denominator == 0 ? 1.0 : (double) numerator / denominator;
     }
 
+    private static long percentile95(List<AdvisorCaseResult> results) {
+        if (results.isEmpty()) {
+            return 0L;
+        }
+        List<Long> sorted = results.stream()
+                .map(AdvisorCaseResult::latencyMillis)
+                .sorted()
+                .toList();
+        int index = (int) Math.ceil(sorted.size() * 0.95) - 1;
+        return sorted.get(Math.max(0, Math.min(index, sorted.size() - 1)));
+    }
+
     @FunctionalInterface
     private interface ResultPredicate {
         boolean test(AdvisorCaseResult result);
@@ -115,6 +131,7 @@ public class MemoryAdvisorReplayEvaluationService {
                                           double falsePositiveRate,
                                           double falseNegativeRate,
                                           double memoryTypeAccuracy,
+                                          long p95LatencyMillis,
                                           List<AdvisorCaseResult> failures,
                                           List<AdvisorCaseResult> results) {
         public AdvisorEvaluationReport {
@@ -132,7 +149,8 @@ public class MemoryAdvisorReplayEvaluationService {
                                     String actualMemoryType,
                                     boolean available,
                                     boolean captureDecisionMatches,
-                                    boolean memoryTypeMatches) {
+                                    boolean memoryTypeMatches,
+                                    long latencyMillis) {
         public AdvisorCaseResult {
             messages = messages == null ? List.of() : List.copyOf(messages);
             expectedMemoryType = expectedMemoryType == null ? "" : expectedMemoryType;

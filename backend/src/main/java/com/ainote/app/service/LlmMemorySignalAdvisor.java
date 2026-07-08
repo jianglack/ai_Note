@@ -20,6 +20,8 @@ import java.util.Set;
 @Service
 public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
 
+    static final String PROMPT_VERSION = "memory-advisor-v1";
+
     private static final Logger log = LoggerFactory.getLogger(LlmMemorySignalAdvisor.class);
     private static final Set<String> ALLOWED_SIGNALS = Set.of(
             "advisor_preference_signal",
@@ -116,7 +118,8 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
     }
 
     private String systemPrompt() {
-        return "You classify whether a user turn contains stable long-term memory signals. "
+        return "Memory advisor prompt version: " + PROMPT_VERSION + ". "
+                + "You classify whether a user turn contains stable long-term memory signals. "
                 + "Return strict JSON only.";
     }
 

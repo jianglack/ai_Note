@@ -39,6 +39,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
         assertThat(report.falsePositiveRate()).isEqualTo(0.0);
         assertThat(report.falseNegativeRate()).isEqualTo(0.0);
         assertThat(report.memoryTypeAccuracy()).isEqualTo(1.0);
+        assertThat(report.p95LatencyMillis()).isGreaterThanOrEqualTo(0L);
         assertThat(report.failures()).isEmpty();
     }
 
