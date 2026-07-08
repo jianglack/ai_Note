@@ -54,6 +54,7 @@ In scope:
 - Formal report validation that rejects stale prompt versions.
 - Prompt version registry with prompt hash and compatibility checks.
 - Threshold calibration report derived from evaluation results.
+- Raw advisor evaluation capture for formal runs, so calibration can see the model decision before runtime confidence gating.
 - Advisor failure-rate and retry observability metrics in the persisted report.
 - Advisor-versus-rule A/B comparison with baseline deltas.
 - Pre-release gate artifact that can be run locally or in CI.
@@ -75,6 +76,10 @@ Add a closed-loop layer above the existing formal and production quality service
   - Owns prompt-version metadata.
   - Provides current prompt version, prompt hash, schema version, model-family compatibility, and status.
   - Rejects unknown or stale prompt versions in release-readiness validation.
+- `MemoryAdvisorRawResult`
+  - Represents the model response before runtime confidence gating.
+  - Contains `rawShouldCapture`, `rawMemoryType`, `rawConfidence`, `rawSignals`, `rawReason`, parse status, and the final gated `AdvisorResult`.
+  - Is used only by formal evaluation and calibration. Normal runtime advisor behavior remains threshold-gated and disabled by default.
 - `MemoryAdvisorCalibrationService`
   - Consumes advisor evaluation results.
   - Computes candidate thresholds, current-threshold metrics, recommended threshold, and rejected alternatives.
@@ -83,7 +88,7 @@ Add a closed-loop layer above the existing formal and production quality service
   - Compares advisor decisions against the rule baseline case by case.
   - Emits summary metrics and categorized deltas: advisor-only allow, rule-only allow, both allow, both deny, advisor regression, advisor improvement.
 - `MemoryAdvisorReleaseGateService`
-  - Consumes a formal batch report or readiness report.
+  - Consumes a complete `MemoryAdvisorReleaseReadinessPackage`.
   - Validates prompt metadata, dataset size, production gates, calibration presence, A/B comparison presence, failure-rate metrics, and report freshness.
   - Emits a release decision: `PASS` or `BLOCKED`, with concrete block reasons.
 - Existing formal batch evaluation path
@@ -96,7 +101,7 @@ This keeps evaluation, calibration, comparison, and release gating separate. Eac
 
 1. Load active replay dataset.
 2. Run preflight budget checks.
-3. Run real advisor batch evaluation or reuse completed progress.
+3. Run real advisor batch evaluation or reuse completed progress, recording raw model output and final threshold-gated advisor output.
 4. Build advisor readiness metrics through `MemoryAdvisorProductionQualityService`.
 5. Load prompt metadata for `LlmMemorySignalAdvisor.PROMPT_VERSION`.
 6. Build threshold calibration from per-case advisor results.
@@ -123,9 +128,27 @@ The current prompt version is `memory-advisor-v2`. A formal report whose prompt 
 
 Prompt version approval does not mean production enablement. It only means this prompt is eligible for formal evaluation and release-gate review.
 
+The prompt hash must be computed from a canonical prompt template, not from an incidental runtime string. The canonical template includes:
+
+- the system prompt text;
+- the user prompt template with placeholders, not a specific user message;
+- the strict JSON schema;
+- allowed memory types;
+- allowed advisor signals;
+- prompt safety rules.
+
+The canonical template uses normalized line endings (`\n`) and trims trailing whitespace before hashing. The hash algorithm is SHA-256, encoded as lowercase hexadecimal. Any change to prompt wording, schema, allowed signals, or allowed memory types requires a new prompt hash and usually a new prompt version.
+
 ## Threshold Calibration
 
 Calibration must be reported, not silently applied.
+
+Calibration requires raw model outputs. It cannot be computed from the existing final `AdvisorResult` alone because runtime gating currently turns low-confidence captures into `noCapture` inside `LlmMemorySignalAdvisor`. Formal evaluation must therefore persist both:
+
+- raw model decision: `rawShouldCapture`, `rawMemoryType`, `rawConfidence`, `rawSignals`, `rawReason`;
+- final runtime decision after current `MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE` gating.
+
+Candidate thresholds are applied to the raw model decision during calibration. Runtime behavior is not changed by calibration.
 
 The calibration report includes:
 
@@ -179,6 +202,18 @@ The release gate blocks if advisor decision accuracy regresses beyond the config
 
 ## Release Gate
 
+The release gate accepts only a complete `MemoryAdvisorReleaseReadinessPackage`, not a bare readiness report. A package includes:
+
+- formal batch report metadata;
+- production readiness report;
+- prompt metadata;
+- calibration report;
+- A/B comparison report;
+- advisor failure-rate metrics;
+- release gate decision.
+
+If the release gate is called with only a `MemoryAdvisorProductionQualityService.AdvisorReadinessReport`, it must return `BLOCKED` with `missing_release_readiness_package` or equivalent block reasons for missing calibration, A/B comparison, prompt metadata, and failure metrics.
+
 The release gate returns:
 
 - `status`: `PASS` or `BLOCKED`;
@@ -230,6 +265,8 @@ mvn "-Dtest=MemoryAdvisorFormalEvaluationIT" test
 
 The report must record `promptVersion=memory-advisor-v2`. A report with `memory-advisor-v1` is retained as historical evidence but cannot satisfy task 2.
 
+When API configuration is available, task 2 must run a real v2 model-backed batch evaluation and persist the release-readiness package. If API configuration is unavailable, the implementation can still be completed and verified with deterministic tests, but advisor tuning cannot be claimed complete. In that case the final task report must explicitly state: closed-loop implementation complete; real-model tuning pending API-backed run.
+
 ## Testing Strategy
 
 Tests must cover:
@@ -240,6 +277,9 @@ Tests must cover:
 - missing calibration blocks release readiness;
 - missing A/B comparison blocks release readiness;
 - a report with failed production quality gates blocks release readiness;
+- bare readiness report without full release package blocks release readiness;
+- calibration uses raw model confidence rather than final threshold-gated advisor decisions;
+- prompt hash changes when canonical prompt text, allowed memory types, allowed signals, or schema changes;
 - oracle advisor with calibration and A/B data can pass the release gate;
 - threshold calibration chooses a deployable threshold when one exists;
 - threshold calibration reports no deployable threshold when sensitive false-allow cannot be eliminated;
@@ -255,9 +295,10 @@ Task 2 is complete only when all of these are true:
 1. The v2 closed-loop design and implementation plan are committed.
 2. The implementation is committed.
 3. Local tests prove the production closed-loop behavior.
-4. A v2 formal evaluation can be launched with explicit budget and API configuration.
+4. The v2 formal evaluation entry point is implemented and tested with explicit budget and API configuration.
 5. The persisted report contains prompt metadata, calibration, A/B comparison, failure metrics, production quality gates, and release gate decision.
 6. Stale v1 reports cannot pass the release gate.
 7. Advisor remains disabled by default in normal runtime configuration.
+8. If API credentials are available, a real-model v2 batch evaluation has been run and its release-readiness package has been reviewed.
 
 If the real-model v2 run fails quality gates, task 2 can still complete as an implemented production-quality loop only if the failure is captured in the release gate as `BLOCKED` with concrete calibration and A/B evidence. In that case, the advisor is not production-ready, but the closed-loop mechanism is complete and ready for prompt/model tuning.
