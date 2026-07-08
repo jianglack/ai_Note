@@ -32,6 +32,9 @@ public class MemoryCandidateExtractor {
 
         boolean correction = isCorrection(userMessage);
         String memoryType = inferMemoryType(userMessage, content);
+        if ("implicit_interaction_style".equals(decision.reason())) {
+            memoryType = "style";
+        }
         if (correction && "fact".equals(memoryType)) {
             memoryType = "preference";
         }

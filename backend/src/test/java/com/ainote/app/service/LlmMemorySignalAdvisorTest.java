@@ -59,6 +59,22 @@ class LlmMemorySignalAdvisorTest {
     }
 
     @Test
+    void parsesHighConfidenceFactAdvice() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"fact","confidence":0.91,
+                 "signals":["advisor_fact_signal"],"reason":"stable user fact"}
+                """));
+
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(request("Remember that my timezone is UTC+8."));
+
+        assertThat(result.available()).isTrue();
+        assertThat(result.shouldCapture()).isTrue();
+        assertThat(result.memoryType()).isEqualTo("fact");
+        assertThat(result.signals()).containsExactly("advisor_fact_signal");
+    }
+
+    @Test
     void lowConfidenceAdviceIsNotCapturable() {
         memoryProperties.getCapture().getAdvisor().setEnabled(true);
         when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
@@ -112,7 +128,9 @@ class LlmMemorySignalAdvisorTest {
                 .contains("reference_only")
                 .contains("selected note")
                 .contains("RAG")
-                .contains("one-off");
+                .contains("one-off")
+                .contains("Do not capture incidental uses of remember")
+                .contains("\"memory_type\": \"fact\"|\"preference\"|\"style\"|\"project_context\"|\"none\"");
     }
 
     private MemoryCapturePolicy.CaptureRequest request(String userMessage) {

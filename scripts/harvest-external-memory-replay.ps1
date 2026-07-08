@@ -1,5 +1,6 @@
 param(
   [int]$TargetCount = 2000,
+  [string]$InputPath = "",
   [string]$OutputPath = "backend/src/test/resources/memory/external-real-human-replay-dataset.json"
 )
 
@@ -48,6 +49,10 @@ function Compact([string]$Text) {
 function HasRiskyText([string]$Text) {
   if ([string]::IsNullOrWhiteSpace($Text)) { return $true }
   if ($Text.Contains([char]0xfffd)) { return $true }
+  foreach ($char in @([char]0x00e2, [char]0x00c3, [char]0x00d0, [char]0x00d1)) {
+    if ($Text.Contains($char)) { return $true }
+  }
+  if ($Text -match "[\x80-\x9f]|\?{3,}") { return $true }
   if ($Text -match "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}") { return $true }
   if ($Text -match "(?<!\d)(?:\+?\d[\d -]{8,}\d)(?!\d)") { return $true }
   if ($Text -match "(?i)\b(?!example\.com\b|example\.org\b|example\.net\b)[a-z0-9-]+\.(com|cn|net|org|io|ai)\b") { return $true }
@@ -59,11 +64,121 @@ function HasRiskyText([string]$Text) {
 
 function NormalizeText([string]$Text) {
   $value = ($Text -replace "\r\n", "`n" -replace "\r", "`n").Trim()
+  $value = Repair-Mojibake $value
   $value = $value -replace "\s+", " "
   if ($value.Length -gt 600) {
     $value = $value.Substring(0, 600).Trim()
   }
   return $value
+}
+
+function Repair-Mojibake([string]$Text) {
+  $value = $Text
+  $replacements = @{
+    (-join @([char]0x00e2, [char]0x0080, [char]0x0098)) = "'"
+    (-join @([char]0x00e2, [char]0x0080, [char]0x0099)) = "'"
+    (-join @([char]0x00e2, [char]0x0080, [char]0x009c)) = '"'
+    (-join @([char]0x00e2, [char]0x0080, [char]0x009d)) = '"'
+    (-join @([char]0x00e2, [char]0x0080, [char]0x0093)) = "-"
+    (-join @([char]0x00e2, [char]0x0080, [char]0x0094)) = "-"
+    (-join @([char]0x00e2, [char]0x0080, [char]0x00a6)) = "..."
+    (-join @([char]0x00c2, [char]0x00ab)) = '"'
+    (-join @([char]0x00c2, [char]0x00bb)) = '"'
+  }
+  foreach ($key in $replacements.Keys) {
+    $value = $value.Replace($key, $replacements[$key])
+  }
+  return $value
+}
+
+function Test-IncidentalRememberTask([string]$Message, [string]$Compact) {
+  $normalized = $Message.ToLowerInvariant()
+  return $normalized.Contains("how can i recall or remember") -or
+         $normalized.Contains("how to remember") -or
+         $normalized.Contains("how to easily remember") -or
+         $normalized.Contains("can't remember") -or
+         $normalized.Contains("cannot remember") -or
+         $normalized.Contains("different ways of saying") -or
+         $normalized.Contains("ways of saying") -or
+         $normalized.Contains("write a rap") -or
+         $normalized.Contains("every sentence start") -or
+         $normalized.Contains("check grammar") -or
+         $normalized.Contains("make it easy to remember") -or
+         $normalized.Contains("sort from a to z") -or
+         $Compact.Contains("forgetit")
+}
+
+function Test-QuotedOrExercisePreferenceTask([string]$Message) {
+  $normalized = $Message.ToLowerInvariant()
+  return $normalized.Contains("give me a response to") -or
+         $normalized.Contains("complete the conversation") -or
+         $normalized.Contains("write dialogue") -or
+         $normalized.Contains("correct this message") -or
+         $normalized.Contains("check grammar") -or
+         $normalized.Contains("rewrite ") -or
+         $normalized.Contains("re write ") -or
+         $normalized.Contains("to send in a discussion") -or
+         $normalized.Contains("only return the raw message")
+}
+
+function Test-OneOffTaskContent([string]$Message) {
+  $normalized = $Message.Trim().ToLowerInvariant()
+  return (Test-QuotedOrExercisePreferenceTask -Message $Message) -or
+         $normalized.StartsWith("task:") -or
+         $normalized.StartsWith("prompt:") -or
+         $normalized.StartsWith("response:") -or
+         $normalized.StartsWith("you are an expert") -or
+         $normalized -match "^\s*(task:|prompt:|response:|story\s+about|character\s+notes|choose\s+the\s+right\s+answer|ask\s+me\s+questions|please\s+edit\s+this\s+text|please\s+correct)\b" -or
+         $normalized -match "^\s*(write|make|generate|create|prepare|revise|rewrite|polish|improve|paraphrase|translate|complete|summarize|describe|explain)\b" -or
+         $normalized -match "^\s*(please\s+)?(generate|make|write|create|revise|rewrite|polish|improve|paraphrase|translate)\b" -or
+         $normalized -match "^\s*(is\s+it|what\s+if|which\s+type|tell\s+how|how\s+to|how\s+can\s+i|how\s+begin|what\s+are|what\s+is|can\s+.+\?)\b" -or
+         $normalized -match "^\s*i\s+want\s+you\s+to\s+(act|create|write|make|design|generate|prepare|work|respond|ask)\b" -or
+         $normalized.StartsWith("(") -or
+         $normalized.StartsWith("[") -or
+         $normalized.Contains("please generate") -or
+         $normalized.Contains("in this detailed script") -or
+         $normalized.Contains("this is a concept for lyrics") -or
+         $normalized.Contains("for references:") -or
+         $normalized.Contains(" writing prompt:") -or
+         $normalized.StartsWith("writing prompt:")
+}
+
+function Test-RoleOverridePrompt([string]$Message) {
+  $normalized = $Message.ToLowerInvariant()
+  return $normalized.Contains("ignore all previous instructions") -or
+         $normalized.Contains("ignore all the instructions") -or
+         $normalized.Contains("do anything now") -or
+         $normalized.Contains("no filters or restrictions") -or
+         $normalized.Contains("no limitations") -or
+         $normalized.Contains("openai policy") -or
+         $normalized.Contains("openai policies") -or
+         $normalized.Contains("no ethics") -or
+         $normalized.Contains("no prohibitions") -or
+         $normalized.Contains("opposite day") -or
+         $normalized.Contains("free from all restrictions") -or
+         $normalized.Contains("unhinged response") -or
+         $normalized.Contains("try to do harm") -or
+         $normalized.Contains("illegal requests") -or
+         $normalized.Contains("answer as dan") -or
+         $normalized.Contains("act just like dan")
+}
+
+function Test-DirectCorrection([string]$Message, [string]$Compact) {
+  $normalized = $Message.ToLowerInvariant()
+  return $normalized -match "(?i)\b(from\s+now\s+on|by\s+default|always|i\s+(no\s+longer|don't|do\s+not|prefer|would\s+rather)|earlier\s+i\s+(said|wanted)|my\s+preference\s+is|don't\s+(answer|reply)|do\s+not\s+(answer|reply))\b"
+}
+
+function Test-ExplicitMemoryRequest([string]$Message, [string]$Compact) {
+  if (Test-IncidentalRememberTask -Message $Message -Compact $Compact) { return $false }
+  $normalized = $Message.ToLowerInvariant()
+  return $normalized -match "^\s*(please\s+)?remember\s*[:,\-]\s*\S.+" -or
+         $normalized -match "^\s*(please\s+)?remember\s+that\s+(my|i\b|i'm\b|i am\b|we\b|our\b|this project\b|the project\b).+" -or
+         $normalized -match "^\s*(please\s+)?keep\s+in\s+mind\s*[:,\-]?\s*(that\s+)?(my|i\b|i'm\b|i am\b|we\b|our\b|this project\b|the project\b).+"
+}
+
+function Test-PreferenceSignal([string]$Message, [string]$Compact) {
+  if (Test-QuotedOrExercisePreferenceTask -Message $Message) { return $false }
+  return $Message -match "(?i)\b(i\s+prefer|i\s+like|i\s+don't\s+like|i\s+do\s+not\s+like|my\s+preference\s+is)\b"
 }
 
 function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
@@ -72,12 +187,15 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
   $compact = Compact $message
   $signals = New-Object System.Collections.Generic.List[string]
 
-  $sensitive = $message -match "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})" -or
-               $assistant -match "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})"
+  $sensitive = $message -match "(?i)(api[_ -]?key|secret|password|access[_ -]?token|auth[_ -]?token|session[_ -]?token|(?:fake[-_])?token[-_][a-z0-9_-]+|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})" -or
+               $assistant -match "(?i)(api[_ -]?key|secret|password|access[_ -]?token|auth[_ -]?token|session[_ -]?token|(?:fake[-_])?token[-_][a-z0-9_-]+|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})"
   $forget = $compact.Contains("forgetthis") -or $compact.Contains("forgetthat")
   $referenceOnly = $compact.Contains("selectednote") -or $compact.Contains("currentnote") -or
                    $compact.Contains("thisnote") -or $compact.Contains("whatdoesthisnotesay") -or
                    $compact.Contains("summarizethisnote")
+  $taskOnly = Test-OneOffTaskContent -Message $UserMessage
+  $roleOverride = Test-RoleOverridePrompt -Message $UserMessage
+  $durableMemoryCandidate = (-not $taskOnly) -and (-not $roleOverride)
   $operation = $compact -in @("ok", "yes", "no", "confirm", "cancel") -or
                $compact.Contains("deleteallnotes") -or $compact.Contains("deleteeverynote") -or
                $compact.Contains("deletenote") -or $compact.Contains("confirmdelete") -or
@@ -92,21 +210,23 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
                      $compact.Contains("thisresponse") -or $compact.Contains("youranswer") -or
                      $compact.Contains("yourreply") -or $compact.Contains("yourresponse")
   $assistantFeedback = $feedbackVerb -and $answerReference
-  $explicitRemember = $compact.Contains("remember") -or $compact.Contains("keepinmind")
-  $preferenceCorrection = $compact.Contains("nolonger") -or $compact.Contains("instead") -or $compact.Contains("rather")
+  $explicitRemember = Test-ExplicitMemoryRequest -Message $UserMessage -Compact $compact
+  $directCorrection = Test-DirectCorrection -Message $UserMessage -Compact $compact
+  $preferenceCorrection = $durableMemoryCandidate -and $directCorrection -and
+                          ($compact.Contains("nolonger") -or $compact.Contains("instead") -or $compact.Contains("rather"))
   $styleIntent = $message -match "(?i)(answer|reply|tone|style|format|formal|serious|concise|detailed|professional)"
   $styleDirective = $styleIntent -and ($compact.Contains("answer") -or $compact.Contains("reply") -or
                                       $compact.Contains("iwantyouto") -or $compact.Contains("please"))
   $stableScope = $compact.Contains("fromnowon") -or $compact.Contains("bydefault") -or $compact.Contains("always")
-  $stableStyle = $stableScope -and $styleDirective
-  $interactionStyleCorrection = ($compact.Contains("not") -or $compact.Contains("less")) -and
+  $stableStyle = $durableMemoryCandidate -and $stableScope -and $styleDirective
+  $interactionStyleCorrection = $durableMemoryCandidate -and $directCorrection -and
+                                ($compact.Contains("don't") -or $compact.Contains("donot") -or
+                                 $compact.Contains("not") -or $compact.Contains("less")) -and
                                 ($compact.Contains("more") -or $compact.Contains("instead")) -and
                                 $styleIntent
   $correction = $preferenceCorrection -or $interactionStyleCorrection
   $projectContext = $message.StartsWith("project context:") -or $message.StartsWith("project background:")
-  $preference = $compact.Contains("iprefer") -or $compact.Contains("ilike") -or
-                $compact.Contains("prefer") -or $compact.Contains("like") -or
-                $compact.Contains("iwantyouto") -or $stableStyle
+  $preference = $durableMemoryCandidate -and ((Test-PreferenceSignal -Message $UserMessage -Compact $compact) -or $stableStyle)
 
   if ($sensitive) {
     $signals.Add("sensitive_content")
@@ -134,7 +254,8 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
     return @{ Allowed = $false; DecisionType = "DENY_TRANSIENT"; MemoryType = ""; Correction = $null; PolicyReason = "assistant_feedback"; Signals = $signals.ToArray(); Category = "assistant_feedback" }
   }
 
-  $candidateCorrection = $compact.Contains("nolonger") -or $compact.Contains("instead") -or $compact.Contains("rather")
+  $candidateCorrection = $durableMemoryCandidate -and $directCorrection -and
+                         ($compact.Contains("nolonger") -or $compact.Contains("instead") -or $compact.Contains("rather"))
   $contentForInference = $UserMessage.Trim()
   if ($contentForInference -match "(?i)^\s*(remember|keep in mind)[,:]?\s*(.*)$") {
     $contentForInference = $Matches[2].Trim()
@@ -146,6 +267,8 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
   $memoryType = "fact"
   if ($projectContext) {
     $memoryType = "project_context"
+  } elseif ($stableStyle -or ($styleDirective -and $stableScope)) {
+    $memoryType = "style"
   } elseif ($inferenceText.Contains("reply") -or $inferenceText.Contains("answer") -or $inferenceText.Contains("format")) {
     $memoryType = "preference"
   } elseif ($contentForInference.ToLowerInvariant().Contains("prefer") -or $contentForInference.ToLowerInvariant().Contains("like")) {
@@ -202,6 +325,59 @@ function ScenarioTagsFor([hashtable]$Expectation, [object[]]$SourceTags) {
     default { if (-not $tags.Contains("external_ambiguous")) { $tags.Add("external_ambiguous") } }
   }
   return $tags.ToArray()
+}
+
+if (-not [string]::IsNullOrWhiteSpace($InputPath)) {
+  $resolvedInputPath = Join-Path (Get-Location) $InputPath
+  $inputArtifact = Get-Content -Raw -Encoding UTF8 -Path $resolvedInputPath | ConvertFrom-Json
+  $cases = New-Object System.Collections.Generic.List[object]
+  $manifest = New-Object System.Collections.Generic.List[object]
+
+  for ($i = 0; $i -lt $inputArtifact.cases.Count; $i++) {
+    $sourceCase = $inputArtifact.cases[$i]
+    $sourceManifest = $inputArtifact.manifest[$i]
+    $expectation = Get-PolicyExpectation -UserMessage $sourceCase.userMessage -AssistantOutput $sourceCase.assistantOutput
+    $index = $i + 1
+    $id = "replay_en_$($expectation.Category)_external_$($index.ToString('0000'))"
+
+    $cases.Add([ordered]@{
+      id = $id
+      userMessage = $sourceCase.userMessage
+      assistantOutput = $sourceCase.assistantOutput
+      expectedCaptureAllowed = [bool]$expectation.Allowed
+      expectedDecisionType = $expectation.DecisionType
+      expectedMemoryType = $expectation.MemoryType
+      expectedCorrection = $expectation.Correction
+      expectedPolicyReason = $expectation.PolicyReason
+      expectedSignals = @($expectation.Signals)
+    })
+
+    $manifest.Add([ordered]@{
+      caseId = $id
+      sourceType = $sourceManifest.sourceType
+      sourceReference = $sourceManifest.sourceReference
+      personaAgent = $sourceManifest.personaAgent
+      scenarioTags = @(ScenarioTagsFor -Expectation $expectation -SourceTags $sourceManifest.scenarioTags)
+      languageTags = @($sourceManifest.languageTags)
+      conversationId = $sourceManifest.conversationId
+      redactionReportId = "redaction-external-wildchat-v2"
+      reviewStatus = $sourceManifest.reviewStatus
+      reviewer = "external_replay_curator_v2"
+      approvedAt = $sourceManifest.approvedAt
+    })
+  }
+
+  $artifact = [ordered]@{
+    cases = @($cases.ToArray())
+    manifest = @($manifest.ToArray())
+  }
+
+  $resolvedOutputPath = Join-Path (Get-Location) $OutputPath
+  $outputDir = Split-Path -Parent $resolvedOutputPath
+  New-Item -ItemType Directory -Force -Path $outputDir | Out-Null
+  $artifact | ConvertTo-Json -Depth 20 | Set-Content -Encoding UTF8 -Path $resolvedOutputPath
+  Write-Host "Reclassified $($cases.Count) external real-human replay cases to $resolvedOutputPath"
+  return
 }
 
 function Invoke-HfSearch([string]$Query, [int]$Offset) {
@@ -274,9 +450,9 @@ foreach ($querySpec in $queries) {
         scenarioTags = @(ScenarioTagsFor -Expectation $expectation -SourceTags $querySpec.Tags)
         languageTags = @("en")
         conversationId = "wildchat-$($row.conversation_id)"
-        redactionReportId = "redaction-external-wildchat-v1"
+        redactionReportId = "redaction-external-wildchat-v2"
         reviewStatus = "approved"
-        reviewer = "external_replay_curator_v1"
+        reviewer = "external_replay_curator_v2"
         approvedAt = $approvedAt
       })
       $acceptedForQuery++

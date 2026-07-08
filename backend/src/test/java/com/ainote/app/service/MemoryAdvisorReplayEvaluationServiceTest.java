@@ -129,6 +129,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
         return switch (memoryType) {
             case "project_context" -> "advisor_project_context_signal";
             case "style" -> "advisor_interaction_style_signal";
+            case "fact" -> "advisor_fact_signal";
             default -> "advisor_preference_signal";
         };
     }

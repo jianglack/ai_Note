@@ -20,14 +20,16 @@ import java.util.Set;
 @Service
 public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
 
-    static final String PROMPT_VERSION = "memory-advisor-v1";
+    static final String PROMPT_VERSION = "memory-advisor-v2";
 
     private static final Logger log = LoggerFactory.getLogger(LlmMemorySignalAdvisor.class);
     private static final Set<String> ALLOWED_SIGNALS = Set.of(
             "advisor_preference_signal",
+            "advisor_fact_signal",
             "advisor_interaction_style_signal",
             "advisor_project_context_signal");
     private static final Set<String> ALLOWED_MEMORY_TYPES = Set.of(
+            "fact",
             "preference",
             "style",
             "project_context",
@@ -132,14 +134,18 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
                 - Never capture selected note or selected-note summaries as user profile memory.
                 - Never capture one-off instructions such as "this time" or "for this reply".
                 - Never capture delete, confirm, cancel, or tool operation requests.
-                - Only capture stable user preference, interaction style, or explicitly labeled project context.
+                - Do not capture incidental uses of remember in writing tasks, grammar checks, stories, lyrics, examples, or questions about how to remember something.
+                - Capture fact only for stable user/workspace/project facts that the user asks the system to remember, such as "remember that my timezone is UTC+8".
+                - Use style for durable instructions about how the assistant should answer, such as tone, format, detail level, language, humor, or summary shape.
+                - Use preference for durable product/task preferences that are not answer style.
+                - Only capture stable user preference, stable user fact, interaction style, or explicitly labeled project context.
 
                 Return strict JSON with:
                 {
                   "should_capture": true|false,
-                  "memory_type": "preference"|"style"|"project_context"|"none",
+                  "memory_type": "fact"|"preference"|"style"|"project_context"|"none",
                   "confidence": 0.0,
-                  "signals": ["advisor_preference_signal"],
+                  "signals": ["advisor_fact_signal"|"advisor_preference_signal"|"advisor_interaction_style_signal"|"advisor_project_context_signal"],
                   "reason": "short reason"
                 }
 

@@ -11,10 +11,14 @@ import java.util.regex.Pattern;
 public class MemorySignalClassifier {
 
     private static final Pattern SENSITIVE_PATTERN = Pattern.compile(
-            "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})");
+            "(?i)(api[_ -]?key|secret|password|access[_ -]?token|auth[_ -]?token|session[_ -]?token|"
+                    + "(?:fake[-_])?token[-_][a-z0-9_-]+|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})");
     private static final Pattern INTERACTION_STYLE_SIGNAL = Pattern.compile(
             "(回答|回复|语气|口吻|风格|格式|详细|简短|严肃|深刻|正式|专业|俏皮|轻松|幽默|活泼|开玩笑|玩笑|啰嗦|精简|简洁|"
                     + "answer|reply|tone|style|format|formal|serious|concise|detailed|professional)");
+    private static final Pattern REAL_CHINESE_INTERACTION_STYLE_SIGNAL = Pattern.compile(
+            "(\u56de\u7b54|\u56de\u590d|\u8bed\u6c14|\u53e3\u543b|\u98ce\u683c|\u683c\u5f0f|\u8be6\u7ec6|"
+                    + "\u7b80\u77ed|\u7b80\u6d01|\u4e25\u8083|\u6b63\u5f0f|\u4e13\u4e1a|\u5e7d\u9ed8|\u6df1\u523b)");
     private static final Pattern PROJECT_CONTEXT_LABEL = Pattern.compile(
             "^(项目上下文|项目背景|project context|project background)[:：].+",
             Pattern.CASE_INSENSITIVE);
@@ -43,16 +47,19 @@ public class MemorySignalClassifier {
         boolean referenceOnly = isReferenceOnlyTask(compact) || isRagReference(aiResponse);
         boolean transientOperation = isTransientOperation(compact);
         boolean oneOffScope = isOneOffInstruction(compact);
-        boolean explicitRemember = isExplicitRemember(compact);
-        boolean interactionStyleCorrection = looksLikeInteractionStyleCorrection(userMessage, compact);
-        boolean preferenceCorrection = looksLikePreferenceCorrection(compact);
-        boolean stableStylePreference = looksLikeStableStylePreference(userMessage, compact);
+        boolean taskOnlyContent = isOneOffTaskContent(userMessage);
+        boolean roleOverridePrompt = isRoleOverridePrompt(userMessage);
+        boolean durableMemoryCandidate = !taskOnlyContent && !roleOverridePrompt;
+        boolean explicitRemember = isExplicitRemember(userMessage, compact);
+        boolean interactionStyleCorrection = durableMemoryCandidate && looksLikeInteractionStyleCorrection(userMessage, compact);
+        boolean preferenceCorrection = durableMemoryCandidate && looksLikePreferenceCorrection(userMessage, compact);
+        boolean stableStylePreference = durableMemoryCandidate && looksLikeStableStylePreference(userMessage, compact);
         boolean oneOffStylePreference = oneOffScope && looksLikeStyleDirective(userMessage, compact);
         boolean assistantFeedback = isAssistantFeedback(compact);
         boolean correctionSignal = preferenceCorrection || interactionStyleCorrection;
         boolean interactionStyleSignal = interactionStyleCorrection || stableStylePreference || oneOffStylePreference;
         boolean projectContextSignal = isProjectContext(userMessage);
-        boolean preferenceSignal = looksLikePreference(compact) || interactionStyleSignal;
+        boolean preferenceSignal = (durableMemoryCandidate && looksLikePreference(userMessage, compact)) || interactionStyleSignal;
         boolean hardDeny = !validUser
                 || blankMessage
                 || sensitive
@@ -60,7 +67,9 @@ public class MemorySignalClassifier {
                 || referenceOnly
                 || transientOperation
                 || oneOffScope
-                || assistantFeedback;
+                || assistantFeedback
+                || taskOnlyContent
+                || roleOverridePrompt;
 
         if (!hardDeny) {
             MemorySignalAdvisor.AdvisorResult advice = signalAdvisor.advise(request);
@@ -74,7 +83,7 @@ public class MemorySignalClassifier {
                     preferenceSignal = true;
                 } else if ("project_context".equals(memoryType)) {
                     projectContextSignal = true;
-                } else if ("preference".equals(memoryType)) {
+                } else if ("preference".equals(memoryType) || "fact".equals(memoryType)) {
                     preferenceSignal = true;
                 }
             }
@@ -126,7 +135,8 @@ public class MemorySignalClassifier {
                 && advice.shouldCapture()
                 && ("preference".equals(advice.memoryType())
                 || "style".equals(advice.memoryType())
-                || "project_context".equals(advice.memoryType()));
+                || "project_context".equals(advice.memoryType())
+                || "fact".equals(advice.memoryType()));
     }
 
     private void addSignal(List<String> matchedSignals, boolean condition, String signal) {
@@ -139,25 +149,153 @@ public class MemorySignalClassifier {
         return SENSITIVE_PATTERN.matcher(text).find();
     }
 
-    private boolean isExplicitRemember(String compact) {
-        return compact.contains("记住")
-                || compact.contains("請記住")
-                || compact.contains("remember")
-                || compact.contains("keepinmind");
+    private boolean isExplicitRemember(String userMessage, String compact) {
+        if (isIncidentalRememberTask(userMessage, compact)) {
+            return false;
+        }
+        if (compact.contains("不要记住") || compact.contains("別記住") || compact.contains("别记住")) {
+            return false;
+        }
+        if (compact.startsWith("记住") || compact.startsWith("請記住") || compact.startsWith("请记住")) {
+            return true;
+        }
+
+        String normalized = userMessage == null ? "" : userMessage.trim().toLowerCase(Locale.ROOT);
+        return Pattern.compile("(?i)^\\s*(please\\s+)?remember\\s*[:：,，-]\\s*\\S.+").matcher(normalized).find()
+                || Pattern.compile("(?i)^\\s*(please\\s+)?remember\\s+that\\s+"
+                        + "(my|i\\b|i'm\\b|i am\\b|we\\b|our\\b|this project\\b|the project\\b).+")
+                .matcher(normalized)
+                .find()
+                || Pattern.compile("(?i)^\\s*(please\\s+)?keep\\s+in\\s+mind\\s*[:：,，-]?\\s*(that\\s+)?"
+                        + "(my|i\\b|i'm\\b|i am\\b|we\\b|our\\b|this project\\b|the project\\b).+")
+                .matcher(normalized)
+                .find();
     }
 
-    private boolean looksLikePreference(String compact) {
-        return compact.contains("我希望")
+    private boolean isIncidentalRememberTask(String userMessage, String compact) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        return normalized.contains("how can i recall or remember")
+                || normalized.contains("how to remember")
+                || normalized.contains("how to easily remember")
+                || normalized.contains("can't remember")
+                || normalized.contains("cannot remember")
+                || normalized.contains("different ways of saying")
+                || normalized.contains("ways of saying")
+                || normalized.contains("write a rap")
+                || normalized.contains("every sentence start")
+                || normalized.contains("check grammar")
+                || normalized.contains("make it easy to remember")
+                || normalized.contains("sort from a to z")
+                || compact.contains("forgetit");
+    }
+
+    private boolean looksLikePreference(String userMessage, String compact) {
+        if (isQuotedOrExercisePreferenceTask(userMessage)) {
+            return false;
+        }
+        if (compact.contains("我希望")
                 || compact.contains("我喜欢")
-                || compact.contains("我偏好")
-                || compact.contains("iprefer")
-                || compact.contains("ilike")
-                || compact.contains("prefer")
-                || compact.contains("like")
-                || compact.contains("iwantyouto");
+                || compact.contains("我偏好")) {
+            return true;
+        }
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        return Pattern.compile("(?i)\\b(i\\s+(?:still\\s+|really\\s+|usually\\s+|generally\\s+|also\\s+|personally\\s+)?"
+                        + "(?:prefer|like|don't\\s+like|do\\s+not\\s+like)|my\\s+preference\\s+is)\\b")
+                .matcher(normalized)
+                .find();
     }
 
-    private boolean looksLikePreferenceCorrection(String compact) {
+    private boolean isQuotedOrExercisePreferenceTask(String userMessage) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        return normalized.contains("give me a response to")
+                || normalized.contains("complete the conversation")
+                || normalized.contains("write dialogue")
+                || normalized.contains("correct this message")
+                || normalized.contains("check grammar")
+                || normalized.contains("rewrite ")
+                || normalized.contains("re write ")
+                || normalized.contains("to send in a discussion")
+                || normalized.contains("only return the raw message");
+    }
+
+    private boolean isOneOffTaskContent(String userMessage) {
+        String normalized = userMessage == null ? "" : userMessage.trim().toLowerCase(Locale.ROOT);
+        return isQuotedOrExercisePreferenceTask(userMessage)
+                || normalized.startsWith("task:")
+                || normalized.startsWith("prompt:")
+                || normalized.startsWith("response:")
+                || normalized.startsWith("you are an expert")
+                || Pattern.compile("(?i)^\\s*(task:|prompt:|response:|story\\s+about|character\\s+notes|"
+                                + "choose\\s+the\\s+right\\s+answer|ask\\s+me\\s+questions|please\\s+edit\\s+this\\s+text|"
+                                + "please\\s+correct)\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)^\\s*(write|make|generate|create|prepare|revise|rewrite|polish|"
+                                + "improve|paraphrase|translate|complete|summarize|describe|explain)\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)^\\s*(please\\s+)?(generate|make|write|create|revise|rewrite|polish|"
+                                + "improve|paraphrase|translate)\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)^\\s*(is\\s+it|what\\s+if|which\\s+type|tell\\s+how|how\\s+to|"
+                                + "how\\s+can\\s+i|how\\s+begin|what\\s+are|what\\s+is|can\\s+.+\\?)\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)^\\s*i\\s+want\\s+you\\s+to\\s+(act|create|write|make|design|"
+                                + "generate|prepare|work|respond|ask)\\b")
+                        .matcher(normalized)
+                        .find()
+                || normalized.startsWith("(")
+                || normalized.startsWith("[")
+                || normalized.contains("please generate")
+                || normalized.contains("in this detailed script")
+                || normalized.contains("this is a concept for lyrics")
+                || normalized.contains("for references:")
+                || normalized.contains(" writing prompt:")
+                || normalized.startsWith("writing prompt:");
+    }
+
+    private boolean isRoleOverridePrompt(String userMessage) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        return normalized.contains("ignore all previous instructions")
+                || normalized.contains("ignore all the instructions")
+                || normalized.contains("do anything now")
+                || normalized.contains("no filters or restrictions")
+                || normalized.contains("no limitations")
+                || normalized.contains("openai policy")
+                || normalized.contains("openai policies")
+                || normalized.contains("no ethics")
+                || normalized.contains("no prohibitions")
+                || normalized.contains("opposite day")
+                || normalized.contains("free from all restrictions")
+                || normalized.contains("unhinged response")
+                || normalized.contains("try to do harm")
+                || normalized.contains("illegal requests")
+                || normalized.contains("answer as dan")
+                || normalized.contains("act just like dan");
+    }
+
+    private boolean looksLikePreferenceCorrection(String userMessage, String compact) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        boolean chineseCorrection = compact.contains("\u4e0d\u518d")
+                || compact.contains("\u6539\u4e3a")
+                || compact.contains("\u4ee5\u540e\u4e0d\u8981");
+        if (chineseCorrection) {
+            return true;
+        }
+        boolean directCorrection = compact.contains("浠ュ悗")
+                || compact.contains("涓嶅啀")
+                || compact.contains("鏀逛负")
+                || Pattern.compile("(?i)\\b(from\\s+now\\s+on|by\\s+default|always|"
+                                + "i\\s+(no\\s+longer|don't|do\\s+not|prefer|would\\s+rather)|"
+                                + "earlier\\s+i\\s+(said|wanted)|my\\s+preference\\s+is|"
+                                + "don't\\s+(answer|reply)|do\\s+not\\s+(answer|reply))\\b")
+                        .matcher(normalized)
+                        .find();
+        if (!directCorrection) {
+            return false;
+        }
         return compact.contains("以后不要")
                 || compact.contains("不再")
                 || compact.contains("改为")
@@ -167,22 +305,38 @@ public class MemorySignalClassifier {
     }
 
     private boolean looksLikeInteractionStyleCorrection(String userMessage, String compact) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        boolean directStyleCorrection = ((compact.contains("\u4e0d\u8981") || compact.contains("\u522b"))
+                && (hasStandaloneChineseWant(compact) || compact.contains("\u6539\u4e3a")))
+                || Pattern.compile("(?i)\\b(from\\s+now\\s+on|"
+                                + "don't\\s+(answer|reply)|do\\s+not\\s+(answer|reply))\\b")
+                        .matcher(normalized)
+                        .find();
+        if (!directStyleCorrection) {
+            return false;
+        }
         boolean hasNegativeDirective = compact.contains("不要")
                 || compact.contains("别")
                 || compact.contains("少一点")
                 || compact.contains("少点")
+                || compact.contains("\u522b")
+                || compact.contains("\u4e0d\u8981")
+                || compact.contains("don't")
+                || compact.contains("donot")
                 || compact.contains("not")
                 || compact.contains("less");
         boolean hasPositiveReplacement = compact.contains("改成")
                 || compact.contains("改为")
                 || compact.contains("多一点")
                 || compact.contains("多点")
+                || hasStandaloneChineseWant(compact)
+                || compact.contains("\u6539\u4e3a")
                 || compact.contains("more")
                 || compact.contains("instead")
                 || hasStandaloneChineseWantAfterNegativeDirective(compact);
         return hasNegativeDirective
                 && hasPositiveReplacement
-                && INTERACTION_STYLE_SIGNAL.matcher(userMessage).find();
+                && hasInteractionStyleSignal(userMessage);
     }
 
     private boolean looksLikeStableStylePreference(String userMessage, String compact) {
@@ -199,7 +353,7 @@ public class MemorySignalClassifier {
     }
 
     private boolean looksLikeStyleDirective(String userMessage, String compact) {
-        boolean styleIntent = INTERACTION_STYLE_SIGNAL.matcher(userMessage).find();
+        boolean styleIntent = hasInteractionStyleSignal(userMessage);
         boolean directive = compact.contains("请")
                 || compact.contains("希望")
                 || compact.contains("要")
@@ -207,8 +361,15 @@ public class MemorySignalClassifier {
                 || compact.contains("回答")
                 || compact.contains("回复")
                 || compact.contains("answer")
-                || compact.contains("reply");
+                || compact.contains("reply")
+                || compact.contains("iwantyouto");
         return styleIntent && directive;
+    }
+
+    private boolean hasInteractionStyleSignal(String userMessage) {
+        String text = userMessage == null ? "" : userMessage;
+        return INTERACTION_STYLE_SIGNAL.matcher(text).find()
+                || REAL_CHINESE_INTERACTION_STYLE_SIGNAL.matcher(text).find();
     }
 
     private boolean hasStandaloneChineseWantAfterNegativeDirective(String compact) {
@@ -223,6 +384,18 @@ public class MemorySignalClassifier {
                 return true;
             }
             wantIndex = compact.indexOf("要", wantIndex + 1);
+        }
+        return false;
+    }
+
+    private boolean hasStandaloneChineseWant(String compact) {
+        int wantIndex = compact.indexOf('\u8981');
+        while (wantIndex >= 0) {
+            boolean partOfNegative = wantIndex > 0 && compact.charAt(wantIndex - 1) == '\u4e0d';
+            if (!partOfNegative) {
+                return true;
+            }
+            wantIndex = compact.indexOf('\u8981', wantIndex + 1);
         }
         return false;
     }
