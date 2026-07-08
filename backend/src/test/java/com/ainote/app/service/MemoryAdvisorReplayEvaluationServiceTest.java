@@ -88,6 +88,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
                         MemoryReplayEvaluationService.MemoryReplayCase::userMessage,
                         Function.identity(),
                         (left, right) -> left));
+        assertThat(expectedByMessage).hasSize(cases.size());
         MemorySignalAdvisor oracleAdvisor = request -> {
             MemoryReplayEvaluationService.MemoryReplayCase expected = expectedByMessage.get(request.userMessage());
             if (expected == null || !expected.expectedCaptureAllowed()) {

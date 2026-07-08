@@ -595,7 +595,7 @@
   },
   {
     "id": "replay_cn_style_serious_less_joking",
-    "userMessage": "以后回答请严肃一点，少开玩笑。",
+    "userMessage": "以后回答请保持严肃口吻，少开玩笑。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -608,7 +608,7 @@
   },
   {
     "id": "replay_cn_style_professional_brief",
-    "userMessage": "今后回复请专业简洁。",
+    "userMessage": "今后回复请用专业语气，先说重点。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -621,7 +621,7 @@
   },
   {
     "id": "replay_cn_style_concise_direct",
-    "userMessage": "之后回答请简洁直接。",
+    "userMessage": "之后回答请简洁直接，不要绕太久。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -634,7 +634,7 @@
   },
   {
     "id": "replay_cn_style_formal_tone",
-    "userMessage": "接下来回复请用正式语气。",
+    "userMessage": "接下来回复请用正式口吻，避免太随意。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -647,7 +647,7 @@
   },
   {
     "id": "replay_cn_style_less_playful",
-    "userMessage": "以后回复请少开玩笑。",
+    "userMessage": "以后默认回复请少开玩笑，保持稳重。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -660,7 +660,7 @@
   },
   {
     "id": "replay_cn_style_more_structured",
-    "userMessage": "今后回答请更专业有条理。",
+    "userMessage": "今后回答请专业分层，结论和依据分开。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -673,7 +673,7 @@
   },
   {
     "id": "replay_cn_style_short_paragraphs",
-    "userMessage": "之后回复请用简短段落。",
+    "userMessage": "之后回复请用简短段落，每段只讲一个点。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -686,7 +686,7 @@
   },
   {
     "id": "replay_cn_style_deeper_analysis",
-    "userMessage": "以后回答请更严肃深刻。",
+    "userMessage": "以后回答请严肃深刻，别只给表面判断。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -699,7 +699,7 @@
   },
   {
     "id": "replay_cn_style_plain_language",
-    "userMessage": "接下来回复请用简洁口吻。",
+    "userMessage": "接下来回复请用简洁口吻，少用术语。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -712,7 +712,7 @@
   },
   {
     "id": "replay_cn_style_stepwise",
-    "userMessage": "今后回答请专业分步骤。",
+    "userMessage": "今后回答请专业分步骤，动作顺序要清楚。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -725,7 +725,7 @@
   },
   {
     "id": "replay_cn_style_no_jokes",
-    "userMessage": "以后回复请少一点玩笑。",
+    "userMessage": "以后一直回答请少一点玩笑，语气更沉稳。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -738,7 +738,7 @@
   },
   {
     "id": "replay_cn_style_crisp_summary",
-    "userMessage": "之后回答请精简摘要。",
+    "userMessage": "之后默认回答请先给精简摘要，再补充细节。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -751,7 +751,7 @@
   },
   {
     "id": "replay_cn_style_formal_default",
-    "userMessage": "以后默认回复请正式专业。",
+    "userMessage": "以后默认回复请正式专业，避免口语化。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -764,7 +764,7 @@
   },
   {
     "id": "replay_cn_style_serious_review",
-    "userMessage": "今后回答请保持严肃语气。",
+    "userMessage": "今后回复评审意见时请保持严肃语气。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -777,7 +777,7 @@
   },
   {
     "id": "replay_cn_style_compact_explanations",
-    "userMessage": "接下来回答请简洁说明。",
+    "userMessage": "接下来回答请简洁说明，不要啰嗦展开。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -790,7 +790,7 @@
   },
   {
     "id": "replay_cn_style_professional_examples",
-    "userMessage": "之后回复请用专业示例。",
+    "userMessage": "之后回复请用专业示例，少用玩笑类比。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -803,7 +803,7 @@
   },
   {
     "id": "replay_cn_style_clear_tone",
-    "userMessage": "以后回答请口吻清楚。",
+    "userMessage": "以后回答请口吻清楚，先区分事实和建议。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -816,7 +816,7 @@
   },
   {
     "id": "replay_cn_style_precise_language",
-    "userMessage": "今后回复请精简准确。",
+    "userMessage": "今后一直回复请精简准确，少放寒暄。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
@@ -1193,8 +1193,8 @@
   },
   {
     "id": "replay_en_reference_only_selected_note_red",
-    "userMessage": "Summarize this note: it says I prefer red.",
-    "assistantOutput": "The note says the author prefers red.",
+    "userMessage": "Summarize this note: it claims I prefer red labels for urgent work.",
+    "assistantOutput": "This note reports a red-label preference from the selected text.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1204,8 +1204,8 @@
   },
   {
     "id": "replay_en_reference_only_current_note_blue",
-    "userMessage": "Current note says I like blue; summarize it.",
-    "assistantOutput": "The current note mentions blue.",
+    "userMessage": "Current note says I like blue planning cards; turn it into bullets.",
+    "assistantOutput": "The current note mentions blue planning cards.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1215,8 +1215,8 @@
   },
   {
     "id": "replay_en_reference_only_this_note_markdown",
-    "userMessage": "This note says I prefer Markdown exports; rewrite it.",
-    "assistantOutput": "The note mentions Markdown exports.",
+    "userMessage": "This note says I prefer Markdown exports; rewrite the note in plain language.",
+    "assistantOutput": "The note mentions Markdown export preference.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1226,8 +1226,8 @@
   },
   {
     "id": "replay_en_reference_only_selected_note_calendar",
-    "userMessage": "Selected note says I prefer calendar planning; extract bullets.",
-    "assistantOutput": "The selected note mentions calendar planning.",
+    "userMessage": "Selected note says I prefer calendar planning for launches; extract the timeline.",
+    "assistantOutput": "The selected note mentions calendar planning for launches.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1237,8 +1237,8 @@
   },
   {
     "id": "replay_en_reference_only_this_note_tags",
-    "userMessage": "What does this note say about my tag preference?",
-    "assistantOutput": "It discusses tag preferences.",
+    "userMessage": "What does this note say about my tag preference for research folders?",
+    "assistantOutput": "It discusses tag preferences in the referenced note.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1248,8 +1248,8 @@
   },
   {
     "id": "replay_cn_reference_only_selected_note_red",
-    "userMessage": "这篇笔记说我喜欢红色，请总结。",
-    "assistantOutput": "这篇笔记提到颜色偏好。",
+    "userMessage": "这篇笔记说我喜欢红色紧急标签，请总结给团队看。",
+    "assistantOutput": "这篇笔记提到红色紧急标签偏好。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1259,8 +1259,8 @@
   },
   {
     "id": "replay_cn_reference_only_current_note_blue",
-    "userMessage": "当前笔记里写着我偏好蓝色，请改写。",
-    "assistantOutput": "当前笔记提到蓝色。",
+    "userMessage": "当前笔记里写着我偏好蓝色计划卡片，请改成要点。",
+    "assistantOutput": "当前笔记提到蓝色计划卡片。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1270,8 +1270,8 @@
   },
   {
     "id": "replay_cn_reference_only_selected_note_markdown",
-    "userMessage": "总结选中笔记：里面说我喜欢 Markdown。",
-    "assistantOutput": "选中笔记提到 Markdown。",
+    "userMessage": "总结选中笔记：里面说我喜欢 Markdown 导出和短标题。",
+    "assistantOutput": "选中笔记提到 Markdown 导出和短标题。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1281,8 +1281,8 @@
   },
   {
     "id": "replay_cn_reference_only_this_note_calendar",
-    "userMessage": "这篇笔记提到我偏好日历视图，请总结。",
-    "assistantOutput": "这篇笔记提到日历视图。",
+    "userMessage": "这篇笔记提到我偏好日历视图安排发布，请总结风险。",
+    "assistantOutput": "这篇笔记提到发布计划的日历视图。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1292,8 +1292,8 @@
   },
   {
     "id": "replay_cn_reference_only_current_note_tags",
-    "userMessage": "当前笔记说我希望按主题打标签，请概括。",
-    "assistantOutput": "当前笔记提到标签偏好。",
+    "userMessage": "当前笔记说我希望按主题打标签，请概括成一句话。",
+    "assistantOutput": "当前笔记提到主题标签偏好。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1303,8 +1303,8 @@
   },
   {
     "id": "replay_cn_reference_only_selected_note_export",
-    "userMessage": "总结选中笔记：里面写我偏好 PDF 导出。",
-    "assistantOutput": "选中笔记提到导出偏好。",
+    "userMessage": "总结选中笔记：里面写我偏好 PDF 导出和引用附录。",
+    "assistantOutput": "选中笔记提到 PDF 导出和引用附录。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1314,8 +1314,8 @@
   },
   {
     "id": "replay_cn_reference_only_this_note_priority",
-    "userMessage": "这篇笔记说我喜欢优先级排序，请整理。",
-    "assistantOutput": "这篇笔记提到排序偏好。",
+    "userMessage": "这篇笔记说我喜欢优先级排序，请整理成待办。",
+    "assistantOutput": "这篇笔记提到优先级排序。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1325,8 +1325,8 @@
   },
   {
     "id": "replay_cn_reference_only_current_note_digest",
-    "userMessage": "当前笔记写着我希望每周摘要，请总结。",
-    "assistantOutput": "当前笔记提到摘要偏好。",
+    "userMessage": "当前笔记写着我希望每周摘要，请提炼其中的限制。",
+    "assistantOutput": "当前笔记提到每周摘要偏好。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1336,8 +1336,8 @@
   },
   {
     "id": "replay_cn_reference_only_selected_note_language",
-    "userMessage": "总结选中笔记：里面说我偏好中文标签。",
-    "assistantOutput": "选中笔记提到标签语言。",
+    "userMessage": "总结选中笔记：里面说我偏好中文标签和中文分组。",
+    "assistantOutput": "选中笔记提到中文标签和分组。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1347,8 +1347,8 @@
   },
   {
     "id": "replay_cn_reference_only_this_note_archive",
-    "userMessage": "这篇笔记记录我喜欢归档完成项，请提炼。",
-    "assistantOutput": "这篇笔记提到归档偏好。",
+    "userMessage": "这篇笔记记录我喜欢归档完成项，请提炼操作步骤。",
+    "assistantOutput": "这篇笔记提到完成项归档。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1358,8 +1358,8 @@
   },
   {
     "id": "replay_en_rag_reference_profile_red",
-    "userMessage": "What does this note say?",
-    "assistantOutput": "<rag_context role=\"reference_only\">The author likes red.</rag_context>",
+    "userMessage": "What does the retrieved note say about color labels?",
+    "assistantOutput": "<rag_context role=\"reference_only\">The referenced note says the author likes red labels for urgent items.</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1369,8 +1369,8 @@
   },
   {
     "id": "replay_en_rag_reference_markdown",
-    "userMessage": "Answer using retrieved context about preferences.",
-    "assistantOutput": "reference_only: The author prefers Markdown.",
+    "userMessage": "Use retrieval to answer what export format appears there.",
+    "assistantOutput": "reference_only: Retrieved text says the author prefers Markdown exports for meeting notes.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1380,8 +1380,8 @@
   },
   {
     "id": "replay_en_rag_reference_operation_false",
-    "userMessage": "Use the search result about task views.",
-    "assistantOutput": "<memory operation_target=\"false\">The author likes calendar view.</memory>",
+    "userMessage": "Use the search result about planning views.",
+    "assistantOutput": "<memory operation_target=\"false\">Retrieved snippet says the author likes calendar view for launches.</memory>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1391,8 +1391,8 @@
   },
   {
     "id": "replay_en_rag_reference_digest",
-    "userMessage": "What preference appears in retrieval?",
-    "assistantOutput": "<rag_context role=\"reference_only\">Weekly digest preference.</rag_context>",
+    "userMessage": "What digest habit appears in the retrieved context?",
+    "assistantOutput": "<rag_context role=\"reference_only\">A weekly digest preference appears in the source note.</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1402,8 +1402,8 @@
   },
   {
     "id": "replay_en_rag_reference_tags",
-    "userMessage": "Summarize the retrieved profile snippet.",
-    "assistantOutput": "reference_only profile snippet: prefers topic tags.",
+    "userMessage": "Summarize the retrieved profile snippet about folders.",
+    "assistantOutput": "reference_only profile snippet: the source text prefers topic tags for research folders.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1413,8 +1413,8 @@
   },
   {
     "id": "replay_cn_rag_reference_profile_red",
-    "userMessage": "这份资料里说了什么？",
-    "assistantOutput": "<rag_context role=\"reference_only\">用户喜欢红色。</rag_context>",
+    "userMessage": "检索资料里如何描述颜色标签？",
+    "assistantOutput": "<rag_context role=\"reference_only\">引用资料说用户喜欢红色紧急标签。</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1424,8 +1424,8 @@
   },
   {
     "id": "replay_cn_rag_reference_markdown",
-    "userMessage": "根据检索资料回答偏好内容。",
-    "assistantOutput": "reference_only：资料写着偏好 Markdown。",
+    "userMessage": "根据检索资料回答导出格式偏好。",
+    "assistantOutput": "reference_only：检索资料写着偏好 Markdown 会议纪要导出。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1435,8 +1435,8 @@
   },
   {
     "id": "replay_cn_rag_reference_operation_false",
-    "userMessage": "检索结果里有什么任务偏好？",
-    "assistantOutput": "<memory operation_target=\"false\">用户喜欢日历视图。</memory>",
+    "userMessage": "检索结果里有什么计划视图偏好？",
+    "assistantOutput": "<memory operation_target=\"false\">检索片段说用户喜欢发布计划日历视图。</memory>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1446,8 +1446,8 @@
   },
   {
     "id": "replay_cn_rag_reference_digest",
-    "userMessage": "资料片段提到什么摘要习惯？",
-    "assistantOutput": "<rag_context role=\"reference_only\">用户希望每周摘要。</rag_context>",
+    "userMessage": "资料片段提到怎样的摘要习惯？",
+    "assistantOutput": "<rag_context role=\"reference_only\">引用资料说用户希望每周五看摘要。</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1457,8 +1457,8 @@
   },
   {
     "id": "replay_cn_rag_reference_tags",
-    "userMessage": "检索片段说了哪些标签习惯？",
-    "assistantOutput": "reference_only：资料写着按主题打标签。",
+    "userMessage": "检索片段说研究文件夹怎样打标签？",
+    "assistantOutput": "reference_only：资料写着按主题打标签，并保留年份。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1468,8 +1468,8 @@
   },
   {
     "id": "replay_cn_rag_reference_export",
-    "userMessage": "根据引用片段说明导出习惯。",
-    "assistantOutput": "<rag_context role=\"reference_only\">用户偏好 PDF 导出。</rag_context>",
+    "userMessage": "根据引用片段说明报告导出习惯。",
+    "assistantOutput": "<rag_context role=\"reference_only\">来源片段说用户偏好 PDF 导出并附引用。</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1479,8 +1479,8 @@
   },
   {
     "id": "replay_cn_rag_reference_language",
-    "userMessage": "检索材料里提到语言偏好吗？",
-    "assistantOutput": "reference_only：资料说标签使用中文。",
+    "userMessage": "检索材料里提到标签语言偏好吗？",
+    "assistantOutput": "reference_only：资料说标签和分组都使用中文。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1490,8 +1490,8 @@
   },
   {
     "id": "replay_cn_rag_reference_archive",
-    "userMessage": "引用内容有什么归档习惯？",
-    "assistantOutput": "<memory operation_target=\"false\">用户喜欢归档完成项。</memory>",
+    "userMessage": "引用内容有什么完成项归档习惯？",
+    "assistantOutput": "<memory operation_target=\"false\">来源片段说用户喜欢把完成项按月份归档。</memory>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1501,8 +1501,8 @@
   },
   {
     "id": "replay_cn_rag_reference_priority",
-    "userMessage": "检索结果说任务排序如何？",
-    "assistantOutput": "reference_only：用户偏好优先级排序。",
+    "userMessage": "检索结果说任务排序规则是什么？",
+    "assistantOutput": "reference_only：检索资料说用户偏好先看阻塞项，再看截止日期。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1512,8 +1512,8 @@
   },
   {
     "id": "replay_cn_rag_reference_color",
-    "userMessage": "引用片段提到颜色吗？",
-    "assistantOutput": "<rag_context role=\"reference_only\">用户偏好绿色标签。</rag_context>",
+    "userMessage": "引用片段提到看板颜色规则吗？",
+    "assistantOutput": "<rag_context role=\"reference_only\">来源资料说用户偏好绿色资料标签。</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
@@ -1863,8 +1863,8 @@
     ]
   },
   {
-    "id": "replay_cn_sensitive_aws_key",
-    "userMessage": "测试密钥是 AKIA0000000000000000。",
+    "id": "replay_cn_sensitive_fake_secret_phrase",
+    "userMessage": "测试 secret 是 fake-cloud-secret-000。",
     "assistantOutput": "我不能保存密钥。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_SENSITIVE",
@@ -2007,7 +2007,7 @@
   },
   {
     "id": "replay_en_ambiguous_thinking_about_topic",
-    "userMessage": "I am still thinking about this.",
+    "userMessage": "I need to compare two options before deciding.",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2016,7 +2016,7 @@
   },
   {
     "id": "replay_en_ambiguous_maybe_later",
-    "userMessage": "Maybe later.",
+    "userMessage": "Maybe we can revisit this after the meeting.",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2025,7 +2025,7 @@
   },
   {
     "id": "replay_en_ambiguous_not_sure_yet",
-    "userMessage": "I am not sure yet.",
+    "userMessage": "I am not sure which direction fits yet.",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2034,7 +2034,7 @@
   },
   {
     "id": "replay_en_ambiguous_leave_it_for_now",
-    "userMessage": "Let's leave it for now.",
+    "userMessage": "Let's park this topic until the draft is clearer.",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2043,7 +2043,7 @@
   },
   {
     "id": "replay_cn_ambiguous_thinking_about_topic",
-    "userMessage": "这个问题我再想想。",
+    "userMessage": "这个问题我想再比较两个方案。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2052,7 +2052,7 @@
   },
   {
     "id": "replay_cn_ambiguous_set_aside",
-    "userMessage": "先放一边。",
+    "userMessage": "先把这个议题放到后面再看。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2061,7 +2061,7 @@
   },
   {
     "id": "replay_cn_ambiguous_not_decided",
-    "userMessage": "我还没决定。",
+    "userMessage": "我还没决定要不要推进。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2070,7 +2070,7 @@
   },
   {
     "id": "replay_cn_ambiguous_later_discuss",
-    "userMessage": "稍后再讨论。",
+    "userMessage": "等材料齐了再讨论这个点。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2079,7 +2079,7 @@
   },
   {
     "id": "replay_cn_ambiguous_unclear_goal",
-    "userMessage": "目标还不清楚。",
+    "userMessage": "现在目标边界还不够清楚。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2088,7 +2088,7 @@
   },
   {
     "id": "replay_cn_ambiguous_wait_a_bit",
-    "userMessage": "再等一下看。",
+    "userMessage": "先观察一下数据再判断。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2097,7 +2097,7 @@
   },
   {
     "id": "replay_cn_ambiguous_no_action_now",
-    "userMessage": "现在先不用处理。",
+    "userMessage": "这件事暂时不需要动作。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
@@ -2106,7 +2106,7 @@
   },
   {
     "id": "replay_cn_ambiguous_review_later",
-    "userMessage": "之后再看看。",
+    "userMessage": "等下个版本出来后再复查。",
     "assistantOutput": "好的。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
