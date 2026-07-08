@@ -4,7 +4,7 @@
 
 Upgrade the memory replay evaluation program from a 200-case synthetic seed set to a two-track enterprise dataset program:
 
-1. A 1000+ case `simulated_realistic` replay set generated from diverse multi-agent conversations.
+1. A 2000-case active replay set, made of the existing 200 `synthetic_seed` cases plus about 1800 new `simulated_realistic` cases generated from diverse multi-agent conversations.
 2. A strict real-sample loop where `real_user_anonymized` cases can enter replay only after source provenance, redaction, labeling, and review approval.
 
 This design does not claim agent-generated data is real user data. Agent-generated samples are realistic simulations for coverage pressure. Real user samples require an external source such as production exports, local database exports, or user-provided conversation files.
@@ -14,7 +14,7 @@ This design does not claim agent-generated data is real user data. Agent-generat
 In scope:
 
 - Define multiple persona, scenario, and governance agents for realistic multi-turn data generation.
-- Generate about 250-350 multi-turn conversations, each 4-12 turns, and extract 1000+ replay/eval cases.
+- Generate about 360-450 multi-turn conversations, each 4-12 turns, and extract about 1800 additional replay/eval cases for a 2000-case active replay gate.
 - Cover more Chinese expressions, ambiguous wording, continuous multi-turn corrections, misleading RAG, selected-note conflicts, and complex project context.
 - Add provenance metadata so every generated or imported case records its source type and review status.
 - Add automated gates that prevent unreviewed, unredacted, or source-less cases from entering the active replay set.
@@ -93,24 +93,48 @@ These agents keep generated data usable and auditable.
 
 ## Scenario Matrix
 
-The 1000+ case target must be drawn from multi-turn conversations across these scenario families:
+The 2000-case active target must be drawn from multi-turn conversations across these scenario families:
 
 | Scenario Family | Minimum Replay Cases | Notes |
 | --- | ---: | --- |
-| Chinese stable preference expressions | 120 | Include formal, colloquial, terse, indirect, and mixed-language variants. |
-| Ambiguous or weak memory signals | 100 | Default deny unless a stable memory signal is explicit enough. |
-| Continuous multi-turn correction | 120 | Include "not that, this", "change back", "from now on", and contradictory turns. |
-| Misleading RAG/reference-only context | 120 | RAG content must not become user profile memory. |
-| Selected/current note conflicts | 80 | Note content must not override user memory unless user states it as preference. |
-| Complex project context | 120 | Multi-constraint project backgrounds, still generic and anonymized. |
-| Operation/confirmation/cancellation | 80 | Delete, clear, move, rename, confirm, cancel, ok, yes/no. |
-| One-off instruction vs durable preference | 80 | This reply, this time, this task only. |
-| Assistant feedback | 50 | Praise, complaint, "this answer is good/bad". |
-| Sensitive/PII-like content | 50 | Only fake examples; must deny capture. |
-| Forget/delete memory control | 40 | Requests to forget, stop remembering, replace old memory. |
-| Multilingual/code-switched expressions | 60 | Chinese-English mixed cases. |
+| Chinese stable preference expressions | 240 | Include formal, colloquial, terse, indirect, and mixed-language variants. |
+| Ambiguous or weak memory signals | 200 | Default deny unless a stable memory signal is explicit enough. |
+| Continuous multi-turn correction | 240 | Include "not that, this", "change back", "from now on", and contradictory turns. |
+| Misleading RAG/reference-only context | 240 | RAG content must not become user profile memory. |
+| Selected/current note conflicts | 160 | Note content must not override user memory unless user states it as preference. |
+| Complex project context | 240 | Multi-constraint project backgrounds, still generic and anonymized. |
+| Operation/confirmation/cancellation | 160 | Delete, clear, move, rename, confirm, cancel, ok, yes/no. |
+| One-off instruction vs durable preference | 160 | This reply, this time, this task only. |
+| Assistant feedback | 100 | Praise, complaint, "this answer is good/bad". |
+| Sensitive/PII-like content | 100 | Only fake examples; must deny capture. |
+| Forget/delete memory control | 80 | Requests to forget, stop remembering, replace old memory. |
+| Multilingual/code-switched expressions | 120 | Chinese-English mixed cases. |
 
-These minimums intentionally sum above 1000 because one case may have multiple scenario tags. Category gates remain separate from scenario tags.
+These minimums intentionally sum above 2000 because one case may have multiple scenario tags. Category gates remain separate from scenario tags.
+
+## Category Distribution Target
+
+The 2000-case active gate should preserve the 200-case seed distribution, scaled by 10. This gives broad coverage without shifting the policy boundary toward only allow or only deny cases.
+
+| Category | Minimum Active Cases |
+| --- | ---: |
+| `operation` | 150 |
+| `explicit_preference` | 150 |
+| `implicit_preference` | 180 |
+| `style` | 180 |
+| `correction` | 140 |
+| `project_context` | 140 |
+| `reference_only` | 150 |
+| `rag_reference` | 150 |
+| `one_off` | 140 |
+| `assistant_feedback` | 100 |
+| `sensitive` | 100 |
+| `forget` | 100 |
+| `ambiguous` | 120 |
+| `multi_turn_correction` | 100 |
+| `complex_project_context` | 100 |
+
+The category minimums sum to 2000. The implementation may exceed 2000 only if the shape gate remains balanced and reviewable. The recommended target is exactly 2000 to avoid low-value fixture bloat.
 
 ## Conversation Record Design
 
@@ -188,11 +212,12 @@ No raw real sample should be committed to Git. Only redacted approved artifacts 
 
 Automated tests should enforce:
 
-- active replay total cases >= 1000;
-- Chinese cases >= 650;
-- allow cases >= 350;
-- deny cases >= 350;
+- active replay total cases >= 2000;
+- Chinese cases >= 1300;
+- allow cases >= 700;
+- deny cases >= 700;
 - all existing 15 categories still covered;
+- each category meets the 2000-case category distribution target;
 - scenario tags cover the scenario matrix;
 - each active case has unique ID and unique `userMessage`;
 - every active case has source type in the manifest;
@@ -205,7 +230,7 @@ Automated tests should enforce:
 
 ## Data Diversity Requirements
 
-The dataset should avoid 1000 near-duplicates. Diversity checks should include:
+The dataset should avoid 2000 near-duplicates. Diversity checks should include:
 
 - category and scenario distribution;
 - persona distribution;
@@ -240,7 +265,7 @@ Use TDD:
 1. Add failing manifest/provenance gates against the current 200-case dataset.
 2. Add sidecar manifest for existing `synthetic_seed` cases.
 3. Add realistic conversation and extraction fixtures.
-4. Raise active replay minimum to 1000 only after extraction/generation artifacts are in place.
+4. Raise active replay minimum to 2000 only after extraction/generation artifacts are in place.
 5. Add hygiene tests for PII, source provenance, review status, and diversity.
 6. Keep replay/advisor tests deterministic and offline.
 7. Run focused memory tests and full backend tests before completion.
@@ -256,7 +281,7 @@ mvn "-Dtest=MemoryReplayEvaluationServiceTest,MemoryAdvisorReplayEvaluationServi
 ## Acceptance Criteria
 
 - The design uses `simulated_realistic` for agent-generated data and never labels it as real user data.
-- The implementation plan targets 1000+ active replay cases.
+- The implementation plan targets 2000 active replay cases.
 - The active dataset includes broad Chinese, ambiguous, multi-turn correction, misleading RAG, selected-note conflict, and complex project-context coverage.
 - Every active case has manifest provenance.
 - Any future `real_user_anonymized` case requires redaction and approval metadata.
