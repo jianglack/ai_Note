@@ -103,18 +103,134 @@ class MemoryAdvisorFormalBatchEvaluationServiceTest {
                 .contains("\"TIMEOUT\"");
     }
 
+    @Test
+    void retriesRetryableUnavailableResultBeforeWritingProgress() throws Exception {
+        Path progressPath = reportDir.resolve("retry-progress.jsonl");
+        Path reportPath = reportDir.resolve("retry-report.json");
+        AtomicInteger calls = new AtomicInteger();
+        MemorySignalAdvisor advisor = request -> {
+            if (calls.incrementAndGet() < 3) {
+                return MemorySignalAdvisor.AdvisorResult.unavailable(
+                        List.of("advisor_failed"),
+                        "UnresolvedModelServerException");
+            }
+            return MemorySignalAdvisor.AdvisorResult.capture(
+                    "preference",
+                    0.99,
+                    List.of("advisor_preference_signal"),
+                    "explicit preference");
+        };
+
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport report = service.run(
+                List.of(replayCase("remember_preference", "remember: I prefer concise answers.", true, "preference")),
+                advisor,
+                request(progressPath, reportPath, false, 1000, false, 3, 1));
+
+        assertThat(report.status()).isEqualTo(MemoryAdvisorFormalBatchEvaluationService.BatchRunStatus.COMPLETED);
+        assertThat(calls).hasValue(3);
+        assertThat(report.results()).hasSize(1);
+        assertThat(report.results().get(0).available()).isTrue();
+        assertThat(report.results().get(0).attemptCount()).isEqualTo(3);
+        assertThat(report.results().get(0).attemptFailures()).hasSize(2);
+        assertThat(Files.readAllLines(progressPath)).hasSize(1);
+    }
+
+    @Test
+    void resumeCanRetryUnavailableProgressEntriesOnly() throws Exception {
+        Path progressPath = reportDir.resolve("retry-unavailable-progress.jsonl");
+        Path reportPath = reportDir.resolve("retry-unavailable-report.json");
+        AtomicInteger firstRunCalls = new AtomicInteger();
+        MemorySignalAdvisor firstRunAdvisor = request -> {
+            firstRunCalls.incrementAndGet();
+            if (request.userMessage().startsWith("remember:")) {
+                return MemorySignalAdvisor.AdvisorResult.unavailable(
+                        List.of("advisor_failed"),
+                        "UnresolvedModelServerException");
+            }
+            return MemorySignalAdvisor.AdvisorResult.noCapture("none", 0.1, List.of(), "not memory");
+        };
+
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport firstReport = service.run(
+                replayCases(),
+                firstRunAdvisor,
+                request(progressPath, reportPath, false, 1000, false, 1, 1));
+
+        assertThat(firstReport.results()).extracting(MemoryAdvisorFormalBatchEvaluationService.ProgressEntry::available)
+                .containsExactly(false, true);
+        assertThat(firstRunCalls).hasValue(2);
+        assertThat(Files.readAllLines(progressPath)).hasSize(2);
+
+        AtomicInteger secondRunCalls = new AtomicInteger();
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport secondReport = service.run(
+                replayCases(),
+                matchingAdvisor(secondRunCalls),
+                request(progressPath, reportPath, true, 1000, true, 1, 1));
+
+        assertThat(secondRunCalls).hasValue(1);
+        assertThat(secondReport.resumedCases()).isEqualTo(1);
+        assertThat(secondReport.retriedCases()).isEqualTo(1);
+        assertThat(secondReport.results()).extracting(MemoryAdvisorFormalBatchEvaluationService.ProgressEntry::available)
+                .containsExactly(true, true);
+        assertThat(Files.readAllLines(progressPath)).hasSize(3);
+    }
+
+    @Test
+    void timedOutAdvisorCallIsNotInterruptedByOuterTimeout() throws Exception {
+        Path progressPath = reportDir.resolve("non-interrupt-timeout-progress.jsonl");
+        Path reportPath = reportDir.resolve("non-interrupt-timeout-report.json");
+        AtomicInteger interrupted = new AtomicInteger();
+        MemorySignalAdvisor advisor = request -> {
+            try {
+                Thread.sleep(200);
+            } catch (InterruptedException e) {
+                interrupted.incrementAndGet();
+                Thread.currentThread().interrupt();
+            }
+            return MemorySignalAdvisor.AdvisorResult.capture(
+                    "preference",
+                    0.99,
+                    List.of("advisor_preference_signal"),
+                    "late result");
+        };
+
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport report = service.run(
+                List.of(replayCase("remember_preference", "remember: I prefer concise answers.", true, "preference")),
+                advisor,
+                request(progressPath, reportPath, false, 50, false, 1, 1));
+
+        Thread.sleep(250);
+
+        assertThat(report.timedOutCases()).isEqualTo(1);
+        assertThat(interrupted).hasValue(0);
+    }
+
     private MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request(
             Path progressPath,
             Path reportPath,
             boolean resume,
             long perCaseTimeoutMillis) {
+        return request(progressPath, reportPath, resume, perCaseTimeoutMillis, false, 1, 1);
+    }
+
+    private MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request(
+            Path progressPath,
+            Path reportPath,
+            boolean resume,
+            long perCaseTimeoutMillis,
+            boolean retryUnavailableProgress,
+            int maxAttempts,
+            long retryInitialBackoffMillis) {
         return new MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest(
                 formalRequest(),
                 1,
                 perCaseTimeoutMillis,
                 resume,
                 progressPath.toString(),
-                reportPath.toString());
+                reportPath.toString(),
+                retryUnavailableProgress,
+                maxAttempts,
+                retryInitialBackoffMillis,
+                retryInitialBackoffMillis);
     }
 
     private MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest formalRequest() {

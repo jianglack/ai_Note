@@ -26,6 +26,11 @@
 #   MEMORY_ADVISOR_FORMAL_EVAL_PROGRESS_PATH        - Defaults to <report-dir>/<run-id>.progress.jsonl
 #   MEMORY_ADVISOR_FORMAL_EVAL_BATCH_REPORT_PATH    - Defaults to <report-dir>/<run-id>.batch.json
 #   MEMORY_ADVISOR_FORMAL_EVAL_MODEL_MAX_TOKENS     - Defaults to 256
+#   MEMORY_ADVISOR_FORMAL_EVAL_MODEL_TIMEOUT_SECONDS - Defaults to 60
+#   MEMORY_ADVISOR_FORMAL_EVAL_RETRY_UNAVAILABLE_PROGRESS - Defaults to false; set true to rerun unavailable progress rows
+#   MEMORY_ADVISOR_FORMAL_EVAL_MAX_ATTEMPTS         - Defaults to 3
+#   MEMORY_ADVISOR_FORMAL_EVAL_RETRY_INITIAL_BACKOFF_MILLIS - Defaults to 1000
+#   MEMORY_ADVISOR_FORMAL_EVAL_RETRY_MAX_BACKOFF_MILLIS - Defaults to 15000
 
 app:
   deepseek:

@@ -92,7 +92,11 @@ class MemoryAdvisorFormalEvaluationIT {
                 value("MEMORY_ADVISOR_FORMAL_EVAL_PROGRESS_PATH",
                         Path.of(formalRequest.reportDirectory(), formalRequest.runId() + ".progress.jsonl").toString()),
                 value("MEMORY_ADVISOR_FORMAL_EVAL_BATCH_REPORT_PATH",
-                        Path.of(formalRequest.reportDirectory(), formalRequest.runId() + ".batch.json").toString()));
+                        Path.of(formalRequest.reportDirectory(), formalRequest.runId() + ".batch.json").toString()),
+                booleanValue("MEMORY_ADVISOR_FORMAL_EVAL_RETRY_UNAVAILABLE_PROGRESS", false),
+                intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_ATTEMPTS", 3),
+                longValue("MEMORY_ADVISOR_FORMAL_EVAL_RETRY_INITIAL_BACKOFF_MILLIS", 1000L),
+                longValue("MEMORY_ADVISOR_FORMAL_EVAL_RETRY_MAX_BACKOFF_MILLIS", 15000L));
     }
 
     private MemoryAdvisorProductionQualityService.AdvisorQualityThresholds thresholds() {
@@ -125,7 +129,7 @@ class MemoryAdvisorFormalEvaluationIT {
                 .modelName(modelName)
                 .temperature(0.2)
                 .maxTokens(intValue("MEMORY_ADVISOR_FORMAL_EVAL_MODEL_MAX_TOKENS", 256))
-                .timeout(Duration.ofSeconds(120))
+                .timeout(Duration.ofSeconds(longValue("MEMORY_ADVISOR_FORMAL_EVAL_MODEL_TIMEOUT_SECONDS", 60L)))
                 .logRequests(false)
                 .logResponses(false)
                 .build();
