@@ -14,6 +14,8 @@ final class MemoryReplaySampleReviewService {
     private static final Set<String> SUPPORTED_SOURCE_TYPES = Set.of(
             "synthetic_seed",
             "simulated_realistic",
+            "external_real_human_conversation",
+            "product_real_user_anonymized",
             "real_user_anonymized");
     private static final Pattern EMAIL_PATTERN =
             Pattern.compile("[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}");
@@ -53,6 +55,10 @@ final class MemoryReplaySampleReviewService {
         long realUserApprovedCases = records.stream()
                 .filter(SampleReviewRecord::eligibleAsRealUserSample)
                 .count();
+        long externalRealHumanApprovedCases = records.stream()
+                .filter(record -> "external_real_human_conversation".equals(record.sourceType()))
+                .filter(SampleReviewRecord::approvedForActiveEvaluation)
+                .count();
 
         List<String> gateFailures = new ArrayList<>();
         boolean realUserPilotReady = realUserApprovedCases >= REAL_USER_PILOT_MINIMUM;
@@ -64,6 +70,7 @@ final class MemoryReplaySampleReviewService {
                 safeDataset.cases().size(),
                 approvedActiveEvaluationCases,
                 quarantinedCases,
+                externalRealHumanApprovedCases,
                 realUserApprovedCases,
                 realUserPilotReady,
                 sourceCounts,
@@ -84,12 +91,16 @@ final class MemoryReplaySampleReviewService {
         validateContent(replayCase, flags);
 
         boolean simulationSource = "synthetic_seed".equals(sourceType) || "simulated_realistic".equals(sourceType);
-        boolean realUserSource = "real_user_anonymized".equals(sourceType);
+        boolean externalRealHumanSource = "external_real_human_conversation".equals(sourceType);
+        boolean realUserSource = "product_real_user_anonymized".equals(sourceType)
+                || "real_user_anonymized".equals(sourceType);
         boolean approved = flags.isEmpty();
 
         String intakeBucket;
         if (approved && simulationSource) {
             intakeBucket = "simulation_baseline";
+        } else if (approved && externalRealHumanSource) {
+            intakeBucket = "external_real_human";
         } else if (approved && realUserSource) {
             intakeBucket = "real_user_candidate";
         } else {
@@ -100,7 +111,7 @@ final class MemoryReplaySampleReviewService {
                 replayCase.id(),
                 sourceType,
                 intakeBucket,
-                approved && (simulationSource || realUserSource),
+                approved && (simulationSource || externalRealHumanSource || realUserSource),
                 approved && realUserSource,
                 flags);
     }
@@ -163,6 +174,7 @@ final class MemoryReplaySampleReviewService {
             int totalCases,
             long approvedActiveEvaluationCases,
             long quarantinedCases,
+            long externalRealHumanApprovedCases,
             long realUserApprovedCases,
             boolean realUserPilotReady,
             Map<String, Long> sourceCounts,

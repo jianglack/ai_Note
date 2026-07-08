@@ -18,17 +18,22 @@ class MemoryReplaySampleReviewServiceTest {
         assertThat(report.totalCases()).isEqualTo(dataset.cases().size());
         assertThat(report.approvedActiveEvaluationCases()).isEqualTo(dataset.cases().size());
         assertThat(report.quarantinedCases()).isZero();
+        assertThat(report.externalRealHumanApprovedCases()).isGreaterThanOrEqualTo(2000);
         assertThat(report.realUserApprovedCases()).isZero();
         assertThat(report.realUserPilotReady()).isFalse();
         assertThat(report.gateFailures()).contains("real_user_pilot_requires_50_approved_samples");
         assertThat(report.sourceCounts()).containsEntry("synthetic_seed", 200L);
         assertThat(report.sourceCounts()).containsEntry("simulated_realistic", 1800L);
+        assertThat(report.sourceCounts()).containsEntry("external_real_human_conversation", 2000L);
         assertThat(report.records()).allSatisfy(record -> {
             assertThat(record.approvedForActiveEvaluation()).isTrue();
             assertThat(record.eligibleAsRealUserSample()).isFalse();
-            assertThat(record.intakeBucket()).isEqualTo("simulation_baseline");
+            assertThat(record.intakeBucket()).isIn("simulation_baseline", "external_real_human");
             assertThat(record.flags()).isEmpty();
         });
+        assertThat(report.records())
+                .filteredOn(record -> record.sourceType().equals("external_real_human_conversation"))
+                .allSatisfy(record -> assertThat(record.intakeBucket()).isEqualTo("external_real_human"));
     }
 
     @Test
@@ -46,7 +51,7 @@ class MemoryReplaySampleReviewServiceTest {
                 List.of(
                         new MemoryReplayDataset.ManifestEntry(
                                 "replay_real_user_email",
-                                "real_user_anonymized",
+                                "product_real_user_anonymized",
                                 "import:local-export:2026-07-08",
                                 "real_user_importer",
                                 List.of("chinese_stable_preference"),

@@ -33,14 +33,17 @@ final class MemoryReplayDatasetLoader {
                         LinkedHashMap::new,
                         Collectors.counting()));
         MemoryReplayDataset simulatedDataset = SimulatedMemoryReplayCaseGenerator.generate(seedCategoryCounts);
+        MemoryReplayDataset externalDataset = ExternalRealHumanReplayDatasetLoader.load();
 
         List<MemoryReplayEvaluationService.MemoryReplayCase> activeCases = new ArrayList<>();
         activeCases.addAll(seedCases);
         activeCases.addAll(simulatedDataset.cases());
+        activeCases.addAll(externalDataset.cases());
 
         List<MemoryReplayDataset.ManifestEntry> activeManifest = new ArrayList<>();
         activeManifest.addAll(seedManifest);
         activeManifest.addAll(simulatedDataset.manifest());
+        activeManifest.addAll(externalDataset.manifest());
 
         assertUnique(activeCases, MemoryReplayEvaluationService.MemoryReplayCase::id, "duplicate replay id");
         assertUnique(activeCases, MemoryReplayEvaluationService.MemoryReplayCase::userMessage, "duplicate replay userMessage");

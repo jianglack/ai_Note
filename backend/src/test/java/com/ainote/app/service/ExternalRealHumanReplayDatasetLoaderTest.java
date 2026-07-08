@@ -28,7 +28,19 @@ class ExternalRealHumanReplayDatasetLoaderTest {
             "external_one_off",
             "external_assistant_feedback",
             "external_memory_control",
+            "external_sensitive_boundary",
             "external_ambiguous");
+    private static final Map<String, Integer> MIN_PROJECT_RELEVANCE_COUNTS = Map.of(
+            "external_memory_preference", 1000,
+            "external_work_context", 400,
+            "external_style_request", 300,
+            "external_reference_task", 200,
+            "external_correction", 50,
+            "external_sensitive_boundary", 10,
+            "external_memory_control", 4,
+            "external_one_off", 5,
+            "external_assistant_feedback", 2,
+            "external_ambiguous", 1000);
 
     @Test
     void loadsApprovedExternalRealHumanReplayDatasetWithProvenance() {
@@ -41,6 +53,9 @@ class ExternalRealHumanReplayDatasetLoaderTest {
                 .doesNotHaveDuplicates();
         assertThat(dataset.cases())
                 .extracting(MemoryReplayEvaluationService.MemoryReplayCase::userMessage)
+                .doesNotHaveDuplicates();
+        assertThat(dataset.manifest())
+                .extracting(MemoryReplayDataset.ManifestEntry::sourceReference)
                 .doesNotHaveDuplicates();
 
         Map<String, MemoryReplayDataset.ManifestEntry> manifestById = dataset.manifest().stream()
@@ -71,10 +86,16 @@ class ExternalRealHumanReplayDatasetLoaderTest {
     void externalDatasetIsFilteredForProjectRelevantMemoryScenarios() {
         MemoryReplayDataset dataset = ExternalRealHumanReplayDatasetLoader.load();
 
-        Set<String> scenarioTags = dataset.manifest().stream()
+        Map<String, Long> scenarioCounts = dataset.manifest().stream()
                 .flatMap(entry -> entry.scenarioTags().stream())
-                .collect(Collectors.toSet());
-        assertThat(scenarioTags).containsAll(REQUIRED_PROJECT_RELEVANCE_TAGS);
+                .collect(Collectors.groupingBy(
+                        tag -> tag,
+                        LinkedHashMap::new,
+                        Collectors.counting()));
+        assertThat(scenarioCounts.keySet()).containsAll(REQUIRED_PROJECT_RELEVANCE_TAGS);
+        MIN_PROJECT_RELEVANCE_COUNTS.forEach((tag, minimum) -> assertThat(scenarioCounts.getOrDefault(tag, 0L))
+                .as(tag)
+                .isGreaterThanOrEqualTo(minimum));
 
         Map<String, Long> categoryCounts = dataset.cases().stream()
                 .collect(Collectors.groupingBy(

@@ -74,7 +74,7 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
 
   $sensitive = $message -match "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})" -or
                $assistant -match "(?i)(api[_ -]?key|secret|password|token|sk-[a-z0-9_-]+|AKIA[0-9A-Z]{16})"
-  $forget = $compact.Contains("forgetthis") -or $compact.Contains("forgetthat") -or $compact.Contains("don'tremember")
+  $forget = $compact.Contains("forgetthis") -or $compact.Contains("forgetthat")
   $referenceOnly = $compact.Contains("selectednote") -or $compact.Contains("currentnote") -or
                    $compact.Contains("thisnote") -or $compact.Contains("whatdoesthisnotesay") -or
                    $compact.Contains("summarizethisnote")
@@ -134,18 +134,30 @@ function Get-PolicyExpectation([string]$UserMessage, [string]$AssistantOutput) {
     return @{ Allowed = $false; DecisionType = "DENY_TRANSIENT"; MemoryType = ""; Correction = $null; PolicyReason = "assistant_feedback"; Signals = $signals.ToArray(); Category = "assistant_feedback" }
   }
 
+  $candidateCorrection = $compact.Contains("nolonger") -or $compact.Contains("instead") -or $compact.Contains("rather")
+  $contentForInference = $UserMessage.Trim()
+  if ($contentForInference -match "(?i)^\s*(remember|keep in mind)[,:]?\s*(.*)$") {
+    $contentForInference = $Matches[2].Trim()
+  }
+  if ($contentForInference.Length -gt 240) {
+    $contentForInference = $contentForInference.Substring(0, 240).Trim()
+  }
+  $inferenceText = ($contentForInference + " " + $UserMessage).ToLowerInvariant()
   $memoryType = "fact"
   if ($projectContext) {
     $memoryType = "project_context"
-  } elseif ($message.Contains("reply") -or $message.Contains("answer") -or $message.Contains("format")) {
+  } elseif ($inferenceText.Contains("reply") -or $inferenceText.Contains("answer") -or $inferenceText.Contains("format")) {
     $memoryType = "preference"
-  } elseif ($message.Contains("prefer") -or $message.Contains("like")) {
+  } elseif ($contentForInference.ToLowerInvariant().Contains("prefer") -or $contentForInference.ToLowerInvariant().Contains("like")) {
+    $memoryType = "preference"
+  }
+  if ($candidateCorrection -and $memoryType -eq "fact") {
     $memoryType = "preference"
   }
 
   if ($explicitRemember) {
     $signals.Add("explicit_remember")
-    return @{ Allowed = $true; DecisionType = "ALLOW_EXPLICIT"; MemoryType = $memoryType; Correction = $false; PolicyReason = "explicit_memory"; Signals = $signals.ToArray(); Category = "explicit_preference" }
+    return @{ Allowed = $true; DecisionType = "ALLOW_EXPLICIT"; MemoryType = $memoryType; Correction = $candidateCorrection; PolicyReason = "explicit_memory"; Signals = $signals.ToArray(); Category = "explicit_preference" }
   }
   if ($correction) {
     if ($preferenceCorrection) { $signals.Add("preference_correction") }

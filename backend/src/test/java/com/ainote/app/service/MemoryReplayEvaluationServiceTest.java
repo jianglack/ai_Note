@@ -17,7 +17,7 @@ class MemoryReplayEvaluationServiceTest {
     private final MemoryReplayEvaluationService evaluator = new MemoryReplayEvaluationService(
             new MemoryCapturePolicy(),
             new MemoryCandidateExtractor());
-    private static final int MIN_TOTAL_CASES = 2000;
+    private static final int MIN_TOTAL_CASES = 4000;
     private static final int MIN_CHINESE_CASES = 1300;
     private static final int MIN_ALLOW_CASES = 700;
     private static final int MIN_DENY_CASES = 700;

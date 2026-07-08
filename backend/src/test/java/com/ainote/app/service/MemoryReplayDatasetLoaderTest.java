@@ -13,8 +13,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MemoryReplayDatasetLoaderTest {
 
-    private static final int MIN_TOTAL_CASES = 2000;
+    private static final int MIN_TOTAL_CASES = 4000;
     private static final int MIN_SIMULATED_CASES = 1800;
+    private static final int MIN_EXTERNAL_REAL_HUMAN_CASES = 2000;
     private static final int MIN_CHINESE_CASES = 1300;
     private static final int MIN_ALLOW_CASES = 700;
     private static final int MIN_DENY_CASES = 700;
@@ -69,11 +70,17 @@ class MemoryReplayDatasetLoaderTest {
                         Collectors.counting()));
         assertThat(sourceCounts.getOrDefault("synthetic_seed", 0L)).isGreaterThanOrEqualTo(200L);
         assertThat(sourceCounts.getOrDefault("simulated_realistic", 0L)).isGreaterThanOrEqualTo(MIN_SIMULATED_CASES);
+        assertThat(sourceCounts.getOrDefault("external_real_human_conversation", 0L))
+                .isGreaterThanOrEqualTo(MIN_EXTERNAL_REAL_HUMAN_CASES);
         assertThat(sourceCounts).doesNotContainKey("real_user_anonymized");
+        assertThat(sourceCounts).doesNotContainKey("product_real_user_anonymized");
 
         assertThat(manifest).allSatisfy(entry -> {
             assertThat(entry.caseId()).isNotBlank();
-            assertThat(entry.sourceType()).isIn("synthetic_seed", "simulated_realistic");
+            assertThat(entry.sourceType()).isIn(
+                    "synthetic_seed",
+                    "simulated_realistic",
+                    "external_real_human_conversation");
             assertThat(entry.sourceReference()).isNotBlank();
             assertThat(entry.personaAgent()).isNotBlank();
             assertThat(entry.scenarioTags()).isNotEmpty();
