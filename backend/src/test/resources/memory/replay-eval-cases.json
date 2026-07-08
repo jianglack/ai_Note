@@ -1,33 +1,171 @@
 [
   {
-    "id": "replay_delete_all_notes",
+    "id": "replay_en_operation_delete_all_notes",
     "userMessage": "delete all notes",
     "assistantOutput": "I need confirmation before deleting notes.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
     "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
+    "expectedSignals": [
+      "transient_operation"
+    ]
   },
   {
-    "id": "replay_confirm",
+    "id": "replay_en_operation_confirm",
     "userMessage": "confirm",
     "assistantOutput": "Confirmed.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
     "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
+    "expectedSignals": [
+      "transient_operation"
+    ]
   },
   {
-    "id": "replay_cancel",
+    "id": "replay_en_operation_cancel",
     "userMessage": "cancel",
     "assistantOutput": "Cancelled.",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
     "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
+    "expectedSignals": [
+      "transient_operation"
+    ]
   },
   {
-    "id": "replay_explicit_preference",
+    "id": "replay_en_operation_ok",
+    "userMessage": "ok",
+    "assistantOutput": "OK.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_en_operation_yes",
+    "userMessage": "yes",
+    "assistantOutput": "Proceeding.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_en_operation_no",
+    "userMessage": "no",
+    "assistantOutput": "Stopped.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_en_operation_confirm_delete",
+    "userMessage": "confirm delete",
+    "assistantOutput": "Delete confirmed.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_en_operation_cancel_delete",
+    "userMessage": "cancel delete",
+    "assistantOutput": "Delete cancelled.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_delete_all_notes",
+    "userMessage": "删除全部笔记",
+    "assistantOutput": "需要你确认后我才会删除。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_confirm_can",
+    "userMessage": "可以",
+    "assistantOutput": "已继续。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_confirm_ok",
+    "userMessage": "好的",
+    "assistantOutput": "已继续。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_delete_every_note",
+    "userMessage": "删除所有笔记",
+    "assistantOutput": "需要确认后才会删除。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_clear_notes",
+    "userMessage": "清空笔记",
+    "assistantOutput": "需要确认后才会清空。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_confirm",
+    "userMessage": "确认",
+    "assistantOutput": "已确认。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_cn_operation_cancel",
+    "userMessage": "取消",
+    "assistantOutput": "已取消。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "operation_or_confirmation",
+    "expectedSignals": [
+      "transient_operation"
+    ]
+  },
+  {
+    "id": "replay_en_explicit_preference_concise_answers",
     "userMessage": "remember: I prefer concise answers.",
     "assistantOutput": "Noted.",
     "expectedCaptureAllowed": true,
@@ -35,115 +173,51 @@
     "expectedMemoryType": "preference",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
-    "expectedSignals": ["explicit_remember"]
+    "expectedSignals": [
+      "explicit_remember"
+    ]
   },
   {
-    "id": "replay_implicit_preference",
-    "userMessage": "I prefer dark mode.",
-    "assistantOutput": "Understood.",
+    "id": "replay_en_explicit_preference_markdown_exports",
+    "userMessage": "remember: I prefer Markdown exports for summaries.",
+    "assistantOutput": "Noted.",
     "expectedCaptureAllowed": true,
-    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedDecisionType": "ALLOW_EXPLICIT",
     "expectedMemoryType": "preference",
     "expectedCorrection": false,
-    "expectedPolicyReason": "implicit_preference",
-    "expectedSignals": ["preference_signal"]
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
   },
   {
-    "id": "replay_preference_correction",
-    "userMessage": "I no longer want English replies; use Chinese instead.",
-    "assistantOutput": "Understood.",
+    "id": "replay_en_explicit_preference_action_items",
+    "userMessage": "keep in mind: I prefer action items at the end.",
+    "assistantOutput": "Noted.",
     "expectedCaptureAllowed": true,
-    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedDecisionType": "ALLOW_EXPLICIT",
     "expectedMemoryType": "preference",
-    "expectedCorrection": true,
-    "expectedPolicyReason": "correction_preference",
-    "expectedSignals": ["preference_correction"]
-  },
-  {
-    "id": "replay_project_context",
-    "userMessage": "Project context: This project is an AI note system.",
-    "assistantOutput": "Recorded.",
-    "expectedCaptureAllowed": true,
-    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "project_context",
     "expectedCorrection": false,
-    "expectedPolicyReason": "project_context",
-    "expectedSignals": ["project_context"]
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
   },
   {
-    "id": "replay_selected_note_reference",
-    "userMessage": "Summarize this note: it says I prefer red.",
-    "assistantOutput": "The note says the author prefers red.",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TOOL_RESULT",
-    "expectedPolicyReason": "reference_context_not_profile",
-    "expectedSignals": ["reference_only"]
+    "id": "replay_en_explicit_preference_question_checklist",
+    "userMessage": "remember: I prefer checklist questions before planning.",
+    "assistantOutput": "Noted.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
   },
   {
-    "id": "replay_rag_reference_profile",
-    "userMessage": "What does this note say?",
-    "assistantOutput": "<rag_context role=\"reference_only\">The author likes red.</rag_context>",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TOOL_RESULT",
-    "expectedPolicyReason": "reference_context_not_profile",
-    "expectedSignals": ["reference_only"]
-  },
-  {
-    "id": "replay_one_off_reply_style",
-    "userMessage": "For this reply, be formal and concise.",
-    "assistantOutput": "I will keep this reply formal and concise.",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TRANSIENT",
-    "expectedPolicyReason": "one_off_instruction",
-    "expectedSignals": ["one_off_scope"]
-  },
-  {
-    "id": "replay_positive_feedback",
-    "userMessage": "I like this answer, thanks.",
-    "assistantOutput": "Glad it helped.",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TRANSIENT",
-    "expectedPolicyReason": "assistant_feedback",
-    "expectedSignals": ["assistant_feedback"]
-  },
-  {
-    "id": "replay_sensitive_secret",
-    "userMessage": "remember: my api key is sk-test123",
-    "assistantOutput": "I cannot store secrets.",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_SENSITIVE",
-    "expectedPolicyReason": "sensitive_content",
-    "expectedSignals": ["sensitive_content"]
-  },
-  {
-    "id": "replay_cn_delete_all_notes",
-    "userMessage": "删除全部笔记",
-    "assistantOutput": "需要你确认后我才会删除。",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TRANSIENT",
-    "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
-  },
-  {
-    "id": "replay_cn_confirm_can",
-    "userMessage": "可以",
-    "assistantOutput": "已继续。",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TRANSIENT",
-    "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
-  },
-  {
-    "id": "replay_cn_confirm_ok",
-    "userMessage": "好的",
-    "assistantOutput": "已继续。",
-    "expectedCaptureAllowed": false,
-    "expectedDecisionType": "DENY_TRANSIENT",
-    "expectedPolicyReason": "operation_or_confirmation",
-    "expectedSignals": ["transient_operation"]
-  },
-  {
-    "id": "replay_cn_explicit_preference",
+    "id": "replay_cn_explicit_preference_conclusion_first",
     "userMessage": "记住，我希望所有回答都先给结论。",
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
@@ -151,10 +225,376 @@
     "expectedMemoryType": "preference",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
-    "expectedSignals": ["explicit_remember"]
+    "expectedSignals": [
+      "explicit_remember"
+    ]
   },
   {
-    "id": "replay_cn_stable_style",
+    "id": "replay_cn_explicit_preference_markdown_summary",
+    "userMessage": "记住，我希望总结默认使用 Markdown。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_action_items",
+    "userMessage": "请记住，我希望会议摘要最后列行动项。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_bullet_notes",
+    "userMessage": "记住，我希望笔记整理成项目符号。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_export_pdf",
+    "userMessage": "请记住，我希望导出材料时优先给 PDF。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_tag_by_topic",
+    "userMessage": "记住，我希望新笔记按主题打标签。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_weekly_digest",
+    "userMessage": "请记住，我希望每周摘要按日期排序。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_short_titles",
+    "userMessage": "记住，我希望笔记标题保持短句。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_examples_after_rules",
+    "userMessage": "请记住，我希望规则说明后面再放示例。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_table_for_comparison",
+    "userMessage": "记住，我希望对比内容用表格呈现。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_cn_explicit_preference_chinese_labels",
+    "userMessage": "请记住，我希望标签名称使用中文。",
+    "assistantOutput": "已记录。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_EXPLICIT",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "explicit_memory",
+    "expectedSignals": [
+      "explicit_remember"
+    ]
+  },
+  {
+    "id": "replay_en_implicit_preference_dark_mode",
+    "userMessage": "I prefer dark mode.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_en_implicit_preference_keyboard_shortcuts",
+    "userMessage": "I like keyboard shortcuts for navigation.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_en_implicit_preference_calendar_view",
+    "userMessage": "I prefer calendar view for planning.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_en_implicit_preference_compact_task_lists",
+    "userMessage": "I like compact task lists.",
+    "assistantOutput": "Understood.",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_blue_labels",
+    "userMessage": "我希望标签颜色用蓝色。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_daily_digest",
+    "userMessage": "我喜欢每天早上看待办摘要。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_calendar_board",
+    "userMessage": "我希望用日历视图安排任务。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_short_note_titles",
+    "userMessage": "我希望笔记标题尽量短。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_week_start_monday",
+    "userMessage": "我喜欢一周从周一开始统计。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_task_priority",
+    "userMessage": "我希望先看高优先级任务。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_tag_color_green",
+    "userMessage": "我希望资料标签用绿色区分。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_timeline_view",
+    "userMessage": "我喜欢用时间线查看记录。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_folder_by_topic",
+    "userMessage": "我喜欢按主题整理文件夹。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_daily_review",
+    "userMessage": "我希望每天结束前做回顾。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_quarter_plan",
+    "userMessage": "我喜欢按季度规划目标。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_task_tags",
+    "userMessage": "我希望给任务加场景标签。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_search_by_keyword",
+    "userMessage": "我希望搜索结果按关键词匹配度排序。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_implicit_preference_archive_done_items",
+    "userMessage": "我喜欢把完成项单独归档。",
+    "assistantOutput": "明白。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_preference",
+    "expectedSignals": [
+      "preference_signal"
+    ]
+  },
+  {
+    "id": "replay_cn_style_serious_less_joking",
     "userMessage": "以后回答请严肃一点，少开玩笑。",
     "assistantOutput": "收到。",
     "expectedCaptureAllowed": true,
@@ -162,21 +602,467 @@
     "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "implicit_interaction_style",
-    "expectedSignals": ["stable_style_preference"]
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
   },
   {
-    "id": "replay_cn_style_correction",
+    "id": "replay_cn_style_professional_brief",
+    "userMessage": "今后回复请专业简洁。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_concise_direct",
+    "userMessage": "之后回答请简洁直接。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_formal_tone",
+    "userMessage": "接下来回复请用正式语气。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_less_playful",
+    "userMessage": "以后回复请少开玩笑。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_more_structured",
+    "userMessage": "今后回答请更专业有条理。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_short_paragraphs",
+    "userMessage": "之后回复请用简短段落。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_deeper_analysis",
+    "userMessage": "以后回答请更严肃深刻。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_plain_language",
+    "userMessage": "接下来回复请用简洁口吻。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_stepwise",
+    "userMessage": "今后回答请专业分步骤。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_no_jokes",
+    "userMessage": "以后回复请少一点玩笑。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_crisp_summary",
+    "userMessage": "之后回答请精简摘要。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_formal_default",
+    "userMessage": "以后默认回复请正式专业。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_serious_review",
+    "userMessage": "今后回答请保持严肃语气。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_compact_explanations",
+    "userMessage": "接下来回答请简洁说明。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_professional_examples",
+    "userMessage": "之后回复请用专业示例。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_clear_tone",
+    "userMessage": "以后回答请口吻清楚。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_cn_style_precise_language",
+    "userMessage": "今后回复请精简准确。",
+    "assistantOutput": "收到。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "implicit_interaction_style",
+    "expectedSignals": [
+      "stable_style_preference"
+    ]
+  },
+  {
+    "id": "replay_en_correction_chinese_instead_of_english",
+    "userMessage": "I no longer want English replies; use Chinese instead.",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_en_correction_weekly_instead_daily",
+    "userMessage": "I no longer want daily digests; use weekly digests instead.",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_serious_instead_of_playful",
     "userMessage": "现在不要这么俏皮，要严肃深刻",
-    "assistantOutput": "收到，后续会更严肃深刻。",
+    "assistantOutput": "已更新偏好。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
     "expectedMemoryType": "style",
     "expectedCorrection": true,
     "expectedPolicyReason": "correction_interaction_style",
-    "expectedSignals": ["interaction_style_correction"]
+    "expectedSignals": [
+      "interaction_style_correction"
+    ]
   },
   {
-    "id": "replay_cn_project_context",
+    "id": "replay_cn_correction_green_instead_blue",
+    "userMessage": "我不再想把标签颜色设为蓝色，改为绿色。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_weekly_instead_daily",
+    "userMessage": "我不再想每天收摘要，改为每周一次。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_table_instead_list",
+    "userMessage": "我不再想用清单看对比，改为表格。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_professional_instead_casual",
+    "userMessage": "不要轻松口吻，要专业正式",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_interaction_style",
+    "expectedSignals": [
+      "interaction_style_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_short_instead_long",
+    "userMessage": "以后不要啰嗦说明，改为简短回答",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_interaction_style",
+    "expectedSignals": [
+      "interaction_style_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_markdown_instead_plain",
+    "userMessage": "我不再想用纯文本记录，改为 Markdown。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_calendar_instead_list",
+    "userMessage": "我不再偏好列表视图，改为日历视图。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_serious_instead_humor",
+    "userMessage": "别幽默回答，要严肃回答",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_interaction_style",
+    "expectedSignals": [
+      "interaction_style_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_priority_instead_date",
+    "userMessage": "我不再想按日期排序任务，改为按优先级。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_brief_instead_detailed",
+    "userMessage": "不要详细展开，要简洁回答",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_interaction_style",
+    "expectedSignals": [
+      "interaction_style_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_correction_topic_instead_project",
+    "userMessage": "我不再想按项目归档，改为按主题归档。",
+    "assistantOutput": "已更新偏好。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_en_project_context_ai_note_system",
+    "userMessage": "Project context: This project is an AI note system.",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_en_project_context_knowledge_base",
+    "userMessage": "Project context: The workspace is an internal knowledge base.",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_en_project_context_research_workspace",
+    "userMessage": "Project background: The team is building a research workspace.",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_en_project_context_task_board",
+    "userMessage": "Project background: The prototype manages team task boards.",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_internal_ai_note_system",
     "userMessage": "项目上下文：这个项目是企业内部 AI 笔记系统。",
     "assistantOutput": "已记录项目上下文。",
     "expectedCaptureAllowed": true,
@@ -184,60 +1070,1307 @@
     "expectedMemoryType": "project_context",
     "expectedCorrection": false,
     "expectedPolicyReason": "project_context",
-    "expectedSignals": ["project_context"]
+    "expectedSignals": [
+      "project_context"
+    ]
   },
   {
-    "id": "replay_cn_selected_note_reference",
+    "id": "replay_cn_project_context_knowledge_base",
+    "userMessage": "项目上下文：这个空间用于整理内部知识库。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_research_workspace",
+    "userMessage": "项目背景：团队正在做研究资料工作台。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_meeting_notes",
+    "userMessage": "项目上下文：当前模块负责会议纪要整理。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_task_dashboard",
+    "userMessage": "项目背景：这个看板用于跟踪团队任务。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_offline_mode",
+    "userMessage": "项目上下文：客户端需要支持离线笔记编辑。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_search_module",
+    "userMessage": "项目背景：搜索模块要覆盖标签和正文。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_export_module",
+    "userMessage": "项目上下文：导出模块需要生成通用报告。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_review_flow",
+    "userMessage": "项目背景：评审流程由普通成员提交。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_project_context_sync_service",
+    "userMessage": "项目上下文：同步服务负责多端笔记状态。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_en_reference_only_selected_note_red",
+    "userMessage": "Summarize this note: it says I prefer red.",
+    "assistantOutput": "The note says the author prefers red.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_reference_only_current_note_blue",
+    "userMessage": "Current note says I like blue; summarize it.",
+    "assistantOutput": "The current note mentions blue.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_reference_only_this_note_markdown",
+    "userMessage": "This note says I prefer Markdown exports; rewrite it.",
+    "assistantOutput": "The note mentions Markdown exports.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_reference_only_selected_note_calendar",
+    "userMessage": "Selected note says I prefer calendar planning; extract bullets.",
+    "assistantOutput": "The selected note mentions calendar planning.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_reference_only_this_note_tags",
+    "userMessage": "What does this note say about my tag preference?",
+    "assistantOutput": "It discusses tag preferences.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_selected_note_red",
     "userMessage": "这篇笔记说我喜欢红色，请总结。",
     "assistantOutput": "这篇笔记提到颜色偏好。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
-    "expectedSignals": ["reference_only"]
+    "expectedSignals": [
+      "reference_only"
+    ]
   },
   {
-    "id": "replay_cn_rag_reference_profile",
+    "id": "replay_cn_reference_only_current_note_blue",
+    "userMessage": "当前笔记里写着我偏好蓝色，请改写。",
+    "assistantOutput": "当前笔记提到蓝色。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_selected_note_markdown",
+    "userMessage": "总结选中笔记：里面说我喜欢 Markdown。",
+    "assistantOutput": "选中笔记提到 Markdown。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_this_note_calendar",
+    "userMessage": "这篇笔记提到我偏好日历视图，请总结。",
+    "assistantOutput": "这篇笔记提到日历视图。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_current_note_tags",
+    "userMessage": "当前笔记说我希望按主题打标签，请概括。",
+    "assistantOutput": "当前笔记提到标签偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_selected_note_export",
+    "userMessage": "总结选中笔记：里面写我偏好 PDF 导出。",
+    "assistantOutput": "选中笔记提到导出偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_this_note_priority",
+    "userMessage": "这篇笔记说我喜欢优先级排序，请整理。",
+    "assistantOutput": "这篇笔记提到排序偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_current_note_digest",
+    "userMessage": "当前笔记写着我希望每周摘要，请总结。",
+    "assistantOutput": "当前笔记提到摘要偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_selected_note_language",
+    "userMessage": "总结选中笔记：里面说我偏好中文标签。",
+    "assistantOutput": "选中笔记提到标签语言。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_reference_only_this_note_archive",
+    "userMessage": "这篇笔记记录我喜欢归档完成项，请提炼。",
+    "assistantOutput": "这篇笔记提到归档偏好。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_rag_reference_profile_red",
+    "userMessage": "What does this note say?",
+    "assistantOutput": "<rag_context role=\"reference_only\">The author likes red.</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_rag_reference_markdown",
+    "userMessage": "Answer using retrieved context about preferences.",
+    "assistantOutput": "reference_only: The author prefers Markdown.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_rag_reference_operation_false",
+    "userMessage": "Use the search result about task views.",
+    "assistantOutput": "<memory operation_target=\"false\">The author likes calendar view.</memory>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_rag_reference_digest",
+    "userMessage": "What preference appears in retrieval?",
+    "assistantOutput": "<rag_context role=\"reference_only\">Weekly digest preference.</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_rag_reference_tags",
+    "userMessage": "Summarize the retrieved profile snippet.",
+    "assistantOutput": "reference_only profile snippet: prefers topic tags.",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_profile_red",
     "userMessage": "这份资料里说了什么？",
     "assistantOutput": "<rag_context role=\"reference_only\">用户喜欢红色。</rag_context>",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TOOL_RESULT",
     "expectedPolicyReason": "reference_context_not_profile",
-    "expectedSignals": ["reference_only"]
+    "expectedSignals": [
+      "reference_only"
+    ]
   },
   {
-    "id": "replay_cn_one_off_reply_style",
-    "userMessage": "这次回答请严肃一点。",
-    "assistantOutput": "这次我会严肃回答。",
+    "id": "replay_cn_rag_reference_markdown",
+    "userMessage": "根据检索资料回答偏好内容。",
+    "assistantOutput": "reference_only：资料写着偏好 Markdown。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_operation_false",
+    "userMessage": "检索结果里有什么任务偏好？",
+    "assistantOutput": "<memory operation_target=\"false\">用户喜欢日历视图。</memory>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_digest",
+    "userMessage": "资料片段提到什么摘要习惯？",
+    "assistantOutput": "<rag_context role=\"reference_only\">用户希望每周摘要。</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_tags",
+    "userMessage": "检索片段说了哪些标签习惯？",
+    "assistantOutput": "reference_only：资料写着按主题打标签。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_export",
+    "userMessage": "根据引用片段说明导出习惯。",
+    "assistantOutput": "<rag_context role=\"reference_only\">用户偏好 PDF 导出。</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_language",
+    "userMessage": "检索材料里提到语言偏好吗？",
+    "assistantOutput": "reference_only：资料说标签使用中文。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_archive",
+    "userMessage": "引用内容有什么归档习惯？",
+    "assistantOutput": "<memory operation_target=\"false\">用户喜欢归档完成项。</memory>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_priority",
+    "userMessage": "检索结果说任务排序如何？",
+    "assistantOutput": "reference_only：用户偏好优先级排序。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_cn_rag_reference_color",
+    "userMessage": "引用片段提到颜色吗？",
+    "assistantOutput": "<rag_context role=\"reference_only\">用户偏好绿色标签。</rag_context>",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TOOL_RESULT",
+    "expectedPolicyReason": "reference_context_not_profile",
+    "expectedSignals": [
+      "reference_only"
+    ]
+  },
+  {
+    "id": "replay_en_one_off_formal_concise_reply",
+    "userMessage": "For this reply, be formal and concise.",
+    "assistantOutput": "我会按这次要求处理。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
     "expectedPolicyReason": "one_off_instruction",
-    "expectedSignals": ["one_off_scope"]
+    "expectedSignals": [
+      "one_off_scope"
+    ]
   },
   {
-    "id": "replay_cn_positive_feedback",
+    "id": "replay_en_one_off_this_time_bullets",
+    "userMessage": "This time, answer with bullets.",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_en_one_off_current_reply_short",
+    "userMessage": "For this reply only, keep it short.",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_en_one_off_this_once_serious",
+    "userMessage": "This once, use a serious tone.",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_serious_reply",
+    "userMessage": "这次回答请严肃一点。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_bullet_reply",
+    "userMessage": "本次回复请用项目符号。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_short_answer",
+    "userMessage": "这一次回答请短一点。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_formal_tone",
+    "userMessage": "本轮回复请正式一点。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_markdown_table",
+    "userMessage": "当前这次请用 Markdown 表格。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_plain_language",
+    "userMessage": "这次请用更简单的说法。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_no_examples",
+    "userMessage": "本次回答不要放示例。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_detailed_review",
+    "userMessage": "这一次请详细分析。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_step_list",
+    "userMessage": "本轮请按步骤列出。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_cn_one_off_quick_summary",
+    "userMessage": "当前这次请先给快速摘要。",
+    "assistantOutput": "我会按这次要求处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "one_off_instruction",
+    "expectedSignals": [
+      "one_off_scope"
+    ]
+  },
+  {
+    "id": "replay_en_assistant_feedback_like_answer",
+    "userMessage": "I like this answer, thanks.",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_en_assistant_feedback_good_reply",
+    "userMessage": "Your reply is good, thank you.",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_en_assistant_feedback_helpful_response",
+    "userMessage": "Your response was helpful, thanks.",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_like_answer",
     "userMessage": "我喜欢这个回答，谢谢。",
     "assistantOutput": "不客气。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_TRANSIENT",
     "expectedPolicyReason": "assistant_feedback",
-    "expectedSignals": ["assistant_feedback"]
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
   },
   {
-    "id": "replay_cn_sensitive_secret",
+    "id": "replay_cn_assistant_feedback_good_answer",
+    "userMessage": "这个回答很好，谢谢。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_helpful_reply",
+    "userMessage": "你的回复很有帮助，谢谢。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_good_reply",
+    "userMessage": "这个回复不错，谢谢。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_answer_helpful",
+    "userMessage": "你的答案很有帮助。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_response_good",
+    "userMessage": "你的回复很好，谢谢。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_cn_assistant_feedback_like_response",
+    "userMessage": "我喜欢你的回答。",
+    "assistantOutput": "不客气。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "assistant_feedback",
+    "expectedSignals": [
+      "assistant_feedback"
+    ]
+  },
+  {
+    "id": "replay_en_sensitive_api_key",
+    "userMessage": "remember: my api key is sk-test123",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_en_sensitive_password",
+    "userMessage": "My password is fake-password-123.",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_en_sensitive_token",
+    "userMessage": "Store this fake token: token-test-000.",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_api_key",
     "userMessage": "记住，我的 API key 是 sk-test123",
     "assistantOutput": "我不能保存密钥。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "DENY_SENSITIVE",
     "expectedPolicyReason": "sensitive_content",
-    "expectedSignals": ["sensitive_content"]
+    "expectedSignals": [
+      "sensitive_content"
+    ]
   },
   {
-    "id": "replay_cn_forget_request",
+    "id": "replay_cn_sensitive_password",
+    "userMessage": "我的 password 是 fake-password-456。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_token",
+    "userMessage": "这个 token 是 fake-token-789，请记住。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_secret",
+    "userMessage": "请保存这个 secret：fake-secret-000。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_aws_key",
+    "userMessage": "测试密钥是 AKIA0000000000000000。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_session_token",
+    "userMessage": "会话 token 是 token-demo-222。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_cn_sensitive_api_secret",
+    "userMessage": "api secret 示例是 fake-secret-333。",
+    "assistantOutput": "我不能保存密钥。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_SENSITIVE",
+    "expectedPolicyReason": "sensitive_content",
+    "expectedSignals": [
+      "sensitive_content"
+    ]
+  },
+  {
+    "id": "replay_en_forget_dark_mode",
+    "userMessage": "forget this dark mode preference",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_en_forget_weekly_digest",
+    "userMessage": "forget that I prefer weekly digests",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_dark_mode",
     "userMessage": "忘记我喜欢深色模式这件事",
     "assistantOutput": "我会按遗忘流程处理。",
     "expectedCaptureAllowed": false,
     "expectedDecisionType": "FORGET_REQUEST",
     "expectedPolicyReason": "forget_request",
-    "expectedSignals": ["forget_request"]
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_markdown",
+    "userMessage": "不要记住我偏好 Markdown 这件事。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_blue_labels",
+    "userMessage": "别记住我喜欢蓝色标签。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_calendar_view",
+    "userMessage": "忘记我偏好日历视图。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_weekly_digest",
+    "userMessage": "不要记住每周摘要偏好。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_short_titles",
+    "userMessage": "别记住短标题偏好。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_priority_sort",
+    "userMessage": "忘记我按优先级排序任务。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_cn_forget_pdf_export",
+    "userMessage": "不要记住 PDF 导出偏好。",
+    "assistantOutput": "我会按遗忘流程处理。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "FORGET_REQUEST",
+    "expectedPolicyReason": "forget_request",
+    "expectedSignals": [
+      "forget_request"
+    ]
+  },
+  {
+    "id": "replay_en_ambiguous_thinking_about_topic",
+    "userMessage": "I am still thinking about this.",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_en_ambiguous_maybe_later",
+    "userMessage": "Maybe later.",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_en_ambiguous_not_sure_yet",
+    "userMessage": "I am not sure yet.",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_en_ambiguous_leave_it_for_now",
+    "userMessage": "Let's leave it for now.",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_thinking_about_topic",
+    "userMessage": "这个问题我再想想。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_set_aside",
+    "userMessage": "先放一边。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_not_decided",
+    "userMessage": "我还没决定。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_later_discuss",
+    "userMessage": "稍后再讨论。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_unclear_goal",
+    "userMessage": "目标还不清楚。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_wait_a_bit",
+    "userMessage": "再等一下看。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_no_action_now",
+    "userMessage": "现在先不用处理。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_cn_ambiguous_review_later",
+    "userMessage": "之后再看看。",
+    "assistantOutput": "好的。",
+    "expectedCaptureAllowed": false,
+    "expectedDecisionType": "DENY_TRANSIENT",
+    "expectedPolicyReason": "no_stable_user_memory_signal",
+    "expectedSignals": []
+  },
+  {
+    "id": "replay_en_multi_turn_correction_blue_instead_red",
+    "userMessage": "Earlier I said red labels; use blue labels instead.",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_en_multi_turn_correction_brief_instead_detailed",
+    "userMessage": "Earlier I wanted detailed replies; keep them brief instead.",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_green_instead_blue",
+    "userMessage": "前面说蓝色标签不再适合，改为绿色标签。",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_weekly_instead_daily",
+    "userMessage": "之前的摘要频率不再要每天，改为每周。",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_professional_instead_playful",
+    "userMessage": "之前不再使用俏皮风格，改为专业风格",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_table_instead_bullets",
+    "userMessage": "前面说项目符号不再适合，改为表格。",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_short_instead_long",
+    "userMessage": "之前不再使用详细语气，改为简洁语气",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_calendar_instead_board",
+    "userMessage": "前面说看板视图不再适合，改为日历视图。",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_serious_instead_light",
+    "userMessage": "之前不再使用轻松语气，改为严肃语气",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "style",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_multi_turn_correction_priority_instead_time",
+    "userMessage": "前面说按时间排序不再适合，改为按优先级。",
+    "assistantOutput": "已按新的偏好更新。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "preference",
+    "expectedCorrection": true,
+    "expectedPolicyReason": "correction_preference",
+    "expectedSignals": [
+      "preference_correction"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_capture_pipeline",
+    "userMessage": "项目上下文：当前记忆捕获流程先判断稳定信号，再把候选项写入用户画像。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_review_queue",
+    "userMessage": "项目背景：企业版需要把低置信度记忆送入人工复核队列。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_mobile_sync",
+    "userMessage": "项目上下文：移动端离线编辑后会通过同步服务合并笔记状态。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_workspace_roles",
+    "userMessage": "项目背景：工作区包含管理员、编辑者和只读成员三类角色。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_search_ranking",
+    "userMessage": "项目上下文：搜索排序会同时考虑标题、标签和正文命中。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_export_workflow",
+    "userMessage": "项目背景：报告导出流程需要先生成摘要，再附上引用来源。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_privacy_mode",
+    "userMessage": "项目上下文：隐私模式会隐藏敏感字段并跳过长期记忆写入。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_team_templates",
+    "userMessage": "项目背景：团队模板用于统一周报、会议纪要和研究记录。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_notification_rules",
+    "userMessage": "项目上下文：通知规则按任务优先级和截止日期组合触发。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
+  },
+  {
+    "id": "replay_cn_complex_project_context_evaluation_suite",
+    "userMessage": "项目背景：评估套件会回放匿名案例来检查记忆捕获质量。",
+    "assistantOutput": "已记录项目上下文。",
+    "expectedCaptureAllowed": true,
+    "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
+    "expectedMemoryType": "project_context",
+    "expectedCorrection": false,
+    "expectedPolicyReason": "project_context",
+    "expectedSignals": [
+      "project_context"
+    ]
   }
 ]

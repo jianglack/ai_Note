@@ -102,7 +102,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
 
         MemoryAdvisorReplayEvaluationService.AdvisorEvaluationReport report = evaluator.evaluate(cases, oracleAdvisor);
 
-        assertThat(report.totalCases()).isGreaterThanOrEqualTo(25);
+        assertThat(report.totalCases()).isGreaterThanOrEqualTo(200);
         assertThat(report.availabilityRate()).isEqualTo(1.0);
         assertThat(report.captureDecisionAccuracy()).isEqualTo(1.0);
         assertThat(report.falsePositiveRate()).isEqualTo(0.0);

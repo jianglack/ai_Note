@@ -115,36 +115,36 @@ class MemoryReplayEvaluationServiceTest {
         assertThat(cases)
                 .extracting(MemoryReplayEvaluationService.MemoryReplayCase::id)
                 .contains(
-                        "replay_delete_all_notes",
-                        "replay_confirm",
-                        "replay_cancel",
-                        "replay_explicit_preference",
-                        "replay_implicit_preference",
-                        "replay_preference_correction",
-                        "replay_project_context",
-                        "replay_selected_note_reference",
-                        "replay_rag_reference_profile",
-                        "replay_one_off_reply_style",
-                        "replay_positive_feedback",
-                        "replay_sensitive_secret",
-                        "replay_cn_delete_all_notes",
-                        "replay_cn_confirm_can",
-                        "replay_cn_confirm_ok",
-                        "replay_cn_explicit_preference",
-                        "replay_cn_stable_style",
-                        "replay_cn_style_correction",
-                        "replay_cn_project_context",
-                        "replay_cn_selected_note_reference",
-                        "replay_cn_rag_reference_profile",
-                        "replay_cn_one_off_reply_style",
-                        "replay_cn_positive_feedback",
-                        "replay_cn_sensitive_secret",
-                        "replay_cn_forget_request");
+                        "replay_en_operation_delete_all_notes",
+                        "replay_en_operation_confirm",
+                        "replay_en_operation_cancel",
+                        "replay_en_explicit_preference_concise_answers",
+                        "replay_en_implicit_preference_dark_mode",
+                        "replay_en_correction_chinese_instead_of_english",
+                        "replay_en_project_context_ai_note_system",
+                        "replay_en_reference_only_selected_note_red",
+                        "replay_en_rag_reference_profile_red",
+                        "replay_en_one_off_formal_concise_reply",
+                        "replay_en_assistant_feedback_like_answer",
+                        "replay_en_sensitive_api_key",
+                        "replay_cn_operation_delete_all_notes",
+                        "replay_cn_operation_confirm_can",
+                        "replay_cn_operation_confirm_ok",
+                        "replay_cn_explicit_preference_conclusion_first",
+                        "replay_cn_style_serious_less_joking",
+                        "replay_cn_correction_serious_instead_of_playful",
+                        "replay_cn_project_context_internal_ai_note_system",
+                        "replay_cn_reference_only_selected_note_red",
+                        "replay_cn_rag_reference_profile_red",
+                        "replay_cn_one_off_serious_reply",
+                        "replay_cn_assistant_feedback_like_answer",
+                        "replay_cn_sensitive_api_key",
+                        "replay_cn_forget_dark_mode");
 
-        assertThat(cases).hasSizeGreaterThanOrEqualTo(25);
+        assertThat(cases).hasSizeGreaterThanOrEqualTo(MIN_TOTAL_CASES);
 
         MemoryReplayEvaluationService.EvaluationReport report = evaluator.evaluate(cases);
-        assertThat(report.totalCases()).isGreaterThanOrEqualTo(12);
+        assertThat(report.totalCases()).isGreaterThanOrEqualTo(MIN_TOTAL_CASES);
         assertThat(report.shouldNotRememberPrecision()).isEqualTo(1.0);
         assertThat(report.shouldRememberRecall()).isEqualTo(1.0);
         assertThat(report.candidateTypeAccuracy()).isEqualTo(1.0);
