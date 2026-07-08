@@ -13,6 +13,13 @@
 #   COHERE_API_KEY                - Cohere reranking, disabled if absent
 #   MEMORY_CAPTURE_ADVISOR_ENABLED        - Defaults to false
 #   MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE - Defaults to 0.82
+#   MEMORY_ADVISOR_FORMAL_EVAL_ENABLED              - Defaults to false; set true only for live advisor evaluation
+#   MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES            - Defaults to 4000
+#   MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES            - Defaults to 4000
+#   MEMORY_ADVISOR_FORMAL_EVAL_MAX_COST_YUAN        - Defaults to 20.0
+#   MEMORY_ADVISOR_FORMAL_EVAL_MAX_INPUT_TOKENS     - Defaults to 2000000
+#   MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE - Defaults to 96
+#   MEMORY_ADVISOR_FORMAL_EVAL_REPORT_DIR           - Defaults to target/memory-advisor-formal-eval
 
 app:
   deepseek:
