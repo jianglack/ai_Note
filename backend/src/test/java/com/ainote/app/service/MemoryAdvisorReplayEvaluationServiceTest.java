@@ -1,10 +1,7 @@
 package com.ainote.app.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -14,7 +11,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MemoryAdvisorReplayEvaluationServiceTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final MemoryAdvisorReplayEvaluationService evaluator = new MemoryAdvisorReplayEvaluationService();
 
     @Test
@@ -103,7 +99,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
 
         MemoryAdvisorReplayEvaluationService.AdvisorEvaluationReport report = evaluator.evaluate(cases, oracleAdvisor);
 
-        assertThat(report.totalCases()).isGreaterThanOrEqualTo(200);
+        assertThat(report.totalCases()).isGreaterThanOrEqualTo(2000);
         assertThat(report.availabilityRate()).isEqualTo(1.0);
         assertThat(report.captureDecisionAccuracy()).isEqualTo(1.0);
         assertThat(report.falsePositiveRate()).isEqualTo(0.0);
@@ -136,10 +132,7 @@ class MemoryAdvisorReplayEvaluationServiceTest {
         };
     }
 
-    private List<MemoryReplayEvaluationService.MemoryReplayCase> loadCases() throws Exception {
-        try (InputStream input = getClass().getResourceAsStream("/memory/replay-eval-cases.json")) {
-            assertThat(input).isNotNull();
-            return objectMapper.readValue(input, new TypeReference<>() {});
-        }
+    private List<MemoryReplayEvaluationService.MemoryReplayCase> loadCases() {
+        return MemoryReplayDatasetLoader.loadActiveDataset().cases();
     }
 }

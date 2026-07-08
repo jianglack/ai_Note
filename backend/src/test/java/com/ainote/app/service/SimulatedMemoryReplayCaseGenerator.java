@@ -62,7 +62,9 @@ final class SimulatedMemoryReplayCaseGenerator {
             int needed = Math.max(0, target.getValue() - existing);
             for (int categoryIndex = 1; categoryIndex <= needed; categoryIndex++) {
                 globalIndex++;
-                String language = globalIndex % 3 == 0 ? "en" : "cn";
+                String language = requiresChineseStyleExtraction(category)
+                        ? "cn"
+                        : globalIndex % 3 == 0 ? "en" : "cn";
                 GeneratedCase generatedCase = buildCase(category, language, categoryIndex, globalIndex);
                 cases.add(generatedCase.replayCase());
                 manifest.add(generatedCase.manifestEntry());
@@ -279,7 +281,7 @@ final class SimulatedMemoryReplayCaseGenerator {
     private static MemoryReplayEvaluationService.MemoryReplayCase multiTurnCorrectionCase(
             String id, String language, String token) {
         if ("cn".equals(language)) {
-            return allow(id, "前面我说可以轻松一点，但以后不要轻松，改为正式简洁回答；多轮纠正编号 " + token,
+            return allow(id, "前面我说可以轻松一点，但以后不要用轻松口吻，改为正式简洁回答；多轮纠正编号 " + token,
                     "已按新的偏好调整。", "ALLOW_IMPLICIT_LOW_CONFIDENCE", "style", true,
                     "correction_interaction_style", List.of("interaction_style_correction"));
         }
@@ -350,6 +352,12 @@ final class SimulatedMemoryReplayCaseGenerator {
             tags.add("multilingual_code_switch");
         }
         return List.copyOf(tags);
+    }
+
+    private static boolean requiresChineseStyleExtraction(String category) {
+        return "style".equals(category)
+                || "correction".equals(category)
+                || "multi_turn_correction".equals(category);
     }
 
     private static String zeroPad(int value) {

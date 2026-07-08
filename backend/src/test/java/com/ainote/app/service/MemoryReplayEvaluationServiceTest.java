@@ -1,10 +1,7 @@
 package com.ainote.app.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -17,14 +14,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class MemoryReplayEvaluationServiceTest {
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final MemoryReplayEvaluationService evaluator = new MemoryReplayEvaluationService(
             new MemoryCapturePolicy(),
             new MemoryCandidateExtractor());
-    private static final int MIN_TOTAL_CASES = 200;
-    private static final int MIN_CHINESE_CASES = 120;
-    private static final int MIN_ALLOW_CASES = 70;
-    private static final int MIN_DENY_CASES = 70;
+    private static final int MIN_TOTAL_CASES = 2000;
+    private static final int MIN_CHINESE_CASES = 1300;
+    private static final int MIN_ALLOW_CASES = 700;
+    private static final int MIN_DENY_CASES = 700;
     private static final Pattern CASE_ID_PATTERN =
             Pattern.compile("^replay_(cn|en)_[a-z]+(?:_[a-z]+)*_[a-z0-9]+(?:_[a-z0-9]+)*$");
     private static final Pattern CJK_PATTERN = Pattern.compile("\\p{IsHan}");
@@ -146,11 +142,11 @@ class MemoryReplayEvaluationServiceTest {
 
         MemoryReplayEvaluationService.EvaluationReport report = evaluator.evaluate(cases);
         assertThat(report.totalCases()).isGreaterThanOrEqualTo(MIN_TOTAL_CASES);
-        assertThat(report.shouldNotRememberPrecision()).isEqualTo(1.0);
-        assertThat(report.shouldRememberRecall()).isEqualTo(1.0);
-        assertThat(report.candidateTypeAccuracy()).isEqualTo(1.0);
-        assertThat(report.reasonCoverage()).isEqualTo(1.0);
-        assertThat(report.signalCoverage()).isEqualTo(1.0);
+        assertThat(report.shouldNotRememberPrecision()).as(failureSummary(report)).isEqualTo(1.0);
+        assertThat(report.shouldRememberRecall()).as(failureSummary(report)).isEqualTo(1.0);
+        assertThat(report.candidateTypeAccuracy()).as(failureSummary(report)).isEqualTo(1.0);
+        assertThat(report.reasonCoverage()).as(failureSummary(report)).isEqualTo(1.0);
+        assertThat(report.signalCoverage()).as(failureSummary(report)).isEqualTo(1.0);
         assertThat(report.failures()).isEmpty();
     }
 
@@ -222,21 +218,21 @@ class MemoryReplayEvaluationServiceTest {
 
     private static Map<String, Integer> categoryMinimums() {
         Map<String, Integer> minimums = new LinkedHashMap<>();
-        minimums.put("operation", 15);
-        minimums.put("explicit_preference", 15);
-        minimums.put("implicit_preference", 18);
-        minimums.put("style", 18);
-        minimums.put("correction", 14);
-        minimums.put("project_context", 14);
-        minimums.put("reference_only", 15);
-        minimums.put("rag_reference", 15);
-        minimums.put("one_off", 14);
-        minimums.put("assistant_feedback", 10);
-        minimums.put("sensitive", 10);
-        minimums.put("forget", 10);
-        minimums.put("ambiguous", 12);
-        minimums.put("multi_turn_correction", 10);
-        minimums.put("complex_project_context", 10);
+        minimums.put("operation", 150);
+        minimums.put("explicit_preference", 150);
+        minimums.put("implicit_preference", 180);
+        minimums.put("style", 180);
+        minimums.put("correction", 140);
+        minimums.put("project_context", 140);
+        minimums.put("reference_only", 150);
+        minimums.put("rag_reference", 150);
+        minimums.put("one_off", 140);
+        minimums.put("assistant_feedback", 100);
+        minimums.put("sensitive", 100);
+        minimums.put("forget", 100);
+        minimums.put("ambiguous", 120);
+        minimums.put("multi_turn_correction", 100);
+        minimums.put("complex_project_context", 100);
         return minimums;
     }
 
@@ -270,10 +266,14 @@ class MemoryReplayEvaluationServiceTest {
                 .allSatisfy(signal -> assertThat(signal).doesNotContain(REPLACEMENT_CHARACTER));
     }
 
-    private List<MemoryReplayEvaluationService.MemoryReplayCase> loadCases() throws Exception {
-        try (InputStream input = getClass().getResourceAsStream("/memory/replay-eval-cases.json")) {
-            assertThat(input).isNotNull();
-            return objectMapper.readValue(input, new TypeReference<>() {});
-        }
+    private static String failureSummary(MemoryReplayEvaluationService.EvaluationReport report) {
+        return report.failures().stream()
+                .limit(20)
+                .map(failure -> failure.id() + " " + failure.messages())
+                .collect(java.util.stream.Collectors.joining(System.lineSeparator()));
+    }
+
+    private List<MemoryReplayEvaluationService.MemoryReplayCase> loadCases() {
+        return MemoryReplayDatasetLoader.loadActiveDataset().cases();
     }
 }
