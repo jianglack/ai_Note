@@ -90,6 +90,41 @@ class LlmMemorySignalAdvisorTest {
     }
 
     @Test
+    void adviseRawPreservesLowConfidenceCaptureBeforeRuntimeGating() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        memoryProperties.getCapture().getAdvisor().setMinConfidence(0.82);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"preference","confidence":0.40,
+                 "signals":["advisor_preference_signal"],"reason":"weak but parseable"}
+                """));
+
+        MemoryAdvisorRawResult raw = advisor.adviseRaw(request("I prefer concise answers."));
+
+        assertThat(raw.available()).isTrue();
+        assertThat(raw.parsed()).isTrue();
+        assertThat(raw.rawShouldCapture()).isTrue();
+        assertThat(raw.rawMemoryType()).isEqualTo("preference");
+        assertThat(raw.rawConfidence()).isEqualTo(0.40);
+        assertThat(raw.finalResult().shouldCapture()).isFalse();
+        assertThat(raw.finalResult().signals()).contains("advisor_low_confidence");
+    }
+
+    @Test
+    void adviseDelegatesToFinalGatedRawResult() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        memoryProperties.getCapture().getAdvisor().setMinConfidence(0.82);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"preference","confidence":0.40,
+                 "signals":["advisor_preference_signal"],"reason":"weak but parseable"}
+                """));
+
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(request("I prefer concise answers."));
+
+        assertThat(result.shouldCapture()).isFalse();
+        assertThat(result.signals()).contains("advisor_low_confidence");
+    }
+
+    @Test
     void malformedJsonReturnsObservableFailure() {
         memoryProperties.getCapture().getAdvisor().setEnabled(true);
         when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("not json"));

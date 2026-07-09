@@ -18,7 +18,7 @@ import java.util.Locale;
 import java.util.Set;
 
 @Service
-public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
+public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
 
     static final String PROMPT_VERSION = "memory-advisor-v2";
 
@@ -49,8 +49,14 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
 
     @Override
     public AdvisorResult advise(MemoryCapturePolicy.CaptureRequest request) {
+        return adviseRaw(request).finalResult();
+    }
+
+    @Override
+    public MemoryAdvisorRawResult adviseRaw(MemoryCapturePolicy.CaptureRequest request) {
         if (!memoryProperties.getCapture().getAdvisor().isEnabled()) {
-            return AdvisorResult.unavailable(List.of("advisor_disabled"), "advisor disabled");
+            AdvisorResult disabled = AdvisorResult.unavailable(List.of("advisor_disabled"), "advisor disabled");
+            return MemoryAdvisorRawResult.fromFinal(disabled);
         }
         try {
             ChatResponse response = chatModel.chat(ChatRequest.builder()
@@ -58,34 +64,38 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
                             SystemMessage.from(systemPrompt()),
                             UserMessage.from(userPrompt(request))))
                     .build());
-            return parse(response.aiMessage().text());
+            return parseRaw(response.aiMessage().text());
         } catch (Exception e) {
             log.warn("memory_advisor_event=failed error={} message={}",
                     e.getClass().getSimpleName(), e.getMessage());
-            return AdvisorResult.unavailable(List.of("advisor_failed"), e.getClass().getSimpleName());
+            AdvisorResult unavailable = AdvisorResult.unavailable(List.of("advisor_failed"), e.getClass().getSimpleName());
+            return new MemoryAdvisorRawResult(false, false, false, "none", 0.0,
+                    unavailable.signals(), "", e.getClass().getSimpleName(), unavailable);
         }
     }
 
-    private AdvisorResult parse(String responseText) throws Exception {
+    private MemoryAdvisorRawResult parseRaw(String responseText) throws Exception {
         JsonNode root = objectMapper.readTree(cleanJson(responseText));
-        boolean shouldCapture = root.path("should_capture").asBoolean(false);
-        String memoryType = normalizeMemoryType(root.path("memory_type").asText("none"));
-        double confidence = root.path("confidence").asDouble(0.0);
-        String reason = root.path("reason").asText("");
-        List<String> signals = allowedSignals(root.path("signals"));
+        boolean rawShouldCapture = root.path("should_capture").asBoolean(false);
+        String rawMemoryType = normalizeMemoryType(root.path("memory_type").asText("none"));
+        double rawConfidence = root.path("confidence").asDouble(0.0);
+        String rawReason = root.path("reason").asText("");
+        List<String> rawSignals = allowedSignals(root.path("signals"));
+        AdvisorResult finalResult;
 
-        if (!ALLOWED_MEMORY_TYPES.contains(memoryType)) {
-            return AdvisorResult.noCapture("none", confidence, List.of("advisor_invalid_type"), reason);
-        }
-        if (!shouldCapture || "none".equals(memoryType)) {
-            return AdvisorResult.noCapture(memoryType, confidence, signals, reason);
-        }
-        if (confidence < memoryProperties.getCapture().getAdvisor().getMinConfidence()) {
-            List<String> lowConfidenceSignals = new ArrayList<>(signals);
+        if (!ALLOWED_MEMORY_TYPES.contains(rawMemoryType)) {
+            finalResult = AdvisorResult.noCapture("none", rawConfidence, List.of("advisor_invalid_type"), rawReason);
+        } else if (!rawShouldCapture || "none".equals(rawMemoryType)) {
+            finalResult = AdvisorResult.noCapture(rawMemoryType, rawConfidence, rawSignals, rawReason);
+        } else if (rawConfidence < memoryProperties.getCapture().getAdvisor().getMinConfidence()) {
+            List<String> lowConfidenceSignals = new ArrayList<>(rawSignals);
             lowConfidenceSignals.add("advisor_low_confidence");
-            return AdvisorResult.noCapture(memoryType, confidence, lowConfidenceSignals, reason);
+            finalResult = AdvisorResult.noCapture(rawMemoryType, rawConfidence, lowConfidenceSignals, rawReason);
+        } else {
+            finalResult = AdvisorResult.capture(rawMemoryType, rawConfidence, rawSignals, rawReason);
         }
-        return AdvisorResult.capture(memoryType, confidence, signals, reason);
+        return new MemoryAdvisorRawResult(true, true, rawShouldCapture, rawMemoryType, rawConfidence,
+                rawSignals, rawReason, "", finalResult);
     }
 
     private String cleanJson(String responseText) {
