@@ -128,6 +128,22 @@ The current prompt version is `memory-advisor-v2`. A formal report whose prompt 
 
 Prompt version approval does not mean production enablement. It only means this prompt is eligible for formal evaluation and release-gate review.
 
+Prompt status semantics:
+
+- `candidate`
+  - Eligible for formal evaluation.
+  - May receive a `PASS` release-gate decision if every metric and package requirement passes.
+  - A passing candidate means "eligible for human promotion to approved"; it does not mean production traffic can enable the advisor.
+  - The release package must include `approvalActionRequired=promote_prompt_to_approved`.
+- `approved`
+  - Eligible for formal evaluation and release-gate `PASS`.
+  - No prompt-status promotion action is required, but runtime advisor enablement still remains a separate configuration decision.
+- `deprecated`
+  - Always blocked by the release gate.
+- Unknown prompt versions are always blocked.
+
+This avoids a circular dependency where a prompt would need to be approved before it could pass the very gate used to justify approval.
+
 The prompt hash must be computed from a canonical prompt template, not from an incidental runtime string. The canonical template includes:
 
 - the system prompt text;
@@ -149,6 +165,13 @@ Calibration requires raw model outputs. It cannot be computed from the existing 
 - final runtime decision after current `MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE` gating.
 
 Candidate thresholds are applied to the raw model decision during calibration. Runtime behavior is not changed by calibration.
+
+Calibration denominator:
+
+- Include only cases with `available=true` and a parsed raw advisor result.
+- Exclude timeout, error, unavailable, missing-progress, and raw parse-error cases from threshold candidate calculations.
+- Count excluded cases separately as `excludedUnavailableCases`, `excludedParseErrorCases`, and `excludedOtherErrorCases`.
+- Excluded cases remain release-gate inputs through advisor failure-rate monitoring. A threshold cannot hide availability, timeout, or parse failures.
 
 The calibration report includes:
 
@@ -222,6 +245,8 @@ The release gate returns:
 - `modelName`;
 - `promptVersion`;
 - `promptHash`;
+- `promptStatus`;
+- `approvalActionRequired`;
 - `evaluatedCases`;
 - `qualityGatePassed`;
 - `blockReasons`;
@@ -242,6 +267,14 @@ The release gate blocks when any of these are true:
 - availability is below threshold;
 - timeout or error rate is above threshold;
 - report is older than the configured freshness window.
+
+Report freshness:
+
+- The default maximum report age is `168` hours, which is 7 days.
+- The configuration key is `MEMORY_ADVISOR_RELEASE_GATE_MAX_REPORT_AGE_HOURS`.
+- Freshness is calculated from the formal batch report `completedAt` timestamp.
+- Missing, malformed, or future `completedAt` timestamps block the gate with `report_timestamp_invalid`.
+- Reports older than the configured window block the gate with `report_stale`.
 
 The gate does not enable the advisor. It only decides whether this advisor prompt/model/dataset result is release-ready.
 
@@ -279,7 +312,10 @@ Tests must cover:
 - a report with failed production quality gates blocks release readiness;
 - bare readiness report without full release package blocks release readiness;
 - calibration uses raw model confidence rather than final threshold-gated advisor decisions;
+- calibration excludes unavailable, timeout, error, and parse-error rows from threshold math while failure-rate gates still count them;
 - prompt hash changes when canonical prompt text, allowed memory types, allowed signals, or schema changes;
+- candidate prompt status can pass quality gates only as approval-eligible, while deprecated and unknown prompts are blocked;
+- report freshness defaults to 168 hours and stale or invalid timestamps block release readiness;
 - oracle advisor with calibration and A/B data can pass the release gate;
 - threshold calibration chooses a deployable threshold when one exists;
 - threshold calibration reports no deployable threshold when sensitive false-allow cannot be eliminated;
