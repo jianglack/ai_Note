@@ -180,9 +180,14 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                                               long perCaseTimeoutMillis,
                                               ExecutorService executor) {
         long startedAt = System.nanoTime();
-        Future<MemorySignalAdvisor.AdvisorResult> future = executor.submit(() -> advisor.advise(request));
+        Future<MemoryAdvisorRawResult> future = executor.submit(() -> {
+            if (advisor instanceof MemoryAdvisorRawSignalAdvisor rawAdvisor) {
+                return rawAdvisor.adviseRaw(request);
+            }
+            return MemoryAdvisorRawResult.fromFinal(advisor.advise(request));
+        });
         try {
-            MemorySignalAdvisor.AdvisorResult result =
+            MemoryAdvisorRawResult result =
                     future.get(Math.max(1, perCaseTimeoutMillis), TimeUnit.MILLISECONDS);
             long latencyMillis = Math.max(0L, (System.nanoTime() - startedAt) / 1_000_000L);
             return ProgressEntry.from(caseId, CaseStatus.COMPLETED, result, latencyMillis);
@@ -255,6 +260,7 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                 safeEntry.confidence(),
                 safeEntry.signals(),
                 safeEntry.reason(),
+                safeEntry.rawResult(),
                 latencyMillis,
                 safeEntry.completedAt(),
                 attemptCount,
@@ -459,6 +465,7 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                                 double confidence,
                                 List<String> signals,
                                 String reason,
+                                MemoryAdvisorRawResult rawResult,
                                 long latencyMillis,
                                 String completedAt,
                                 int attemptCount,
@@ -469,6 +476,15 @@ public class MemoryAdvisorFormalBatchEvaluationService {
             memoryType = memoryType == null ? "none" : memoryType;
             signals = signals == null ? List.of() : List.copyOf(signals);
             reason = safe(reason);
+            if (rawResult == null) {
+                rawResult = MemoryAdvisorRawResult.fromFinal(new MemorySignalAdvisor.AdvisorResult(
+                        available,
+                        shouldCapture,
+                        memoryType,
+                        confidence,
+                        signals,
+                        reason));
+            }
             latencyMillis = Math.max(0L, latencyMillis);
             completedAt = safe(completedAt);
             attemptCount = Math.max(1, attemptCount);
@@ -479,9 +495,18 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                                   CaseStatus status,
                                   MemorySignalAdvisor.AdvisorResult result,
                                   long latencyMillis) {
-            MemorySignalAdvisor.AdvisorResult safeResult = result == null
-                    ? MemorySignalAdvisor.AdvisorResult.unavailable(List.of("advisor_null_result"), "null advisor result")
-                    : result;
+            return from(caseId, status, MemoryAdvisorRawResult.fromFinal(result), latencyMillis);
+        }
+
+        static ProgressEntry from(String caseId,
+                                  CaseStatus status,
+                                  MemoryAdvisorRawResult rawResult,
+                                  long latencyMillis) {
+            MemoryAdvisorRawResult safeRawResult = rawResult == null
+                    ? MemoryAdvisorRawResult.fromFinal(MemorySignalAdvisor.AdvisorResult.unavailable(
+                    List.of("advisor_null_result"), "null advisor result"))
+                    : rawResult;
+            MemorySignalAdvisor.AdvisorResult safeResult = safeRawResult.finalResult();
             return new ProgressEntry(
                     caseId,
                     status,
@@ -491,6 +516,7 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                     safeResult.confidence(),
                     safeResult.signals(),
                     safeResult.reason(),
+                    safeRawResult,
                     latencyMillis,
                     Instant.now().toString(),
                     1,

@@ -136,6 +136,42 @@ class MemoryAdvisorFormalBatchEvaluationServiceTest {
     }
 
     @Test
+    void batchProgressStoresRawResultSeparatelyFromFinalDecision() throws Exception {
+        Path progressPath = reportDir.resolve("raw-progress.jsonl");
+        Path reportPath = reportDir.resolve("raw-report.json");
+        MemoryAdvisorRawSignalAdvisor advisor = new MemoryAdvisorRawSignalAdvisor() {
+            @Override
+            public MemoryAdvisorRawResult adviseRaw(MemoryCapturePolicy.CaptureRequest request) {
+                MemorySignalAdvisor.AdvisorResult finalResult = MemorySignalAdvisor.AdvisorResult.noCapture(
+                        "preference",
+                        0.40,
+                        List.of("advisor_preference_signal", "advisor_low_confidence"),
+                        "below runtime threshold");
+                return new MemoryAdvisorRawResult(true, true, true, "preference", 0.40,
+                        List.of("advisor_preference_signal"), "raw preference", "", finalResult);
+            }
+
+            @Override
+            public MemorySignalAdvisor.AdvisorResult advise(MemoryCapturePolicy.CaptureRequest request) {
+                return adviseRaw(request).finalResult();
+            }
+        };
+
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport report = service.run(
+                List.of(replayCase("remember_preference", "remember: I prefer concise answers.", true, "preference")),
+                advisor,
+                request(progressPath, reportPath, false, 1000, false, 1, 1));
+
+        assertThat(report.results()).hasSize(1);
+        MemoryAdvisorFormalBatchEvaluationService.ProgressEntry entry = report.results().get(0);
+        assertThat(entry.rawResult().parsed()).isTrue();
+        assertThat(entry.rawResult().rawShouldCapture()).isTrue();
+        assertThat(entry.rawResult().rawConfidence()).isEqualTo(0.40);
+        assertThat(entry.shouldCapture()).isFalse();
+        assertThat(Files.readString(progressPath)).contains("\"rawShouldCapture\":true");
+    }
+
+    @Test
     void resumeCanRetryUnavailableProgressEntriesOnly() throws Exception {
         Path progressPath = reportDir.resolve("retry-unavailable-progress.jsonl");
         Path reportPath = reportDir.resolve("retry-unavailable-report.json");
