@@ -59,6 +59,10 @@ class MemoryAdvisorFormalEvaluationIT {
             assertThat(report.readinessReport().run().modelName()).isEqualTo(modelName);
             assertThat(report.readinessReport().run().promptVersion())
                     .isEqualTo(LlmMemorySignalAdvisor.PROMPT_VERSION);
+            assertThat(report.releaseReadinessPackage()).isNotNull();
+            assertThat(report.releaseReadinessPackage().promptVersion())
+                    .isEqualTo(LlmMemorySignalAdvisor.PROMPT_VERSION);
+            assertThat(report.releaseGateDecision()).isNotNull();
         } else {
             assertThat(report.preflightReport().blockReasons()).isNotEmpty();
             assertThat(report.readinessReport()).isNull();

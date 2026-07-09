@@ -172,6 +172,32 @@ class MemoryAdvisorFormalBatchEvaluationServiceTest {
     }
 
     @Test
+    void completedBatchReportContainsReleaseReadinessPackage() throws Exception {
+        Path progressPath = reportDir.resolve("release-progress.jsonl");
+        Path reportPath = reportDir.resolve("release-report.json");
+
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationReport report = service.run(
+                replayCases(),
+                matchingAdvisor(new AtomicInteger()),
+                request(progressPath, reportPath, false, 1000));
+
+        assertThat(report.releaseReadinessPackage()).isNotNull();
+        assertThat(report.releaseGateDecision()).isNotNull();
+        assertThat(report.releaseReadinessPackage().promptMetadata().promptVersion())
+                .isEqualTo(LlmMemorySignalAdvisor.PROMPT_VERSION);
+        assertThat(report.releaseReadinessPackage().calibrationReport()).isNotNull();
+        assertThat(report.releaseReadinessPackage().abComparisonReport()).isNotNull();
+        assertThat(report.releaseReadinessPackage().failureMetricsReport()).isNotNull();
+
+        String json = Files.readString(reportPath);
+        assertThat(json)
+                .contains("\"releaseReadinessPackage\"")
+                .contains("\"releaseGateDecision\"")
+                .contains("\"promptHash\"")
+                .contains("\"recommendedThreshold\"");
+    }
+
+    @Test
     void resumeCanRetryUnavailableProgressEntriesOnly() throws Exception {
         Path progressPath = reportDir.resolve("retry-unavailable-progress.jsonl");
         Path reportPath = reportDir.resolve("retry-unavailable-report.json");

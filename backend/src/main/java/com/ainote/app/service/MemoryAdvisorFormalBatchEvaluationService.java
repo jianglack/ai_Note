@@ -30,17 +30,54 @@ public class MemoryAdvisorFormalBatchEvaluationService {
     private static final int DEFAULT_MAX_ATTEMPTS = 3;
     private static final long DEFAULT_RETRY_INITIAL_BACKOFF_MILLIS = 1_000L;
     private static final long DEFAULT_RETRY_MAX_BACKOFF_MILLIS = 15_000L;
+    private static final double DEFAULT_ADVISOR_MIN_CONFIDENCE = 0.82;
 
     private final MemoryAdvisorFormalEvaluationService formalEvaluationService;
     private final MemoryAdvisorProductionQualityService productionQualityService;
+    private final MemoryAdvisorPromptRegistry promptRegistry;
+    private final MemoryAdvisorCalibrationService calibrationService;
+    private final MemoryAdvisorAbComparisonService abComparisonService;
+    private final MemoryAdvisorFailureMetricsService failureMetricsService;
+    private final MemoryAdvisorReleaseGateService releaseGateService;
     private final ObjectMapper objectMapper;
 
     public MemoryAdvisorFormalBatchEvaluationService(
             MemoryAdvisorFormalEvaluationService formalEvaluationService,
             MemoryAdvisorProductionQualityService productionQualityService,
             ObjectMapper objectMapper) {
+        this(
+                formalEvaluationService,
+                productionQualityService,
+                objectMapper,
+                new MemoryAdvisorPromptRegistry(),
+                new MemoryAdvisorCalibrationService(),
+                new MemoryAdvisorAbComparisonService(new MemoryCapturePolicy(), new MemoryCandidateExtractor()),
+                new MemoryAdvisorFailureMetricsService(),
+                null);
+    }
+
+    public MemoryAdvisorFormalBatchEvaluationService(
+            MemoryAdvisorFormalEvaluationService formalEvaluationService,
+            MemoryAdvisorProductionQualityService productionQualityService,
+            ObjectMapper objectMapper,
+            MemoryAdvisorPromptRegistry promptRegistry,
+            MemoryAdvisorCalibrationService calibrationService,
+            MemoryAdvisorAbComparisonService abComparisonService,
+            MemoryAdvisorFailureMetricsService failureMetricsService,
+            MemoryAdvisorReleaseGateService releaseGateService) {
         this.formalEvaluationService = formalEvaluationService;
         this.productionQualityService = productionQualityService;
+        this.promptRegistry = promptRegistry == null ? new MemoryAdvisorPromptRegistry() : promptRegistry;
+        this.calibrationService = calibrationService == null ? new MemoryAdvisorCalibrationService() : calibrationService;
+        this.abComparisonService = abComparisonService == null
+                ? new MemoryAdvisorAbComparisonService(new MemoryCapturePolicy(), new MemoryCandidateExtractor())
+                : abComparisonService;
+        this.failureMetricsService = failureMetricsService == null
+                ? new MemoryAdvisorFailureMetricsService()
+                : failureMetricsService;
+        this.releaseGateService = releaseGateService == null
+                ? new MemoryAdvisorReleaseGateService(this.promptRegistry)
+                : releaseGateService;
         this.objectMapper = objectMapper == null ? new ObjectMapper() : objectMapper;
     }
 
@@ -68,6 +105,8 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                     progressPath.toString(),
                     reportPath.toString(),
                     preflightReport,
+                    null,
+                    null,
                     null,
                     List.of(),
                     Instant.now().toString(),
@@ -119,6 +158,34 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                                 safeRequest.formalRequest().promptVersion(),
                                 safeRequest.formalRequest().datasetVersion(),
                                 safeRequest.formalRequest().qualityThresholds()));
+        MemoryAdvisorPromptRegistry.PromptMetadata promptMetadata =
+                promptRegistry.find(safeRequest.formalRequest().promptVersion()).orElse(null);
+        MemoryAdvisorCalibrationService.CalibrationReport calibrationReport = calibrationService.calibrate(
+                selectedCases,
+                orderedProgress,
+                DEFAULT_ADVISOR_MIN_CONFIDENCE,
+                safeRequest.formalRequest().qualityThresholds());
+        MemoryAdvisorAbComparisonService.AbComparisonReport abComparisonReport =
+                abComparisonService.compare(selectedCases, orderedProgress);
+        MemoryAdvisorFailureMetricsService.FailureMetricsReport failureMetricsReport =
+                failureMetricsService.summarize(orderedProgress);
+        String completedAt = Instant.now().toString();
+        MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage releasePackage =
+                new MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage(
+                        safeRequest.formalRequest().runId(),
+                        safeRequest.formalRequest().datasetVersion(),
+                        safeRequest.formalRequest().modelName(),
+                        safeRequest.formalRequest().promptVersion(),
+                        completedAt,
+                        progressPath.toString(),
+                        reportPath.toString(),
+                        promptMetadata,
+                        readinessReport,
+                        calibrationReport,
+                        abComparisonReport,
+                        failureMetricsReport);
+        MemoryAdvisorReleaseGateService.ReleaseGateDecision releaseGateDecision =
+                releaseGateService.evaluate(releasePackage);
 
         BatchEvaluationReport report = new BatchEvaluationReport(
                 BatchRunStatus.COMPLETED,
@@ -132,9 +199,11 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                 reportPath.toString(),
                 preflightReport,
                 readinessReport,
+                releasePackage,
+                releaseGateDecision,
                 orderedProgress,
                 startedAt,
-                Instant.now().toString());
+                completedAt);
         writeReport(reportPath, report);
         return report;
     }
@@ -438,6 +507,8 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                                         String reportPath,
                                         MemoryAdvisorFormalEvaluationService.FormalEvaluationReport preflightReport,
                                         MemoryAdvisorProductionQualityService.AdvisorReadinessReport readinessReport,
+                                        MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage releaseReadinessPackage,
+                                        MemoryAdvisorReleaseGateService.ReleaseGateDecision releaseGateDecision,
                                         List<ProgressEntry> results,
                                         String startedAt,
                                         String completedAt) {
