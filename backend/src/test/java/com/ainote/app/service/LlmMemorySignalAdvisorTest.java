@@ -133,6 +133,21 @@ class LlmMemorySignalAdvisorTest {
                 .contains("\"memory_type\": \"fact\"|\"preference\"|\"style\"|\"project_context\"|\"none\"");
     }
 
+    @Test
+    void canonicalPromptTemplateContainsRuntimePromptAndIsHashable() {
+        MemoryAdvisorPromptRegistry registry = new MemoryAdvisorPromptRegistry();
+
+        String canonicalPrompt = LlmMemorySignalAdvisor.canonicalPromptTemplate();
+
+        assertThat(canonicalPrompt)
+                .contains("Memory advisor prompt version: " + LlmMemorySignalAdvisor.PROMPT_VERSION)
+                .contains("USER_MESSAGE:")
+                .contains("ASSISTANT_OUTPUT:")
+                .contains("reference_only")
+                .contains("\"should_capture\": true|false");
+        assertThat(registry.hashCanonicalTemplate(canonicalPrompt)).matches("[a-f0-9]{64}");
+    }
+
     private MemoryCapturePolicy.CaptureRequest request(String userMessage) {
         return new MemoryCapturePolicy.CaptureRequest("user-1", userMessage, "收到。");
     }

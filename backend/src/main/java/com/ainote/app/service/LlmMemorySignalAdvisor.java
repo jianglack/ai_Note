@@ -119,13 +119,26 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
         return memoryType == null ? "none" : memoryType.trim().toLowerCase(Locale.ROOT);
     }
 
-    private String systemPrompt() {
+    static String canonicalPromptTemplate() {
+        return systemPromptTemplate() + "\n\n" + userPromptTemplate();
+    }
+
+    private static String systemPromptTemplate() {
         return "Memory advisor prompt version: " + PROMPT_VERSION + ". "
                 + "You classify whether a user turn contains stable long-term memory signals. "
                 + "Return strict JSON only.";
     }
 
+    private String systemPrompt() {
+        return systemPromptTemplate();
+    }
+
     private String userPrompt(MemoryCapturePolicy.CaptureRequest request) {
+        return userPromptTemplate().formatted(safe(request == null ? null : request.userMessage()),
+                safe(request == null ? null : request.aiResponse()));
+    }
+
+    private static String userPromptTemplate() {
         return """
                 Decide whether the USER_MESSAGE contains a stable long-term memory signal.
 
@@ -154,8 +167,7 @@ public class LlmMemorySignalAdvisor implements MemorySignalAdvisor {
 
                 ASSISTANT_OUTPUT:
                 %s
-                """.formatted(safe(request == null ? null : request.userMessage()),
-                safe(request == null ? null : request.aiResponse()));
+                """;
     }
 
     private String safe(String value) {
