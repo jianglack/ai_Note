@@ -22,6 +22,7 @@ frontend/dev/
 frontend/test-results/
 frontend/playwright-report/
 frontend/coverage/
+frontend/target/
 
 # audit docs — local only, NEVER publish (vulnerability roadmap; repo has public remote)
 AUDIT_REPORT.md
@@ -36,6 +37,9 @@ hf-tei-*/
 !.env.example
 .idea/
 .vscode/
+.superpowers/**/state/
+observability/secrets/
+observability/alertmanager/alertmanager.production.yml
 *.log
 *.tmp
 *.gz
