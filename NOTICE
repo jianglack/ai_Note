@@ -1,0 +1,6 @@
+AiNote
+Copyright 2026 AiNote contributors
+
+This product includes a filtered and redacted replay fixture derived from
+the allenai/WildChat dataset. See THIRD_PARTY_NOTICES.md for provenance,
+transformation, and licensing details.
