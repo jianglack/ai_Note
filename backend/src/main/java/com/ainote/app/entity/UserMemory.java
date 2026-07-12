@@ -36,8 +36,11 @@ public class UserMemory {
     @Column(name = "tool_call_id", length = 64)
     private String toolCallId;
 
-    @Column(name = "sequence_number")
+    @Column(name = "sequence_number", nullable = false)
     private Integer sequenceNumber;
+
+    @Column(name = "trimmed_at")
+    private LocalDateTime trimmedAt;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -128,5 +131,13 @@ public class UserMemory {
 
     public void setSequenceNumber(Integer sequenceNumber) {
         this.sequenceNumber = sequenceNumber;
+    }
+
+    public LocalDateTime getTrimmedAt() {
+        return trimmedAt;
+    }
+
+    public void setTrimmedAt(LocalDateTime trimmedAt) {
+        this.trimmedAt = trimmedAt;
     }
 }

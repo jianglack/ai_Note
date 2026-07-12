@@ -4,15 +4,18 @@ on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   secret-scan:
     name: gitleaks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -20,8 +23,8 @@ jobs:
     name: backend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
         with:
           distribution: temurin
           java-version: "17"
@@ -34,15 +37,18 @@ jobs:
     name: frontend
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
         with:
-          node-version: "20"
+          node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
       - name: Install
         working-directory: frontend
         run: npm ci
+      - name: Production dependency vulnerability gate
+        working-directory: frontend
+        run: npm audit --omit=dev --audit-level=high --registry=https://registry.npmjs.org
       - name: Typecheck
         working-directory: frontend
         run: npx tsc -b
@@ -55,3 +61,64 @@ jobs:
       - name: Vitest coverage gate
         working-directory: frontend
         run: npm run test:coverage
+
+  dependency-security:
+    name: dependency security and SBOM
+    runs-on: ubuntu-latest
+    env:
+      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/dependency-check
+          key: ${{ runner.os }}-dependency-check-v12-${{ hashFiles('backend/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-dependency-check-v12-
+      - name: Backend OWASP Dependency-Check gate
+        working-directory: backend
+        run: >-
+          mvn -B org.owasp:dependency-check-maven:12.2.2:check
+          -DdataDirectory=$HOME/.cache/dependency-check
+          -DfailBuildOnCVSS=7
+          -DfailOnError=true
+          -Dformats=JSON,HTML
+          -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
+      - name: Generate backend CycloneDX SBOM
+        working-directory: backend
+        run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -DskipTests
+      - name: Generate frontend CycloneDX SBOM
+        working-directory: frontend
+        run: |
+          npm ci
+          mkdir -p target
+          npm sbom --sbom-format cyclonedx > target/bom.json
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: security-reports-and-sboms
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            backend/target/dependency-check-report.*
+            backend/target/bom.*
+            frontend/target/bom.json
+
+  dependency-review:
+    name: dependency review
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: high

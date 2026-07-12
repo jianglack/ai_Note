@@ -149,6 +149,33 @@ class MemoryCapturePolicyTest {
     }
 
     @Test
+    void explicitNoStoreAndUncertainPreferenceShouldNotBeCaptured() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "先别记，我可能还会改：我也许以后喜欢英文回答，但不确定。",
+                        "好的"));
+
+        assertThat(decision.allowed()).isFalse();
+        assertThat(decision.type()).isEqualTo(MemoryCapturePolicy.DecisionType.DENY_TRANSIENT);
+        assertThat(decision.reason()).isEqualTo("explicit_no_store_or_uncertain");
+        assertThat(decision.matchedSignals()).contains("explicit_no_store_or_uncertain");
+    }
+
+    @Test
+    void chineseContrastiveCorrectionShouldBeAllowedForSupersedeFlow() {
+        MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
+                new MemoryCapturePolicy.CaptureRequest(
+                        "user-1",
+                        "更正一下：我不是默认希望先详细解释，而是希望先给结论，再补充必要细节。请以后按这个记。",
+                        "好的"));
+
+        assertThat(decision.allowed()).isTrue();
+        assertThat(decision.reason()).contains("correction");
+        assertThat(decision.matchedSignals()).contains("interaction_style_correction");
+    }
+
+    @Test
     void positiveFeedbackAboutThisAnswerShouldNotBecomePreference() {
         MemoryCapturePolicy.CaptureDecision decision = policy.evaluate(
                 new MemoryCapturePolicy.CaptureRequest(

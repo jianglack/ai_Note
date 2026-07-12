@@ -92,6 +92,27 @@ public interface UserMemoryRepository extends JpaRepository<UserMemory, Long> {
            "ORDER BY COALESCE(m.sequenceNumber, 0) ASC, m.createdAt ASC")
     List<UserMemory> findAllByUserIdOrderByCreatedAtAsc(String userId);
 
+    @Query("""
+        SELECT m FROM UserMemory m
+        WHERE m.userId = :userId
+          AND m.trimmedAt IS NULL
+        ORDER BY m.sequenceNumber DESC, m.id DESC
+        """)
+    List<UserMemory> findModelWindowByUserIdOrderBySequenceDesc(
+            @Param("userId") String userId,
+            Pageable pageable);
+
+    @Query("""
+        SELECT m FROM UserMemory m
+        WHERE m.userId = :userId
+          AND m.sequenceNumber BETWEEN :fromSequence AND :toSequence
+        ORDER BY m.sequenceNumber ASC, m.id ASC
+        """)
+    List<UserMemory> findByUserIdAndSequenceRange(
+            @Param("userId") String userId,
+            @Param("fromSequence") int fromSequence,
+            @Param("toSequence") int toSequence);
+
     /**
      * 获取用户当前最大 sequence_number
      */

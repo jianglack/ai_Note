@@ -1,5 +1,4 @@
 import api from './services/api';
-import { getAuthToken } from './services/apiBase';
 import { parseSseStream } from './services/sse';
 
 export type Tag = {
@@ -199,7 +198,6 @@ export async function aiChatStream(
     payload.noteIds = [noteId];
   }
 
-  const token = getAuthToken();
   const baseURL = api.defaults.baseURL || '';
 
   try {
@@ -207,9 +205,9 @@ export async function aiChatStream(
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': token ? `Bearer ${token}` : '',
         'Accept': 'text/event-stream'
       },
+      credentials: 'include',
       body: JSON.stringify(payload),
       signal
     });
@@ -475,6 +473,7 @@ export type MemoryRecord = {
   sourceMessageIds: string | null;
   sourceToolCallId: string | null;
   evidenceExcerpt: string | null;
+  metadataJson: string | null;
   lastAccessedAt: string | null;
   accessCount: number | null;
   supersedesId: number | null;
@@ -485,6 +484,36 @@ export type MemoryRecord = {
 export type MemoryListResponse = {
   items: MemoryRecord[];
   nextCursor: string | null;
+};
+
+export type MemoryExportResponse = MemoryListResponse & {
+  exportedAt: string | null;
+  itemCount: number;
+  redacted: boolean;
+  redactionSummary: Record<string, number>;
+  schemaVersion: string;
+};
+
+export type MemoryDeleteProofResponse = {
+  requestId: string;
+  userId: string;
+  deletedMemoryIds: number[];
+  deletedCount: number;
+  contentHashes: string[];
+  requestedAt: string | null;
+  completedAt: string | null;
+  status: string;
+  proofJson: string;
+};
+
+export type MemoryCompliancePostureResponse = {
+  piiDetectionEnabled: boolean;
+  exportRedactionEnabled: boolean;
+  deletedMemoryRetentionDays: number;
+  atRestEncryptionRequired: boolean;
+  atRestEncryptionConfirmed: boolean;
+  atRestEncryptionKeyRef: string | null;
+  status: string;
 };
 
 export type MemoryEventRecord = {
@@ -519,6 +548,54 @@ export type MemoryUpdatePayload = {
   reason?: string;
 };
 
+export type MemoryFeedbackPayload = {
+  feedbackType: string;
+  userComment?: string | null;
+  expectedContent?: string | null;
+  expectedMemoryType?: string | null;
+  expectedCaptureAllowed?: boolean | null;
+};
+
+export type MemoryReviewCaseRecord = {
+  id: number;
+  memoryId: number | null;
+  userId: string | null;
+  feedbackType: string;
+  userComment: string | null;
+  expectedContent: string | null;
+  expectedMemoryType: string | null;
+  expectedCaptureAllowed: boolean | null;
+  status: string;
+  reviewerId: string | null;
+  reviewerDecision: string | null;
+  reviewerComment: string | null;
+  replayCaseId: string | null;
+  replayCaseJson: string | null;
+  manifestJson: string | null;
+  memoryBeforeJson: string | null;
+  sourceContextJson: string | null;
+  policySnapshotJson: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+  reviewedAt: string | null;
+};
+
+export type MemoryReviewCaseListResponse = {
+  items: MemoryReviewCaseRecord[];
+};
+
+export type MemoryReviewDecisionPayload = {
+  decision: string;
+  reviewerComment?: string | null;
+  correctedContent?: string | null;
+  correctedMemoryType?: string | null;
+  correctedConfidence?: number | null;
+};
+
+export type MemoryReplayCandidateExportResponse = {
+  items: MemoryReviewCaseRecord[];
+};
+
 export async function getMemories(params: MemoryListParams = {}): Promise<MemoryListResponse> {
   const res = await api.get('/api/memories', {
     params: {
@@ -541,6 +618,39 @@ export async function getMemoryEvents(params: { memoryId?: number; limit?: numbe
   return res.data;
 }
 
+export async function submitMemoryFeedback(id: number, payload: MemoryFeedbackPayload): Promise<MemoryReviewCaseRecord> {
+  const res = await api.post(`/api/memories/${id}/feedback`, payload);
+  return res.data;
+}
+
+export async function getMemoryReviewCases(params: {
+  status?: string;
+  limit?: number;
+} = {}): Promise<MemoryReviewCaseListResponse> {
+  const res = await api.get('/api/admin/memory-review-cases', {
+    params: {
+      status: params.status || undefined,
+      limit: params.limit,
+    },
+  });
+  return res.data;
+}
+
+export async function decideMemoryReviewCase(
+  id: number,
+  payload: MemoryReviewDecisionPayload,
+): Promise<MemoryReviewCaseRecord> {
+  const res = await api.post(`/api/admin/memory-review-cases/${id}/decision`, payload);
+  return res.data;
+}
+
+export async function exportMemoryReplayCandidates(limit?: number): Promise<MemoryReplayCandidateExportResponse> {
+  const res = await api.get('/api/admin/memory-review-cases/replay-candidates', {
+    params: { limit },
+  });
+  return res.data;
+}
+
 export async function updateMemory(id: number, payload: MemoryUpdatePayload): Promise<MemoryRecord> {
   const res = await api.patch(`/api/memories/${id}`, payload);
   return res.data;
@@ -555,8 +665,22 @@ export async function forgetMemories(payload: { memoryIds?: number[]; query?: st
   return res.data;
 }
 
-export async function exportMemories(): Promise<MemoryListResponse> {
+export async function exportMemories(): Promise<MemoryExportResponse> {
   const res = await api.get('/api/memories/export');
+  return res.data;
+}
+
+export async function hardDeleteMemories(payload: {
+  memoryIds?: number[];
+  query?: string;
+  reason?: string;
+}): Promise<MemoryDeleteProofResponse> {
+  const res = await api.post('/api/memories/hard-delete', payload);
+  return res.data;
+}
+
+export async function getMemoryCompliancePosture(): Promise<MemoryCompliancePostureResponse> {
+  const res = await api.get('/api/admin/memory-privacy/posture');
   return res.data;
 }
 
@@ -1158,7 +1282,6 @@ export function subscribePlanProgress(
   onPlanUpdate: (data: { planId: string; status: string; completedSteps: number; totalSteps: number }) => void,
   onLog?: (data: { planId: string; message: string }) => void
 ): () => void {
-  const token = getAuthToken();
   const baseURL = api.defaults.baseURL || '';
   const controller = new AbortController();
 
@@ -1167,9 +1290,9 @@ export function subscribePlanProgress(
       const response = await fetch(`${baseURL}/api/ai/plans/${planId}/stream`, {
         signal: controller.signal,
         headers: {
-          'Authorization': token ? `Bearer ${token}` : '',
           'Accept': 'text/event-stream'
-        }
+        },
+        credentials: 'include'
       });
 
       if (!response.ok) return;
@@ -1248,5 +1371,52 @@ export async function sendActionFeedback(params: {
 /* ── Agent metrics (admin) ── */
 export async function getAgentMetrics(): Promise<Record<string, any>> {
   const res = await api.get('/api/admin/agent-metrics');
+  return res.data;
+}
+
+export interface MemoryMetricsSnapshot {
+  status: string;
+  sampledAt: string;
+  captureDecisionCount: number;
+  captureAllowedCount: number;
+  captureRejectedCount: number;
+  captureSkippedCount: number;
+  captureFailedCount: number;
+  captureRejectionRate: number;
+  captureCandidateCount: number;
+  captureWrittenMemoryCount: number;
+  memoryWriteCount: number;
+  memoryCreatedCount: number;
+  memoryReinforcedCount: number;
+  memorySupersededCount: number;
+  memoryWriteSkippedCount: number;
+  memoryWriteRate: number;
+  advisorRequestCount: number;
+  advisorFailureCount: number;
+  advisorUnavailableCount: number;
+  advisorSkippedCount: number;
+  advisorFailureRate: number;
+  userDeletionRequestCount: number;
+  userDeletedMemoryCount: number;
+  userDeletionRate: number;
+  retrievalRequestCount: number;
+  retrievalHitCount: number;
+  retrievalMissCount: number;
+  retrievalHitRate: number;
+  contextInjectionCount: number;
+  semanticInjectedMemoryCount: number;
+  episodicInjectedMemoryCount: number;
+  injectedMemoryCount: number;
+  averageInjectedMemories: number;
+  feedbackCount: number;
+  wrongWriteFeedbackCount: number;
+  wrongWriteFeedbackRate: number;
+  retentionPurgedMemoryCount: number;
+  captureP95LatencyMs: number;
+  retrievalP95LatencyMs: number;
+}
+
+export async function getMemoryMetrics(): Promise<MemoryMetricsSnapshot> {
+  const res = await api.get('/api/admin/memory-metrics');
   return res.data;
 }

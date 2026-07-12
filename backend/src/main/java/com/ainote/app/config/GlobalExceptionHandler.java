@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
@@ -57,7 +58,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.badRequest().body(error);
     }
 
-    @ExceptionHandler({NoSuchElementException.class, EntityNotFoundException.class})
+    @ExceptionHandler({
+            NoSuchElementException.class,
+            EntityNotFoundException.class,
+            NoResourceFoundException.class
+    })
     public ResponseEntity<Map<String, String>> handleNotFound(Exception e) {
         log.warn("Resource not found: {}", e.getMessage());
         Map<String, String> error = new HashMap<>();

@@ -15,6 +15,7 @@ public class MemoryProperties {
     private Retrieval retrieval = new Retrieval();
     private Audit audit = new Audit();
     private ChatHistory chatHistory = new ChatHistory();
+    private Privacy privacy = new Privacy();
 
     public enum CaptureMode {
         LEGACY,
@@ -75,7 +76,7 @@ public class MemoryProperties {
 
     public static class Advisor {
         private boolean enabled = false;
-        private double minConfidence = 0.82;
+        private double minConfidence = 0.80;
 
         public boolean isEnabled() {
             return enabled;
@@ -90,7 +91,7 @@ public class MemoryProperties {
         }
 
         public void setMinConfidence(double minConfidence) {
-            this.minConfidence = minConfidence <= 0 ? 0.82 : minConfidence;
+            this.minConfidence = minConfidence <= 0 ? 0.80 : minConfidence;
         }
     }
 
@@ -120,6 +121,17 @@ public class MemoryProperties {
 
     public static class ChatHistory {
         private ChatHistoryWriteMode writeMode = ChatHistoryWriteMode.APPEND;
+        private int modelWindowMaxMessages = 256;
+        private int flushMaxAttempts = 3;
+        private long flushRetryDelayMs = 25;
+        private boolean compactionEnabled = true;
+        private int compactionMinUserTurns = 3;
+        private int compactionWorkerBatchSize = 4;
+        private int compactionMaxAttempts = 5;
+        private int compactionLeaseSeconds = 300;
+        private int compactionMaxSourceMessages = 64;
+        private int compactionMaxSourceCharacters = 12000;
+        private long compactionPollMs = 5000;
 
         public ChatHistoryWriteMode getWriteMode() {
             return writeMode;
@@ -127,6 +139,88 @@ public class MemoryProperties {
 
         public void setWriteMode(ChatHistoryWriteMode writeMode) {
             this.writeMode = writeMode == null ? ChatHistoryWriteMode.APPEND : writeMode;
+        }
+
+        public int getModelWindowMaxMessages() { return modelWindowMaxMessages; }
+        public void setModelWindowMaxMessages(int value) { modelWindowMaxMessages = Math.max(8, value); }
+        public int getFlushMaxAttempts() { return flushMaxAttempts; }
+        public void setFlushMaxAttempts(int value) { flushMaxAttempts = Math.max(1, value); }
+        public long getFlushRetryDelayMs() { return flushRetryDelayMs; }
+        public void setFlushRetryDelayMs(long value) { flushRetryDelayMs = Math.max(0, value); }
+        public boolean isCompactionEnabled() { return compactionEnabled; }
+        public void setCompactionEnabled(boolean value) { compactionEnabled = value; }
+        public int getCompactionMinUserTurns() { return compactionMinUserTurns; }
+        public void setCompactionMinUserTurns(int value) { compactionMinUserTurns = Math.max(1, value); }
+        public int getCompactionWorkerBatchSize() { return compactionWorkerBatchSize; }
+        public void setCompactionWorkerBatchSize(int value) { compactionWorkerBatchSize = Math.max(1, value); }
+        public int getCompactionMaxAttempts() { return compactionMaxAttempts; }
+        public void setCompactionMaxAttempts(int value) { compactionMaxAttempts = Math.max(1, value); }
+        public int getCompactionLeaseSeconds() { return compactionLeaseSeconds; }
+        public void setCompactionLeaseSeconds(int value) { compactionLeaseSeconds = Math.max(30, value); }
+        public int getCompactionMaxSourceMessages() { return compactionMaxSourceMessages; }
+        public void setCompactionMaxSourceMessages(int value) { compactionMaxSourceMessages = Math.max(8, value); }
+        public int getCompactionMaxSourceCharacters() { return compactionMaxSourceCharacters; }
+        public void setCompactionMaxSourceCharacters(int value) {
+            compactionMaxSourceCharacters = Math.max(1000, value);
+        }
+        public long getCompactionPollMs() { return compactionPollMs; }
+        public void setCompactionPollMs(long value) { compactionPollMs = Math.max(1000, value); }
+    }
+
+    public static class Privacy {
+        private boolean redactExports = true;
+        private int exportMaxItems = 1000;
+        private int deletedMemoryRetentionDays = 30;
+        private boolean atRestEncryptionRequired = true;
+        private boolean atRestEncryptionConfirmed = false;
+        private String atRestEncryptionKeyRef = "";
+
+        public boolean isRedactExports() {
+            return redactExports;
+        }
+
+        public void setRedactExports(boolean redactExports) {
+            this.redactExports = redactExports;
+        }
+
+        public int getExportMaxItems() {
+            return exportMaxItems;
+        }
+
+        public void setExportMaxItems(int exportMaxItems) {
+            this.exportMaxItems = exportMaxItems <= 0 ? 1000 : exportMaxItems;
+        }
+
+        public int getDeletedMemoryRetentionDays() {
+            return deletedMemoryRetentionDays;
+        }
+
+        public void setDeletedMemoryRetentionDays(int deletedMemoryRetentionDays) {
+            this.deletedMemoryRetentionDays = deletedMemoryRetentionDays < 1 ? 30 : deletedMemoryRetentionDays;
+        }
+
+        public boolean isAtRestEncryptionRequired() {
+            return atRestEncryptionRequired;
+        }
+
+        public void setAtRestEncryptionRequired(boolean atRestEncryptionRequired) {
+            this.atRestEncryptionRequired = atRestEncryptionRequired;
+        }
+
+        public boolean isAtRestEncryptionConfirmed() {
+            return atRestEncryptionConfirmed;
+        }
+
+        public void setAtRestEncryptionConfirmed(boolean atRestEncryptionConfirmed) {
+            this.atRestEncryptionConfirmed = atRestEncryptionConfirmed;
+        }
+
+        public String getAtRestEncryptionKeyRef() {
+            return atRestEncryptionKeyRef;
+        }
+
+        public void setAtRestEncryptionKeyRef(String atRestEncryptionKeyRef) {
+            this.atRestEncryptionKeyRef = atRestEncryptionKeyRef == null ? "" : atRestEncryptionKeyRef.trim();
         }
     }
 
@@ -192,5 +286,13 @@ public class MemoryProperties {
 
     public void setChatHistory(ChatHistory chatHistory) {
         this.chatHistory = chatHistory == null ? new ChatHistory() : chatHistory;
+    }
+
+    public Privacy getPrivacy() {
+        return privacy;
+    }
+
+    public void setPrivacy(Privacy privacy) {
+        this.privacy = privacy == null ? new Privacy() : privacy;
     }
 }

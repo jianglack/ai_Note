@@ -1,6 +1,9 @@
 package com.ainote.app.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 public class AuthResponse {
+    @JsonIgnore
     private String token;
     private String userId;
     private String username;

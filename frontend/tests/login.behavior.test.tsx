@@ -25,13 +25,12 @@ describe('LoginPage behavior', () => {
   beforeEach(() => {
     localStorage.clear();
     vi.clearAllMocks();
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+    useAuthStore.setState({ user: null, isAuthenticated: false, initialized: false });
   });
 
   it('submits credentials through the auth store and navigates after login', async () => {
     vi.mocked(api.post).mockResolvedValueOnce({
       data: {
-        token: 'jwt-token',
         userId: 'user-1',
         username: 'alice',
         email: 'alice@example.com',
@@ -66,7 +65,7 @@ describe('LoginPage behavior', () => {
         password: 'correct-password',
       });
     });
-    expect(localStorage.getItem('token')).toBe('jwt-token');
+    expect(localStorage.getItem('token')).toBeNull();
     expect(await screen.findByText('home')).toBeInTheDocument();
   });
 });

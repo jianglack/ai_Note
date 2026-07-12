@@ -59,4 +59,6 @@ public interface EpisodicMemoryRepository extends JpaRepository<EpisodicMemory, 
      * 统计用户的情节记忆数量
      */
     long countByUserId(String userId);
+
+    boolean existsByUserIdAndSourceMessageRange(String userId, String sourceMessageRange);
 }

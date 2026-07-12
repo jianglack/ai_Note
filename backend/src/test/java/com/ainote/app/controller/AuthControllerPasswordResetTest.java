@@ -46,7 +46,7 @@ class AuthControllerPasswordResetTest {
                                 {
                                   "username": "victim",
                                   "email": "victim@example.com",
-                                  "newPassword": "newpassword123"
+                                  "newPassword": "new-secure-password-123"
                                 }
                                 """))
                 .andExpect(status().isGone());
@@ -91,25 +91,25 @@ class AuthControllerPasswordResetTest {
                         .content("""
                                 {
                                   "token": "reset-token",
-                                  "newPassword": "newpassword123"
+                                  "newPassword": "new-secure-password-123"
                                 }
                                 """))
                 .andExpect(status().isNoContent());
 
-        verify(passwordResetService).confirmReset("reset-token", "newpassword123");
+        verify(passwordResetService).confirmReset("reset-token", "new-secure-password-123");
     }
 
     @Test
     void confirmPasswordReset_returnsBadRequestForInvalidToken() throws Exception {
         Mockito.doThrow(new IllegalArgumentException("Invalid or expired reset token"))
-                .when(passwordResetService).confirmReset("bad-token", "newpassword123");
+                .when(passwordResetService).confirmReset("bad-token", "new-secure-password-123");
 
         mockMvc.perform(post("/api/auth/password-reset/confirm")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {
                                   "token": "bad-token",
-                                  "newPassword": "newpassword123"
+                                  "newPassword": "new-secure-password-123"
                                 }
                                 """))
                 .andExpect(status().isBadRequest());

@@ -926,6 +926,245 @@
   width: 100%;
 }
 
+.memory-workspace-tabs {
+  display: inline-flex;
+  gap: 4px;
+  margin: 16px 0 8px;
+  padding: 4px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 8px;
+  background: var(--color-paper-1, #f5efe0);
+}
+
+.memory-workspace-tabs button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--color-text-secondary, #7a6b58);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.memory-workspace-tabs button.active,
+.memory-workspace-tabs button[aria-selected='true'] {
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-text, #2b2620);
+  box-shadow: 0 1px 2px rgba(74, 64, 50, 0.08);
+}
+
+.memory-explanation-panel {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(224, 212, 184, 0.75);
+}
+
+.memory-explanation-header,
+.memory-review-topline,
+.memory-review-toolbar,
+.memory-feedback-header,
+.memory-feedback-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.memory-explanation-header,
+.memory-review-topline,
+.memory-review-toolbar,
+.memory-feedback-header {
+  justify-content: space-between;
+}
+
+.memory-explanation-header h3,
+.memory-explanation-events h3,
+.memory-feedback-header h2 {
+  margin: 0;
+  color: var(--color-text, #2b2620);
+  font-size: 14px;
+}
+
+.memory-explanation-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.memory-explanation-grid div {
+  min-width: 0;
+}
+
+.memory-explanation-grid dt {
+  margin: 0;
+  color: var(--color-ink-500, #9a8b73);
+  font-size: 10px;
+}
+
+.memory-explanation-grid dd {
+  margin: 2px 0 0;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.memory-empty.compact {
+  padding: 0;
+  margin: 0;
+}
+
+.memory-event-list.compact {
+  margin-top: 6px;
+}
+
+.memory-review-panel {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.memory-review-toolbar {
+  justify-content: flex-start;
+}
+
+.memory-review-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.memory-review-item {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 8px;
+  background: var(--color-paper-0, #fbf7ee);
+}
+
+.memory-review-topline {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.memory-review-snapshots {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.memory-review-snapshots details {
+  border: 1px solid rgba(224, 212, 184, 0.75);
+  border-radius: 8px;
+  background: var(--color-paper-1, #f5efe0);
+}
+
+.memory-review-snapshots summary {
+  padding: 8px 10px;
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.memory-review-snapshots pre {
+  margin: 0;
+  padding: 8px 10px;
+  border-top: 1px solid rgba(224, 212, 184, 0.75);
+  color: var(--color-text-secondary, #7a6b58);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 180px;
+  overflow: auto;
+}
+
+.memory-review-form {
+  display: grid;
+  grid-template-columns: minmax(130px, 160px) repeat(3, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.memory-review-form label,
+.memory-feedback-dialog label {
+  display: grid;
+  gap: 4px;
+  color: var(--color-ink-500, #9a8b73);
+  font-size: 11px;
+}
+
+.memory-review-form input,
+.memory-review-form textarea,
+.memory-feedback-dialog input,
+.memory-feedback-dialog textarea {
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 8px;
+  background: var(--color-paper-0, #fbf7ee);
+  color: var(--color-text, #2b2620);
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.memory-review-form textarea,
+.memory-feedback-dialog textarea {
+  min-height: 36px;
+  resize: vertical;
+}
+
+.memory-review-comment {
+  grid-column: 1 / -2;
+}
+
+.memory-feedback-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(43, 38, 32, 0.35);
+}
+
+.memory-feedback-dialog {
+  width: min(560px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--color-border, #e0d4b8);
+  border-radius: 8px;
+  background: var(--color-paper-0, #fbf7ee);
+  box-shadow: 0 18px 48px rgba(43, 38, 32, 0.22);
+}
+
+.memory-feedback-header {
+  align-items: flex-start;
+}
+
+.memory-feedback-checkbox {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.memory-feedback-checkbox input {
+  width: auto;
+}
+
+.memory-feedback-actions {
+  justify-content: flex-end;
+}
+
 /* ─── 响应式 ─────────────────────────────────── */
 @media (max-width: 768px) {
   .settings-page {
@@ -951,7 +1190,10 @@
   .context-preview-form,
   .memory-list-item,
   .memory-meta,
-  .memory-event-meta {
+  .memory-event-meta,
+  .memory-explanation-grid,
+  .memory-review-snapshots,
+  .memory-review-form {
     grid-template-columns: 1fr;
   }
 

@@ -1,6 +1,7 @@
 package com.ainote.app.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class MemoryAdvisorFormalBatchEvaluationService {
     private static final int DEFAULT_MAX_ATTEMPTS = 3;
     private static final long DEFAULT_RETRY_INITIAL_BACKOFF_MILLIS = 1_000L;
     private static final long DEFAULT_RETRY_MAX_BACKOFF_MILLIS = 15_000L;
-    private static final double DEFAULT_ADVISOR_MIN_CONFIDENCE = 0.82;
+    private static final double DEFAULT_ADVISOR_MIN_CONFIDENCE = 0.80;
 
     private final MemoryAdvisorFormalEvaluationService formalEvaluationService;
     private final MemoryAdvisorProductionQualityService productionQualityService;
@@ -56,6 +57,7 @@ public class MemoryAdvisorFormalBatchEvaluationService {
                 null);
     }
 
+    @Autowired
     public MemoryAdvisorFormalBatchEvaluationService(
             MemoryAdvisorFormalEvaluationService formalEvaluationService,
             MemoryAdvisorProductionQualityService productionQualityService,

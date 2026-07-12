@@ -13,7 +13,7 @@ public class RegisterRequest {
     @Size(max = 254)
     private String email;
     @NotBlank
-    @Size(min = 6, max = 100)
+    @Size(min = 15, max = 100)
     private String password;
 
     public RegisterRequest() {}

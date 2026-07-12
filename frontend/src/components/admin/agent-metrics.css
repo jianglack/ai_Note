@@ -114,6 +114,127 @@
   border: 1px solid rgba(43,38,32,0.10);
 }
 
+.amd-memory-panel {
+  border-radius: 10px;
+  border: 1px solid rgba(43,38,32,0.10);
+  background: var(--color-paper-0, #fbf7ee);
+  overflow: hidden;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset;
+}
+.amd-memory-body {
+  padding: 16px 18px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.amd-memory-status {
+  font-size: 11px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  border: 1px solid rgba(43,38,32,0.10);
+}
+.amd-memory-status.ok {
+  background: rgba(107,122,90,0.12);
+  color: var(--color-sage, #6b7a5a);
+}
+.amd-memory-status.warn {
+  background: rgba(184,69,46,0.12);
+  color: var(--color-accent, #b8452e);
+}
+
+.amd-memory-events {
+  border-radius: 10px;
+  border: 1px solid rgba(43,38,32,0.10);
+  background: rgba(255,255,255,0.22);
+  overflow: hidden;
+}
+.amd-events-header {
+  padding: 11px 16px;
+  border-bottom: 1px dashed rgba(43,38,32,0.12);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.amd-events-title {
+  font-family: var(--font-serif, 'Noto Serif SC', serif);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text, #2b2620);
+}
+.amd-events-empty {
+  padding: 20px 16px;
+  text-align: center;
+  color: var(--color-text-tertiary, #9a8770);
+  font-size: 12.5px;
+}
+.amd-events-list {
+  display: flex;
+  flex-direction: column;
+}
+.amd-event-row {
+  padding: 11px 16px;
+  border-bottom: 1px dashed rgba(43,38,32,0.10);
+}
+.amd-event-row:last-child {
+  border-bottom: none;
+}
+.amd-event-row.normal {
+  border-left: 3px solid rgba(107,122,90,0.55);
+}
+.amd-event-row.warn {
+  border-left: 3px solid rgba(201,169,89,0.70);
+}
+.amd-event-row.danger {
+  border-left: 3px solid rgba(184,69,46,0.70);
+  background: rgba(184,69,46,0.035);
+}
+.amd-event-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.amd-event-type,
+.amd-event-result,
+.amd-event-memory {
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+.amd-event-type {
+  color: var(--color-text, #2b2620);
+  background: rgba(43,38,32,0.05);
+  border: 1px solid rgba(43,38,32,0.10);
+}
+.amd-event-result {
+  color: var(--color-sage, #6b7a5a);
+  background: rgba(107,122,90,0.10);
+  border: 1px solid rgba(107,122,90,0.25);
+}
+.amd-event-memory {
+  color: #445566;
+  background: rgba(68,85,102,0.08);
+  border: 1px solid rgba(68,85,102,0.18);
+}
+.amd-event-summary {
+  margin-top: 7px;
+  font-size: 12.5px;
+  color: var(--color-text-secondary, #6b5848);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.amd-event-meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-family: 'Cascadia Code', 'Fira Code', monospace;
+  font-size: 10px;
+  color: var(--color-text-tertiary, #9a8770);
+}
+
 .amd-table-cols {
   display: grid;
   grid-template-columns: 1.7fr 0.9fr 0.95fr 1.0fr 1.0fr;

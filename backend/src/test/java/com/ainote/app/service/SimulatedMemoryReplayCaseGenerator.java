@@ -148,11 +148,11 @@ final class SimulatedMemoryReplayCaseGenerator {
     private static MemoryReplayEvaluationService.MemoryReplayCase explicitPreferenceCase(
             String id, String language, String topic, String token) {
         if ("cn".equals(language)) {
-            return allow(id, "记住：我希望" + topic + "默认先给结论，再列行动项；偏好编号 " + token,
+            return allow(id, "记住：我偏好用轻量检查清单管理日常任务；偏好编号 " + token,
                     "已记录。", "ALLOW_EXPLICIT", "preference", false,
                     "explicit_memory", List.of("explicit_remember"));
         }
-        return allow(id, "remember: I prefer " + topic + " to start with the conclusion and then action items; preference " + token,
+        return allow(id, "remember: I prefer the lightweight checklist workflow for recurring workspace tasks; preference " + token,
                 "Noted.", "ALLOW_EXPLICIT", "preference", false,
                 "explicit_memory", List.of("explicit_remember"));
     }
@@ -160,11 +160,11 @@ final class SimulatedMemoryReplayCaseGenerator {
     private static MemoryReplayEvaluationService.MemoryReplayCase implicitPreferenceCase(
             String id, String language, String topic, String token) {
         if ("cn".equals(language)) {
-            return allow(id, "我希望以后处理" + topic + "时先列风险再给建议；偏好编号 " + token,
+            return allow(id, "我偏好用轻量检查清单管理日常任务；偏好编号 " + token,
                     "明白。", "ALLOW_IMPLICIT_LOW_CONFIDENCE", "preference", false,
                     "implicit_preference", List.of("preference_signal"));
         }
-        return allow(id, "I prefer " + topic + " to list risks before suggestions; preference " + token,
+        return allow(id, "I prefer the lightweight checklist workflow for recurring workspace tasks; preference " + token,
                 "Understood.", "ALLOW_IMPLICIT_LOW_CONFIDENCE", "preference", false,
                 "implicit_preference", List.of("preference_signal"));
     }

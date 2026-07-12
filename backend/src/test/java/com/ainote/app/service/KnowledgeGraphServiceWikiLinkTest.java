@@ -7,6 +7,7 @@ import com.ainote.app.entity.User;
 import com.ainote.app.model.graph.GraphLink;
 import com.ainote.app.repository.FolderRepository;
 import com.ainote.app.repository.NoteRepository;
+import com.ainote.app.repository.NoteConceptRepository;
 import com.ainote.app.repository.ScheduleRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,6 +26,7 @@ class KnowledgeGraphServiceWikiLinkTest {
     private NoteRepository noteRepository;
     private FolderRepository folderRepository;
     private ScheduleRepository scheduleRepository;
+    private NoteConceptRepository noteConceptRepository;
     private KnowledgeGraphService service;
 
     @BeforeEach
@@ -34,7 +36,9 @@ class KnowledgeGraphServiceWikiLinkTest {
         noteRepository = mock(NoteRepository.class);
         folderRepository = mock(FolderRepository.class);
         scheduleRepository = mock(ScheduleRepository.class);
-        service = new KnowledgeGraphService(driverProvider, noteRepository, folderRepository, scheduleRepository);
+        noteConceptRepository = mock(NoteConceptRepository.class);
+        service = new KnowledgeGraphService(
+                driverProvider, noteRepository, folderRepository, scheduleRepository, noteConceptRepository);
     }
 
     @Test

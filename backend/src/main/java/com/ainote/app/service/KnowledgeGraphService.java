@@ -2,6 +2,7 @@ package com.ainote.app.service;
 
 import com.ainote.app.entity.Folder;
 import com.ainote.app.entity.Note;
+import com.ainote.app.entity.NoteConcept;
 import com.ainote.app.entity.Schedule;
 import com.ainote.app.entity.Tag;
 import com.ainote.app.model.graph.GraphLink;
@@ -9,6 +10,7 @@ import com.ainote.app.model.graph.GraphNode;
 import com.ainote.app.model.graph.KnowledgeGraphResponse;
 import com.ainote.app.repository.FolderRepository;
 import com.ainote.app.repository.NoteRepository;
+import com.ainote.app.repository.NoteConceptRepository;
 import com.ainote.app.repository.ScheduleRepository;
 import jakarta.annotation.PostConstruct;
 import org.neo4j.driver.Driver;
@@ -43,16 +45,19 @@ public class KnowledgeGraphService {
     private final NoteRepository noteRepository;
     private final FolderRepository folderRepository;
     private final ScheduleRepository scheduleRepository;
+    private final NoteConceptRepository noteConceptRepository;
 
     public KnowledgeGraphService(
             ObjectProvider<Driver> driverProvider,
             NoteRepository noteRepository,
             FolderRepository folderRepository,
-            ScheduleRepository scheduleRepository) {
+            ScheduleRepository scheduleRepository,
+            NoteConceptRepository noteConceptRepository) {
         this.driver = driverProvider.getIfAvailable();
         this.noteRepository = noteRepository;
         this.folderRepository = folderRepository;
         this.scheduleRepository = scheduleRepository;
+        this.noteConceptRepository = noteConceptRepository;
     }
 
     @PostConstruct
@@ -274,6 +279,14 @@ public class KnowledgeGraphService {
         folderRepository.findByUserId(userId).forEach(folder -> syncFolder(folder.getId()));
         noteRepository.findByUserIdAndDeletedAtIsNull(userId).forEach(note -> syncNote(note.getId()));
         scheduleRepository.findByUserIdOrderByStartTimeDesc(userId).forEach(schedule -> syncSchedule(schedule.getId()));
+        noteConceptRepository.findByUserId(userId).stream()
+                .collect(Collectors.groupingBy(NoteConcept::getNoteId, LinkedHashMap::new, Collectors.toList()))
+                .forEach((noteId, concepts) -> syncNoteConcepts(noteId, concepts.stream()
+                        .map(concept -> Map.<String, Object>of(
+                                "concept", concept.getConcept(),
+                                "category", concept.getCategory(),
+                                "confidence", concept.getConfidence()))
+                        .toList()));
     }
 
     private List<String> searchRelatedNoteIdsFromNeo4j(String userId, String query, List<String> seedNoteIds, int limit) {

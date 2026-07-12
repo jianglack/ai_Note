@@ -3,6 +3,9 @@ package com.ainote.app.service.chat;
 import com.ainote.app.agent.guardrail.GuardrailResult;
 import com.ainote.app.agent.guardrail.InputGuardrail;
 import com.ainote.app.model.AiChatResponse;
+import com.ainote.app.model.memory.MemoryForgetResponse;
+import com.ainote.app.service.MemoryControlService;
+import com.ainote.app.service.MemoryPrivacyService;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -12,6 +15,8 @@ import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 @Service
 public class ChatOrchestrator {
@@ -24,6 +29,8 @@ public class ChatOrchestrator {
     private final CircuitBreaker circuitBreaker;
     private final ChatMetrics chatMetrics;
     private final InputGuardrail inputGuardrail;
+    private final MemoryPrivacyService memoryPrivacyService;
+    private final MemoryControlService memoryControlService;
 
     public ChatOrchestrator(
             AgentChatStrategy agentStrategy,
@@ -31,13 +38,17 @@ public class ChatOrchestrator {
             ReadOnlyStreamingChatService readOnlyStreamingChatService,
             CircuitBreakerRegistry circuitBreakerRegistry,
             ChatMetrics chatMetrics,
-            InputGuardrail inputGuardrail) {
+            InputGuardrail inputGuardrail,
+            MemoryPrivacyService memoryPrivacyService,
+            MemoryControlService memoryControlService) {
         this.agentStrategy = agentStrategy;
         this.fallbackStrategy = fallbackStrategy;
         this.readOnlyStreamingChatService = readOnlyStreamingChatService;
         this.circuitBreaker = circuitBreakerRegistry.circuitBreaker("agent-chat");
         this.chatMetrics = chatMetrics;
         this.inputGuardrail = inputGuardrail;
+        this.memoryPrivacyService = memoryPrivacyService;
+        this.memoryControlService = memoryControlService;
     }
 
     public AiChatResponse chat(String query, List<String> noteIds, String userId) {
@@ -46,6 +57,11 @@ public class ChatOrchestrator {
         GuardrailResult guardResult = inputGuardrail.check(query);
         if (!guardResult.passed()) {
             return buildRejectionResponse(guardResult.reason());
+        }
+
+        Optional<AiChatResponse> governedMemoryResponse = handleGovernedMemoryCommand(query, userId);
+        if (governedMemoryResponse.isPresent()) {
+            return governedMemoryResponse.get();
         }
 
         if (circuitBreaker.getState() == CircuitBreaker.State.OPEN) {
@@ -98,6 +114,14 @@ public class ChatOrchestrator {
             AiChatResponse rejection = buildRejectionResponse(guardResult.reason());
             callback.onToken(guardResult.reason());
             callback.onComplete(rejection);
+            return;
+        }
+
+        Optional<AiChatResponse> governedMemoryResponse = handleGovernedMemoryCommand(query, userId);
+        if (governedMemoryResponse.isPresent()) {
+            AiChatResponse response = governedMemoryResponse.get();
+            callback.onToken(response.getContent());
+            callback.onComplete(response);
             return;
         }
 
@@ -170,6 +194,103 @@ public class ChatOrchestrator {
         response.setChatMode("REJECTED");
         response.setDegraded(false);
         return response;
+    }
+
+    private Optional<AiChatResponse> handleGovernedMemoryCommand(String query, String userId) {
+        if (query == null || query.isBlank()) {
+            return Optional.empty();
+        }
+        if (isSensitiveMemoryWriteRequest(query)) {
+            AiChatResponse response = new AiChatResponse(
+                    "我不能为你保存身份证号、手机号、密钥、邮箱等敏感个人信息；这类内容不会写入长期记忆。"
+                            + "如果只是当前这轮对话需要处理，请尽量使用脱敏信息。",
+                    new HashMap<>());
+            response.setChatMode("MEMORY_GOVERNED");
+            response.setDegraded(false);
+            return Optional.of(response);
+        }
+        if (isForgetAllMemoryRequest(query)) {
+            MemoryForgetResponse result = memoryControlService.forgetAllActiveMemories(
+                    userId,
+                    "natural language forget-all request");
+            AiChatResponse response = new AiChatResponse(
+                    "已删除你的长期记忆 " + result.deletedCount()
+                            + " 条。说明：这只处理长期记忆，不等同于删除当前聊天记录、审计事件或合规保留日志。",
+                    new HashMap<>());
+            response.setChatMode("MEMORY_GOVERNED");
+            response.setDegraded(false);
+            return Optional.of(response);
+        }
+        if (isLongTermMemoryRecallRequest(query) && !hasActiveLongTermMemory(userId)) {
+            AiChatResponse response = new AiChatResponse(
+                    "我当前没有与你这个问题对应的可用长期记忆，因此不能假装知道你的偏好或项目背景。",
+                    new HashMap<>());
+            response.setChatMode("MEMORY_GOVERNED");
+            response.setDegraded(false);
+            return Optional.of(response);
+        }
+        return Optional.empty();
+    }
+
+    private boolean hasActiveLongTermMemory(String userId) {
+        try {
+            return memoryControlService.hasActiveMemories(userId);
+        } catch (RuntimeException e) {
+            log.warn("Failed to check active long-term memory for user={}; continuing with normal chat", userId, e);
+            return true;
+        }
+    }
+
+    private boolean isLongTermMemoryRecallRequest(String query) {
+        String normalized = query == null ? "" : query.toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+        return normalized.contains("根据你记住")
+                || normalized.contains("根据记住的")
+                || normalized.contains("按你记住")
+                || normalized.contains("你记得我的")
+                || normalized.contains("你记住的我的")
+                || normalized.contains("我保存的偏好")
+                || normalized.contains("已保存的偏好")
+                || normalized.contains("记住的偏好")
+                || normalized.contains("saved preference")
+                || normalized.contains("saved response style")
+                || normalized.contains("remembered preference")
+                || normalized.contains("what do you remember about me")
+                || normalized.contains("based on my active saved preference")
+                || normalized.contains("based on my saved preference");
+    }
+
+    private boolean isSensitiveMemoryWriteRequest(String query) {
+        String compact = query.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        boolean memoryIntent = compact.startsWith("请记住")
+                || compact.startsWith("记住")
+                || compact.startsWith("remember")
+                || compact.startsWith("pleaseremember")
+                || compact.startsWith("keepinmind");
+        return memoryIntent && memoryPrivacyService.scan(query).hasBlockingFindings();
+    }
+
+    private boolean isForgetAllMemoryRequest(String query) {
+        String compact = query.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        boolean memoryScope = compact.contains("记忆")
+                || compact.contains("长期记忆")
+                || compact.contains("你记住的")
+                || compact.contains("所有记忆")
+                || compact.contains("全部记忆")
+                || compact.contains("allmemories")
+                || compact.contains("memory");
+        boolean deleteIntent = compact.contains("全部删除")
+                || compact.contains("全部清除")
+                || compact.contains("清空")
+                || compact.contains("删除所有")
+                || compact.contains("删掉所有")
+                || compact.contains("全部删")
+                || compact.contains("forgetall")
+                || compact.contains("deleteall")
+                || compact.contains("clearall");
+        boolean correctionDelete = compact.contains("这些记忆都不对")
+                || compact.contains("这些都不对")
+                || compact.contains("全部不对");
+        return (memoryScope && deleteIntent) || correctionDelete;
     }
 
     private AiChatResponse buildErrorResponse(String message) {

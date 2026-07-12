@@ -1,6 +1,9 @@
 package com.ainote.app.service;
 
+import com.ainote.app.entity.ChatMemoryHead;
 import com.ainote.app.entity.UserMemory;
+import com.ainote.app.memory.ReliableChatMemoryStore;
+import com.ainote.app.memory.ShortTermMemoryMetrics;
 import com.ainote.app.model.AiChatResponse;
 import com.ainote.app.model.ChatHistoryItem;
 import com.ainote.app.model.ChatHistoryPage;
@@ -9,6 +12,7 @@ import com.ainote.app.model.ClassificationSuggestion;
 import com.ainote.app.model.ExtractedSchedule;
 import com.ainote.app.model.Folder;
 import com.ainote.app.model.Note;
+import com.ainote.app.repository.ChatMemoryHeadRepository;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.security.SecurityUtils;
 import com.ainote.app.util.PromptLoader;
@@ -26,6 +30,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -54,6 +59,9 @@ public class AiService {
     private final ChatModel chatModel;
     private final SecurityUtils securityUtils;
     private final UserMemoryRepository userMemoryRepository;
+    private final ChatMemoryHeadRepository chatMemoryHeadRepository;
+    private final ReliableChatMemoryStore reliableChatMemoryStore;
+    private final ShortTermMemoryMetrics shortTermMemoryMetrics;
     private final ObjectMapper objectMapper;
     private final PromptLoader promptLoader;
     private static final DateTimeFormatter SCHEDULE_TIME_FORMAT =
@@ -72,6 +80,9 @@ public class AiService {
             @Qualifier("agentChatModel") ChatModel chatModel,
             SecurityUtils securityUtils,
             UserMemoryRepository userMemoryRepository,
+            ChatMemoryHeadRepository chatMemoryHeadRepository,
+            ReliableChatMemoryStore reliableChatMemoryStore,
+            ShortTermMemoryMetrics shortTermMemoryMetrics,
             PromptLoader promptLoader,
             ObjectMapper objectMapper) {
         this.noteService = noteService;
@@ -79,21 +90,48 @@ public class AiService {
         this.chatModel = chatModel;
         this.securityUtils = securityUtils;
         this.userMemoryRepository = userMemoryRepository;
+        this.chatMemoryHeadRepository = chatMemoryHeadRepository;
+        this.reliableChatMemoryStore = reliableChatMemoryStore;
+        this.shortTermMemoryMetrics = shortTermMemoryMetrics;
         this.objectMapper = objectMapper;
         this.promptLoader = promptLoader;
     }
 
+    @Transactional
     public void saveChatMessage(String userId, String role, String content) {
-        try {
-            UserMemory msg = new UserMemory();
-            msg.setUserId(userId);
-            msg.setMessageType(role.equals("user") ? "USER" : "AI");
-            msg.setContent(content);
-            msg.setCreatedAt(LocalDateTime.now());
-            userMemoryRepository.save(msg);
-        } catch (Exception e) {
-            log.error("Failed to save chat message [userId={}, role={}]: {}", userId, role, e.getMessage());
+        appendVisibleMessages(userId, List.of(new VisibleMessage(role, content)));
+    }
+
+    @Transactional
+    public void saveChatTurn(String userId, String userContent, String aiContent) {
+        List<VisibleMessage> messages = new ArrayList<>(2);
+        if (userContent != null) messages.add(new VisibleMessage("user", userContent));
+        if (aiContent != null) messages.add(new VisibleMessage("assistant", aiContent));
+        appendVisibleMessages(userId, messages);
+    }
+
+    private void appendVisibleMessages(String userId, List<VisibleMessage> messages) {
+        if (messages.isEmpty()) return;
+        chatMemoryHeadRepository.ensureExists(userId);
+        ChatMemoryHead head = chatMemoryHeadRepository.findByUserIdForUpdate(userId)
+                .orElseThrow(() -> new IllegalStateException("chat memory head missing after ensure"));
+        int nextSequence = head.getNextSequenceNumber();
+        LocalDateTime now = LocalDateTime.now();
+        List<UserMemory> rows = new ArrayList<>(messages.size());
+        for (int i = 0; i < messages.size(); i++) {
+            VisibleMessage visible = messages.get(i);
+            UserMemory row = new UserMemory();
+            row.setUserId(userId);
+            row.setMessageType("user".equals(visible.role()) ? "USER" : "AI");
+            row.setContent(visible.content());
+            row.setSequenceNumber(nextSequence + i);
+            row.setCreatedAt(now);
+            rows.add(row);
         }
+        userMemoryRepository.saveAll(rows);
+        head.setNextSequenceNumber(nextSequence + rows.size());
+        chatMemoryHeadRepository.save(head);
+        shortTermMemoryMetrics.recordAppend(rows.size());
     }
 
     public List<ChatHistoryItem> getChatHistory(String userId, int limit) {
@@ -163,8 +201,10 @@ public class AiService {
 
     public void clearChatMemory(String userId) {
         log.info("Clearing chat memory for user: {}", userId);
-        userMemoryRepository.deleteByUserId(userId);
+        reliableChatMemoryStore.deleteMessages(userId);
     }
+
+    private record VisibleMessage(String role, String content) {}
 
     public String spiritGreeting() {
         String[] greetings = {

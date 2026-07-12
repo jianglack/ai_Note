@@ -32,6 +32,9 @@ public class MemoryCapturePolicy {
         if (signals.forgetRequest()) {
             return CaptureDecision.deny(DecisionType.FORGET_REQUEST, "forget_request", matchedSignals);
         }
+        if (signals.noStoreOrUncertain()) {
+            return CaptureDecision.deny(DecisionType.DENY_TRANSIENT, "explicit_no_store_or_uncertain", matchedSignals);
+        }
         if (signals.referenceOnly()) {
             return CaptureDecision.deny(DecisionType.DENY_TOOL_RESULT, "reference_context_not_profile", matchedSignals);
         }

@@ -71,6 +71,13 @@ public class AuthService {
         return new AuthResponse(token, user.getId(), user.getUsername(), user.getEmail());
     }
 
+    @Transactional(readOnly = true)
+    public AuthResponse getCurrentUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new AuthResponse(null, user.getId(), user.getUsername(), user.getEmail());
+    }
+
     public void logout(String token) {
         if (tokenProvider.validateToken(token)) {
             tokenService.deleteToken(tokenProvider.getJtiFromToken(token));

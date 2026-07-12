@@ -8,6 +8,7 @@ import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
@@ -29,24 +30,36 @@ public class MemoryRetrievalService {
     private final EmbeddingModel embeddingModel;
     private final SemanticMemoryRepository semanticMemoryRepository;
     private final EpisodicMemoryRepository episodicMemoryRepository;
+    private final MemoryMetricsService memoryMetricsService;
 
     public MemoryRetrievalService(EmbeddingModel embeddingModel,
                                   SemanticMemoryRepository semanticMemoryRepository,
                                   EpisodicMemoryRepository episodicMemoryRepository) {
+        this(embeddingModel, semanticMemoryRepository, episodicMemoryRepository, MemoryMetricsService.noop());
+    }
+
+    @Autowired
+    public MemoryRetrievalService(EmbeddingModel embeddingModel,
+                                  SemanticMemoryRepository semanticMemoryRepository,
+                                  EpisodicMemoryRepository episodicMemoryRepository,
+                                  MemoryMetricsService memoryMetricsService) {
         this.embeddingModel = embeddingModel;
         this.semanticMemoryRepository = semanticMemoryRepository;
         this.episodicMemoryRepository = episodicMemoryRepository;
+        this.memoryMetricsService = memoryMetricsService == null ? MemoryMetricsService.noop() : memoryMetricsService;
     }
 
     public MemoryRetrievalResult retrieveForQuery(String userId,
                                                   String query,
                                                   int semanticLimit,
                                                   int episodicLimit) {
+        long startedAt = System.nanoTime();
         if (userId == null || userId.isBlank()) {
-            return MemoryRetrievalResult.empty();
+            return recordRetrieval(MemoryRetrievalResult.empty(), "invalid_user", startedAt);
         }
         if (query == null || query.isBlank()) {
-            return fallback(userId, semanticLimit, episodicLimit, "blank_query");
+            return recordRetrieval(fallback(userId, semanticLimit, episodicLimit, "blank_query"),
+                    "fallback_blank_query", startedAt);
         }
 
         String embedding;
@@ -56,7 +69,8 @@ public class MemoryRetrievalService {
         } catch (Exception e) {
             log.warn("memory_retrieval_event=embedding_failed user_id={} query_chars={}",
                     userId, query.length(), e);
-            return fallback(userId, semanticLimit, episodicLimit, "embedding_failed");
+            return recordRetrieval(fallback(userId, semanticLimit, episodicLimit, "embedding_failed"),
+                    "fallback_embedding_failed", startedAt);
         }
 
         List<SemanticMemory> semantic = retrieveSemantic(userId, embedding, semanticLimit);
@@ -71,9 +85,10 @@ public class MemoryRetrievalService {
                     userId, PageRequest.of(0, Math.max(episodicLimit, 1)));
         }
 
+        markSemanticMemoriesAccessed(userId, semantic);
         log.info("memory_retrieval_event=query_relevant_retrieved user_id={} semantic_count={} episodic_count={} threshold={}",
                 userId, semantic.size(), episodic.size(), DEFAULT_SIMILARITY_THRESHOLD);
-        return new MemoryRetrievalResult(semantic, episodic);
+        return recordRetrieval(new MemoryRetrievalResult(semantic, episodic), "query_relevant", startedAt);
     }
 
     private List<SemanticMemory> retrieveSemantic(String userId, String embedding, int limit) {
@@ -197,7 +212,40 @@ public class MemoryRetrievalService {
                         userId, PageRequest.of(0, Math.max(episodicLimit, 1)));
         log.info("memory_retrieval_event=fallback user_id={} reason={} semantic_count={} episodic_count={}",
                 userId, reason, semantic.size(), episodic.size());
+        markSemanticMemoriesAccessed(userId, semantic);
         return new MemoryRetrievalResult(semantic, episodic);
+    }
+
+    private void markSemanticMemoriesAccessed(String userId, List<SemanticMemory> memories) {
+        if (userId == null || userId.isBlank() || memories == null || memories.isEmpty()) {
+            return;
+        }
+        List<Long> ids = memories.stream()
+                .map(SemanticMemory::getId)
+                .filter(id -> id != null)
+                .distinct()
+                .toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+        try {
+            semanticMemoryRepository.markAccessed(userId, ids, LocalDateTime.now());
+        } catch (Exception e) {
+            log.warn("memory_retrieval_event=access_mark_failed user_id={} memory_count={} error={}",
+                    userId, ids.size(), e.getClass().getSimpleName());
+        }
+    }
+
+    private MemoryRetrievalResult recordRetrieval(MemoryRetrievalResult result,
+                                                  String source,
+                                                  long startedAt) {
+        MemoryRetrievalResult safeResult = result == null ? MemoryRetrievalResult.empty() : result;
+        memoryMetricsService.recordRetrieval(
+                safeResult.semanticMemories().size(),
+                safeResult.episodicMemories().size(),
+                source,
+                (System.nanoTime() - startedAt) / 1_000_000L);
+        return safeResult;
     }
 
     private String embeddingToString(Embedding embedding) {

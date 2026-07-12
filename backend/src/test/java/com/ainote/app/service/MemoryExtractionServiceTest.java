@@ -96,6 +96,24 @@ class MemoryExtractionServiceTest {
     }
 
     @Test
+    void extractSemanticMemoryRejectsSensitiveExtractedContentBeforeSave() {
+        when(chatModel.chat(any(ChatRequest.class)))
+                .thenReturn(chatResponse("""
+                        [
+                          {"category":"fact","content":"backup email alice@example.com","confidence":0.9}
+                        ]
+                        """));
+
+        service.extractSemanticMemoryAsync(
+                "user-1",
+                "Remember that my preferred contact channel is email followup.",
+                "noted");
+
+        verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
+        verify(semanticMemoryRepository, never()).updateEmbedding(any(Long.class), any(String.class));
+    }
+
+    @Test
     void extractSemanticMemoryReinforcesSimilarExistingMemory() {
         SemanticMemory existing = new SemanticMemory();
         existing.setUserId("user-1");

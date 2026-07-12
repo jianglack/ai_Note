@@ -38,10 +38,19 @@ class MemoryAdvisorFormalEvaluationIT {
                 formalEvaluationService,
                 productionQualityService,
                 OBJECT_MAPPER);
+        int requestedMaxCases = intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES", 4000);
+        MemoryAdvisorFormalEvaluationCaseSelector.SelectionConfig selectionConfig =
+                new MemoryAdvisorFormalEvaluationCaseSelector.SelectionConfig(
+                        value("MEMORY_ADVISOR_FORMAL_EVAL_SELECTION_STRATEGY", "first"),
+                        caseIds(),
+                        requestedMaxCases);
         List<MemoryReplayEvaluationService.MemoryReplayCase> cases =
-                MemoryReplayDatasetLoader.loadActiveDataset().cases();
+                MemoryAdvisorFormalEvaluationCaseSelector.select(
+                        MemoryReplayDatasetLoader.loadActiveDataset().cases(),
+                        selectionConfig);
 
-        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request = request(apiKey, modelName);
+        MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request =
+                request(apiKey, modelName, cases.size(), selectionConfig.overridesDefaultCaseCount());
         MemorySignalAdvisor advisor = hasText(apiKey)
                 ? realAdvisor(apiKey, modelName, baseUrl)
                 : requestPayload -> MemorySignalAdvisor.AdvisorResult.unavailable(
@@ -71,7 +80,10 @@ class MemoryAdvisorFormalEvaluationIT {
 
     private MemoryAdvisorFormalBatchEvaluationService.BatchEvaluationRequest request(
             String apiKey,
-            String modelName) {
+            String modelName,
+            int selectedCaseCount,
+            boolean overrideDefaultCaseCount) {
+        int defaultCaseCount = overrideDefaultCaseCount ? selectedCaseCount : 4000;
         MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest formalRequest =
                 new MemoryAdvisorFormalEvaluationService.FormalEvaluationRequest(
                         value("MEMORY_ADVISOR_FORMAL_EVAL_RUN_ID", "memory-advisor-formal-eval"),
@@ -80,8 +92,8 @@ class MemoryAdvisorFormalEvaluationIT {
                 modelName,
                 LlmMemorySignalAdvisor.PROMPT_VERSION,
                 value("MEMORY_ADVISOR_FORMAL_EVAL_DATASET_VERSION", "active-replay-v2026-07-08"),
-                intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES", 4000),
-                intValue("MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES", 4000),
+                intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES", defaultCaseCount),
+                intValue("MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES", defaultCaseCount),
                 intValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_INPUT_TOKENS", 2_000_000),
                 intValue("MEMORY_ADVISOR_FORMAL_EVAL_OUTPUT_TOKENS_PER_CASE", 256),
                 doubleValue("MEMORY_ADVISOR_FORMAL_EVAL_MAX_COST_YUAN", 20.0),
@@ -157,6 +169,17 @@ class MemoryAdvisorFormalEvaluationIT {
 
     private static boolean enabled() {
         return booleanValue("MEMORY_ADVISOR_FORMAL_EVAL_ENABLED", false);
+    }
+
+    private static List<String> caseIds() {
+        String value = value("MEMORY_ADVISOR_FORMAL_EVAL_CASE_IDS", "");
+        if (!hasText(value)) {
+            return List.of();
+        }
+        return java.util.Arrays.stream(value.split("[,\\r\\n]+"))
+                .map(String::trim)
+                .filter(MemoryAdvisorFormalEvaluationIT::hasText)
+                .toList();
     }
 
     private static String value(String key, String defaultValue) {

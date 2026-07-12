@@ -1,5 +1,7 @@
 # Log message contains no credential; generic-api-key is a phrase-level false positive.
 26a7f5bb6c7c83511483a1d4ef1fedb2ae130073:backend/src/main/java/com/ainote/app/service/planning/ReflectionService.java:generic-api-key:36
+backend/src/main/java/com/ainote/app/service/planning/ReflectionService.java:generic-api-key:41
 
 # Synthetic JWT fixture verifies OutputGuardrail redaction and grants no access.
 26a7f5bb6c7c83511483a1d4ef1fedb2ae130073:backend/src/test/java/com/ainote/app/agent/guardrail/OutputGuardrailTest.java:jwt:73
+backend/src/test/java/com/ainote/app/agent/guardrail/OutputGuardrailTest.java:jwt:75

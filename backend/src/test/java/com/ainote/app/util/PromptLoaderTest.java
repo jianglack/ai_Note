@@ -36,4 +36,11 @@ class PromptLoaderTest {
         assertThat(loader.format("test-format.txt", "Alice", 3).trim())
                 .isEqualTo("Hello Alice, count=3");
     }
+
+    @Test
+    void fallbackPromptForbidsInventingMissingUserMemory() {
+        assertThat(loader.load("fallback-system.txt"))
+                .contains("没有对应的 <user_memory>")
+                .contains("不得假装知道、猜测或编造用户偏好和项目背景");
+    }
 }

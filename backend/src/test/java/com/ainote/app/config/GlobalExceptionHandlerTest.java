@@ -11,6 +11,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.http.HttpMethod;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
@@ -77,9 +79,12 @@ class GlobalExceptionHandlerTest {
                 handler.handleNotFound(new NoSuchElementException("missing"));
         ResponseEntity<Map<String, String>> entityNotFound =
                 handler.handleNotFound(new EntityNotFoundException("missing"));
+        ResponseEntity<Map<String, String>> staticResourceNotFound =
+                handler.handleNotFound(new NoResourceFoundException(HttpMethod.GET, "/v3/api-docs"));
 
         assertThat(noSuchElement.getStatusCode().value()).isEqualTo(404);
         assertThat(entityNotFound.getStatusCode().value()).isEqualTo(404);
+        assertThat(staticResourceNotFound.getStatusCode().value()).isEqualTo(404);
     }
 
     @Test

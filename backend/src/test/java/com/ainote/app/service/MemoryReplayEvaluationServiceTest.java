@@ -40,7 +40,7 @@ class MemoryReplayEvaluationServiceTest {
                         "Noted.",
                         true,
                         "ALLOW_EXPLICIT",
-                        "preference",
+                        "style",
                         false,
                         "explicit_memory",
                         List.of("explicit_remember")),
@@ -214,6 +214,46 @@ class MemoryReplayEvaluationServiceTest {
                         .as(category)
                         .isGreaterThanOrEqualTo(minimum));
         assertThat(categoryCounts).hasSize(CATEGORY_MINIMUMS.size());
+    }
+
+    @Test
+    void answerFormatPreferenceSeedsUseStyleMemoryType() {
+        Map<String, MemoryReplayEvaluationService.MemoryReplayCase> byId = loadCases().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        MemoryReplayEvaluationService.MemoryReplayCase::id,
+                        java.util.function.Function.identity(),
+                        (left, right) -> left));
+
+        assertThat(byId.get("replay_en_explicit_preference_concise_answers").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_en_explicit_preference_action_items").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_cn_explicit_preference_markdown_summary").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_cn_explicit_preference_short_titles").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_cn_implicit_preference_short_note_titles").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_en_correction_chinese_instead_of_english").expectedMemoryType())
+                .isEqualTo("style");
+        assertThat(byId.get("replay_en_multi_turn_correction_brief_instead_detailed").expectedMemoryType())
+                .isEqualTo("style");
+    }
+
+    @Test
+    void generatedPreferenceCasesDoNotEncodeAnswerFormatInstructions() {
+        List<MemoryReplayEvaluationService.MemoryReplayCase> generatedPreferenceCases = loadCases().stream()
+                .filter(replayCase -> replayCase.id().contains("_explicit_preference_sim_")
+                        || replayCase.id().contains("_implicit_preference_sim_"))
+                .toList();
+
+        assertThat(generatedPreferenceCases).isNotEmpty();
+        for (MemoryReplayEvaluationService.MemoryReplayCase replayCase : generatedPreferenceCases) {
+            String normalized = replayCase.userMessage().toLowerCase(java.util.Locale.ROOT);
+            assertThat(normalized).as(replayCase.id()).doesNotContain("conclusion");
+            assertThat(normalized).as(replayCase.id()).doesNotContain("action items");
+            assertThat(normalized).as(replayCase.id()).doesNotContain("risks before suggestions");
+        }
     }
 
     private static Map<String, Integer> categoryMinimums() {

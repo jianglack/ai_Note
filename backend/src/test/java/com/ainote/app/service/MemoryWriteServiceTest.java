@@ -17,6 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,6 +26,7 @@ class MemoryWriteServiceTest {
     private SemanticMemoryRepository semanticMemoryRepository;
     private MemoryEventRepository memoryEventRepository;
     private EmbeddingModel embeddingModel;
+    private MemoryMetricsService memoryMetricsService;
     private MemoryWriteService service;
 
     @BeforeEach
@@ -32,7 +34,13 @@ class MemoryWriteServiceTest {
         semanticMemoryRepository = mock(SemanticMemoryRepository.class);
         memoryEventRepository = mock(MemoryEventRepository.class);
         embeddingModel = mock(EmbeddingModel.class);
-        service = new MemoryWriteService(semanticMemoryRepository, memoryEventRepository, embeddingModel);
+        memoryMetricsService = mock(MemoryMetricsService.class);
+        service = new MemoryWriteService(
+                semanticMemoryRepository,
+                memoryEventRepository,
+                embeddingModel,
+                new MemoryPrivacyService(),
+                memoryMetricsService);
 
         when(embeddingModel.embed(any(String.class)))
                 .thenReturn(Response.from(Embedding.from(new float[]{0.1f, 0.2f})));
@@ -80,6 +88,33 @@ class MemoryWriteServiceTest {
         assertThat(eventCaptor.getValue().getActor()).isEqualTo("assistant");
         assertThat(eventCaptor.getValue().getTraceId()).isEqualTo(saved.getSourceTraceId());
         assertThat(eventCaptor.getValue().getAfterJson()).contains("contentHash");
+        verify(memoryMetricsService).recordWriteResult(result, "explicit");
+    }
+
+    @Test
+    void skipsSensitiveCandidateBeforePersistingMemory() {
+        MemoryCandidateExtractor.MemoryCandidate candidate = new MemoryCandidateExtractor.MemoryCandidate(
+                "fact",
+                "fact",
+                "backup email alice@example.com",
+                0.95,
+                "user",
+                "remember my backup email is alice@example.com",
+                false);
+
+        MemoryWriteService.MemoryWriteResult result = service.writeCandidates(
+                "user-1", List.of(candidate), "explicit");
+
+        assertThat(result.skipped()).isEqualTo(1);
+        verify(semanticMemoryRepository, never()).save(any(SemanticMemory.class));
+        verify(semanticMemoryRepository, never()).updateEmbedding(any(Long.class), any(String.class));
+
+        ArgumentCaptor<MemoryEvent> eventCaptor = ArgumentCaptor.forClass(MemoryEvent.class);
+        verify(memoryEventRepository).save(eventCaptor.capture());
+        assertThat(eventCaptor.getValue().getEventType()).isEqualTo("CAPTURE_REJECTED_PRIVACY");
+        assertThat(eventCaptor.getValue().getAfterJson()).contains("\"email\":1");
+        assertThat(eventCaptor.getValue().getAfterJson()).doesNotContain("alice@example.com");
+        verify(memoryMetricsService).recordWriteResult(result, "explicit");
     }
 
     @Test
@@ -180,6 +215,33 @@ class MemoryWriteServiceTest {
         assertThat(event.getReason()).isEqualTo("capture_exception");
         assertThat(event.getTraceId()).isEqualTo("memory-capture-deadbeefdeadbeefdeadbeef");
         assertThat(event.getAfterJson()).contains("IllegalStateException", "extractor down");
+    }
+
+    @Test
+    void recordsDeniedCaptureDecisionWithRedactedEvidenceAndSignals() {
+        MemoryCapturePolicy.CaptureDecision decision = new MemoryCapturePolicy.CaptureDecision(
+                MemoryCapturePolicy.DecisionType.DENY_SENSITIVE,
+                false,
+                "sensitive_content",
+                0.0,
+                List.of("sensitive_content"));
+
+        service.recordCaptureDecision(
+                "user-1",
+                "denied",
+                "sensitive_content",
+                decision,
+                "请记住我的手机号：13812345678");
+
+        ArgumentCaptor<MemoryEvent> eventCaptor = ArgumentCaptor.forClass(MemoryEvent.class);
+        verify(memoryEventRepository).save(eventCaptor.capture());
+        MemoryEvent event = eventCaptor.getValue();
+        assertThat(event.getEventType()).isEqualTo("CAPTURE_REJECTED");
+        assertThat(event.getActor()).isEqualTo("system");
+        assertThat(event.getAfterJson()).contains("\"matchedSignals\":[\"sensitive_content\"]");
+        assertThat(event.getAfterJson()).contains("\"phone\":1");
+        assertThat(event.getAfterJson()).doesNotContain("13812345678");
+        assertThat(event.getTraceId()).matches("memory-capture-[a-f0-9]{24}");
     }
 
     @Test

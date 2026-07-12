@@ -198,11 +198,11 @@ public class ReadOnlyStreamingChatService {
     }
 
     private String assembleContext(String query, List<String> noteIds, String userId) {
-        if (noteIds == null || noteIds.isEmpty()) {
-            return "";
-        }
         try {
-            return contextAssembler.assemble(query, noteIds, userId);
+            return contextAssembler.assemble(
+                    query,
+                    noteIds == null ? List.of() : noteIds,
+                    userId);
         } catch (Exception e) {
             log.warn("Direct stream context assembly failed; continuing without context", e);
             return "";

@@ -1,10 +1,14 @@
 package com.ainote.app.service;
 
+import com.ainote.app.entity.ChatMemoryHead;
 import com.ainote.app.entity.UserMemory;
+import com.ainote.app.memory.ReliableChatMemoryStore;
+import com.ainote.app.memory.ShortTermMemoryMetrics;
 import com.ainote.app.model.ChatHistoryItem;
 import com.ainote.app.model.ChatHistoryPage;
 import com.ainote.app.model.ExtractedSchedule;
 import com.ainote.app.model.Note;
+import com.ainote.app.repository.ChatMemoryHeadRepository;
 import com.ainote.app.repository.UserMemoryRepository;
 import com.ainote.app.security.SecurityUtils;
 import com.ainote.app.util.PromptLoader;
@@ -16,6 +20,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.data.domain.PageRequest;
 
 import java.time.LocalDateTime;
@@ -27,6 +32,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 @DisplayName("AiService unit tests")
 class AiServiceTest {
     private NoteService noteService;
@@ -34,6 +40,9 @@ class AiServiceTest {
     private ChatModel chatModel;
     private SecurityUtils securityUtils;
     private UserMemoryRepository userMemoryRepository;
+    private ChatMemoryHeadRepository chatMemoryHeadRepository;
+    private ReliableChatMemoryStore reliableChatMemoryStore;
+    private ShortTermMemoryMetrics shortTermMemoryMetrics;
     private PromptLoader promptLoader;
     private AiService aiService;
 
@@ -44,9 +53,13 @@ class AiServiceTest {
         chatModel = mock(ChatModel.class);
         securityUtils = mock(SecurityUtils.class);
         userMemoryRepository = mock(UserMemoryRepository.class);
+        chatMemoryHeadRepository = mock(ChatMemoryHeadRepository.class);
+        reliableChatMemoryStore = mock(ReliableChatMemoryStore.class);
+        shortTermMemoryMetrics = mock(ShortTermMemoryMetrics.class);
         promptLoader = mock(PromptLoader.class);
         aiService = new AiService(noteService, folderService, chatModel,
-                securityUtils, userMemoryRepository, promptLoader, new ObjectMapper());
+                securityUtils, userMemoryRepository, chatMemoryHeadRepository,
+                reliableChatMemoryStore, shortTermMemoryMetrics, promptLoader, new ObjectMapper());
     }
 
     @Test
@@ -120,6 +133,27 @@ class AiServiceTest {
                 .containsExactly("older", "oldest");
         assertThat(page.isHasMore()).isFalse();
         assertThat(page.getNextCursor()).isNull();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test
+    void saveChatTurnAllocatesConsecutiveSequencesInOneBatch() {
+        ChatMemoryHead head = new ChatMemoryHead();
+        head.setUserId("user-123");
+        head.setNextSequenceNumber(7);
+        when(chatMemoryHeadRepository.findByUserIdForUpdate("user-123")).thenReturn(Optional.of(head));
+
+        aiService.saveChatTurn("user-123", "question", "answer");
+
+        ArgumentCaptor<List<UserMemory>> rows = ArgumentCaptor.forClass(List.class);
+        verify(userMemoryRepository).saveAll(rows.capture());
+        assertThat(rows.getValue()).extracting(UserMemory::getSequenceNumber)
+                .containsExactly(7, 8);
+        assertThat(rows.getValue()).extracting(UserMemory::getMessageType)
+                .containsExactly("USER", "AI");
+        assertThat(head.getNextSequenceNumber()).isEqualTo(9);
+        verify(chatMemoryHeadRepository).save(head);
+        verify(shortTermMemoryMetrics).recordAppend(2);
     }
 
     @Test

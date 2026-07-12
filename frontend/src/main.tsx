@@ -45,14 +45,23 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return isAuthenticated ? <Navigate to="/" replace /> : <>{children}</>;
 }
 
+function AuthBootstrap({ children }: { children: React.ReactNode }) {
+  const initialized = useAuthStore((s) => s.initialized);
+  const initialize = useAuthStore((s) => s.initialize);
+  React.useEffect(() => { void initialize(); }, [initialize]);
+  return initialized ? <>{children}</> : null;
+}
+
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
-          <Route path="/*" element={<PrivateRoute><App /></PrivateRoute>} />
-        </Routes>
+        <AuthBootstrap>
+          <Routes>
+            <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
+            <Route path="/*" element={<PrivateRoute><App /></PrivateRoute>} />
+          </Routes>
+        </AuthBootstrap>
       </BrowserRouter>
     </ErrorBoundary>
   </React.StrictMode>

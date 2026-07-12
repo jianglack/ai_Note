@@ -265,7 +265,7 @@ public class AgentService {
             log.warn("Failed to generate episodic summary before clearing: {}", e.getMessage());
         }
 
-        userMemoryRepository.deleteByUserId(userId);
+        reliableChatMemoryStore.deleteMessages(userId);
     }
 
     /**

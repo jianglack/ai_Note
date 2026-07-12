@@ -93,7 +93,6 @@ describe('App shell real behavior', () => {
     Element.prototype.scrollTo = vi.fn();
     Element.prototype.scrollIntoView = vi.fn();
     localStorage.clear();
-    localStorage.setItem('token', 'jwt-token');
 
     apiMocks.getSchedules.mockResolvedValue([]);
     apiMocks.getNotes.mockResolvedValue([noteFixture]);
@@ -112,11 +111,10 @@ describe('App shell real behavior', () => {
 
     useAuthStore.setState({
       user: { userId: 'user-1', username: 'alice', email: 'alice@example.com' },
-      token: 'jwt-token',
       isAuthenticated: true,
+      initialized: true,
       logout: vi.fn(async () => {
-        localStorage.removeItem('token');
-        useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+        useAuthStore.setState({ user: null, isAuthenticated: false, initialized: true });
       }) as any,
     });
     useAiStore.setState({

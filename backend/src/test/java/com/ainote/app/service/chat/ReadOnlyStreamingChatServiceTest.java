@@ -21,7 +21,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -93,7 +92,7 @@ class ReadOnlyStreamingChatServiceTest {
     }
 
     @Test
-    void skipsContextAssemblyWhenNoNotesAreSelected() {
+    void assemblesMemoryContextWhenNoNotesAreSelected() {
         Mockito.doAnswer(invocation -> {
             StreamingChatResponseHandler handler = invocation.getArgument(1);
             handler.onCompleteResponse(ChatResponse.builder()
@@ -107,7 +106,7 @@ class ReadOnlyStreamingChatServiceTest {
 
         assertThat(handled).isTrue();
         assertThat(callback.complete.getContent()).isEqualTo("ok");
-        verify(contextAssembler, never()).assemble(anyString(), any(), anyString());
+        verify(contextAssembler).assemble("summarize", List.of(), "u1");
     }
 
     @Test

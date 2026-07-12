@@ -1,5 +1,6 @@
 package com.ainote.app.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,19 +19,28 @@ public class MemorySignalClassifier {
                     + "answer|reply|tone|style|format|formal|serious|concise|detailed|professional)");
     private static final Pattern REAL_CHINESE_INTERACTION_STYLE_SIGNAL = Pattern.compile(
             "(\u56de\u7b54|\u56de\u590d|\u8bed\u6c14|\u53e3\u543b|\u98ce\u683c|\u683c\u5f0f|\u8be6\u7ec6|"
-                    + "\u7b80\u77ed|\u7b80\u6d01|\u4e25\u8083|\u6b63\u5f0f|\u4e13\u4e1a|\u5e7d\u9ed8|\u6df1\u523b)");
+                    + "\u7b80\u77ed|\u7b80\u6d01|\u4e25\u8083|\u6b63\u5f0f|\u4e13\u4e1a|\u5e7d\u9ed8|\u6df1\u523b|"
+                    + "\u8868\u8fbe)");
     private static final Pattern PROJECT_CONTEXT_LABEL = Pattern.compile(
             "^(项目上下文|项目背景|project context|project background)[:：].+",
             Pattern.CASE_INSENSITIVE);
 
     private final MemorySignalAdvisor signalAdvisor;
+    private final MemoryPrivacyService privacyService;
 
     public MemorySignalClassifier(MemorySignalAdvisor signalAdvisor) {
+        this(signalAdvisor, new MemoryPrivacyService());
+    }
+
+    @Autowired
+    public MemorySignalClassifier(MemorySignalAdvisor signalAdvisor,
+                                  MemoryPrivacyService privacyService) {
         this.signalAdvisor = signalAdvisor == null ? MemorySignalAdvisor.disabled() : signalAdvisor;
+        this.privacyService = privacyService == null ? new MemoryPrivacyService() : privacyService;
     }
 
     MemorySignalClassifier() {
-        this(MemorySignalAdvisor.disabled());
+        this(MemorySignalAdvisor.disabled(), new MemoryPrivacyService());
     }
 
     public SignalClassification classify(MemoryCapturePolicy.CaptureRequest request) {
@@ -44,6 +54,7 @@ public class MemorySignalClassifier {
         boolean blankMessage = userMessage.isBlank();
         boolean sensitive = containsSensitive(userMessage) || containsSensitive(aiResponse);
         boolean forgetRequest = isForgetRequest(compact);
+        boolean noStoreOrUncertain = isNoStoreOrUncertain(userMessage, compact);
         boolean referenceOnly = isReferenceOnlyTask(compact) || isRagReference(aiResponse);
         boolean transientOperation = isTransientOperation(compact);
         boolean oneOffScope = isOneOffInstruction(compact);
@@ -64,6 +75,7 @@ public class MemorySignalClassifier {
                 || blankMessage
                 || sensitive
                 || forgetRequest
+                || noStoreOrUncertain
                 || referenceOnly
                 || transientOperation
                 || oneOffScope
@@ -93,9 +105,12 @@ public class MemorySignalClassifier {
         addSignal(matchedSignals, blankMessage, "blank_message");
         addSignal(matchedSignals, sensitive, "sensitive_content");
         addSignal(matchedSignals, forgetRequest, "forget_request");
+        addSignal(matchedSignals, noStoreOrUncertain, "explicit_no_store_or_uncertain");
         addSignal(matchedSignals, referenceOnly, "reference_only");
         addSignal(matchedSignals, transientOperation, "transient_operation");
         addSignal(matchedSignals, oneOffScope, "one_off_scope");
+        addSignal(matchedSignals, taskOnlyContent, "task_only_content");
+        addSignal(matchedSignals, roleOverridePrompt, "role_override_prompt");
         addSignal(matchedSignals, assistantFeedback, "assistant_feedback");
         addSignal(matchedSignals, explicitRemember, "explicit_remember");
         addSignal(matchedSignals, preferenceCorrection, "preference_correction");
@@ -110,9 +125,12 @@ public class MemorySignalClassifier {
                 blankMessage,
                 sensitive,
                 forgetRequest,
+                noStoreOrUncertain,
                 referenceOnly,
                 transientOperation,
                 oneOffScope,
+                taskOnlyContent,
+                roleOverridePrompt,
                 assistantFeedback,
                 explicitRemember,
                 preferenceSignal,
@@ -146,17 +164,28 @@ public class MemorySignalClassifier {
     }
 
     private boolean containsSensitive(String text) {
-        return SENSITIVE_PATTERN.matcher(text).find();
+        return SENSITIVE_PATTERN.matcher(text).find()
+                || privacyService.scan(text).hasBlockingFindings();
     }
 
     private boolean isExplicitRemember(String userMessage, String compact) {
         if (isIncidentalRememberTask(userMessage, compact)) {
             return false;
         }
+        if (isNoStoreOrUncertain(userMessage, compact)) {
+            return false;
+        }
         if (compact.contains("不要记住") || compact.contains("別記住") || compact.contains("别记住")) {
             return false;
         }
         if (compact.startsWith("记住") || compact.startsWith("請記住") || compact.startsWith("请记住")) {
+            return true;
+        }
+
+        if (compact.contains("\u4e0d\u8981\u8bb0\u4f4f") || compact.contains("\u522b\u8bb0\u4f4f")) {
+            return false;
+        }
+        if (compact.startsWith("\u8bb0\u4f4f") || compact.startsWith("\u8bf7\u8bb0\u4f4f")) {
             return true;
         }
 
@@ -170,6 +199,30 @@ public class MemorySignalClassifier {
                         + "(my|i\\b|i'm\\b|i am\\b|we\\b|our\\b|this project\\b|the project\\b).+")
                 .matcher(normalized)
                 .find();
+    }
+
+    private boolean isNoStoreOrUncertain(String userMessage, String compact) {
+        String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
+        return compact.contains("先别记")
+                || compact.contains("先不要记")
+                || compact.contains("暂时别记")
+                || compact.contains("暂时不要记")
+                || compact.contains("不要长期记")
+                || compact.contains("不用长期记")
+                || compact.contains("可能还会改")
+                || compact.contains("等我确认")
+                || compact.contains("待确认")
+                || Pattern.compile("(?i)\\b(don't|do\\s+not)\\s+(remember|save|store)\\s+"
+                        + "(this|that|it|my\\s+(preference|details?|information|profile))\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)\\b(not\\s+sure|uncertain|temporary|tentative)\\b.{0,40}"
+                        + "\\b(save|store|remember|keep)\\b")
+                        .matcher(normalized)
+                        .find()
+                || Pattern.compile("(?i)\\b(might|may)\\s+change\\s+(this|that|my\\s+preference)\\b")
+                        .matcher(normalized)
+                        .find();
     }
 
     private boolean isIncidentalRememberTask(String userMessage, String compact) {
@@ -196,6 +249,11 @@ public class MemorySignalClassifier {
         if (compact.contains("我希望")
                 || compact.contains("我喜欢")
                 || compact.contains("我偏好")) {
+            return true;
+        }
+        if (compact.contains("\u6211\u5e0c\u671b")
+                || compact.contains("\u6211\u559c\u6b22")
+                || compact.contains("\u6211\u504f\u597d")) {
             return true;
         }
         String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
@@ -280,7 +338,12 @@ public class MemorySignalClassifier {
         String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
         boolean chineseCorrection = compact.contains("\u4e0d\u518d")
                 || compact.contains("\u6539\u4e3a")
-                || compact.contains("\u4ee5\u540e\u4e0d\u8981");
+                || compact.contains("\u4ee5\u540e\u4e0d\u8981")
+                || (hasChineseCorrectionMarker(compact)
+                        && (compact.contains("希望")
+                        || compact.contains("偏好")
+                        || compact.contains("喜欢")
+                        || hasInteractionStyleSignal(userMessage)));
         if (chineseCorrection) {
             return true;
         }
@@ -306,7 +369,8 @@ public class MemorySignalClassifier {
 
     private boolean looksLikeInteractionStyleCorrection(String userMessage, String compact) {
         String normalized = userMessage == null ? "" : userMessage.toLowerCase(Locale.ROOT);
-        boolean directStyleCorrection = ((compact.contains("\u4e0d\u8981") || compact.contains("\u522b"))
+        boolean directStyleCorrection = (hasChineseCorrectionMarker(compact) && hasInteractionStyleSignal(userMessage))
+                || ((compact.contains("\u4e0d\u8981") || compact.contains("\u522b"))
                 && (hasStandaloneChineseWant(compact) || compact.contains("\u6539\u4e3a")))
                 || Pattern.compile("(?i)\\b(from\\s+now\\s+on|"
                                 + "don't\\s+(answer|reply)|do\\s+not\\s+(answer|reply))\\b")
@@ -317,6 +381,7 @@ public class MemorySignalClassifier {
         }
         boolean hasNegativeDirective = compact.contains("不要")
                 || compact.contains("别")
+                || compact.contains("不是")
                 || compact.contains("少一点")
                 || compact.contains("少点")
                 || compact.contains("\u522b")
@@ -327,6 +392,8 @@ public class MemorySignalClassifier {
                 || compact.contains("less");
         boolean hasPositiveReplacement = compact.contains("改成")
                 || compact.contains("改为")
+                || compact.contains("而是")
+                || compact.contains("应该")
                 || compact.contains("多一点")
                 || compact.contains("多点")
                 || hasStandaloneChineseWant(compact)
@@ -339,10 +406,19 @@ public class MemorySignalClassifier {
                 && hasInteractionStyleSignal(userMessage);
     }
 
+    private boolean hasChineseCorrectionMarker(String compact) {
+        return compact.contains("更正")
+                || compact.contains("纠正")
+                || compact.contains("修正")
+                || (compact.contains("不是") && compact.contains("而是"));
+    }
+
     private boolean looksLikeStableStylePreference(String userMessage, String compact) {
         boolean stableScope = compact.contains("以后")
                 || compact.contains("今后")
                 || compact.contains("之后")
+                || compact.contains("从今天开始")
+                || compact.contains("从现在开始")
                 || compact.contains("接下来")
                 || compact.contains("默认")
                 || compact.contains("一直")
@@ -493,7 +569,13 @@ public class MemorySignalClassifier {
     }
 
     private boolean isProjectContext(String userMessage) {
-        return PROJECT_CONTEXT_LABEL.matcher(userMessage).find();
+        String text = userMessage == null ? "" : userMessage.trim();
+        String compact = compact(normalize(text));
+        return PROJECT_CONTEXT_LABEL.matcher(text).find()
+                || compact.contains("项目上下文")
+                || compact.contains("项目背景")
+                || compact.contains("当前项目是")
+                || compact.contains("我的当前项目是");
     }
 
     private boolean isRagReference(String text) {
@@ -515,9 +597,12 @@ public class MemorySignalClassifier {
             boolean blankMessage,
             boolean sensitive,
             boolean forgetRequest,
+            boolean noStoreOrUncertain,
             boolean referenceOnly,
             boolean transientOperation,
             boolean oneOffScope,
+            boolean taskOnlyContent,
+            boolean roleOverridePrompt,
             boolean assistantFeedback,
             boolean explicitRemember,
             boolean preferenceSignal,

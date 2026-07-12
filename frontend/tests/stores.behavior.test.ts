@@ -30,7 +30,7 @@ describe('zustand store behavior', () => {
     localStorage.clear();
     vi.clearAllMocks();
     vi.useRealTimers();
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+    useAuthStore.setState({ user: null, isAuthenticated: false, initialized: false });
     useAiStore.setState({
       messages: [],
       currentMessage: '',
@@ -49,10 +49,9 @@ describe('zustand store behavior', () => {
     useCardStore.setState({ cards: {} });
   });
 
-  it('authStore persists login and clears state on logout', async () => {
+  it('authStore uses the server cookie session without persisting a JWT', async () => {
     apiMock.post.mockResolvedValueOnce({
       data: {
-        token: 'jwt-token',
         userId: 'user-1',
         username: 'alice',
         email: 'alice@example.com',
@@ -63,7 +62,7 @@ describe('zustand store behavior', () => {
       await useAuthStore.getState().login('alice', 'password');
     });
 
-    expect(localStorage.getItem('token')).toBe('jwt-token');
+    expect(localStorage.getItem('token')).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(true);
 
     await act(async () => {
@@ -72,6 +71,21 @@ describe('zustand store behavior', () => {
 
     expect(localStorage.getItem('token')).toBeNull();
     expect(useAuthStore.getState().isAuthenticated).toBe(false);
+  });
+
+  it('authStore restores a cookie session through the current-user endpoint', async () => {
+    localStorage.setItem('token', 'legacy-token');
+    apiMock.get.mockResolvedValueOnce({
+      data: { userId: 'user-1', username: 'alice', email: 'alice@example.com' },
+    });
+
+    await act(async () => {
+      await useAuthStore.getState().initialize();
+    });
+
+    expect(apiMock.get).toHaveBeenCalledWith('/api/auth/me');
+    expect(localStorage.getItem('token')).toBeNull();
+    expect(useAuthStore.getState()).toMatchObject({ isAuthenticated: true, initialized: true });
   });
 
   it('aiStore appends messages and updates active plans in messages', () => {

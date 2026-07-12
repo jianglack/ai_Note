@@ -16,6 +16,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -28,6 +29,7 @@ class MemoryRetrievalServiceTest {
     private EmbeddingModel embeddingModel;
     private SemanticMemoryRepository semanticMemoryRepository;
     private EpisodicMemoryRepository episodicMemoryRepository;
+    private MemoryMetricsService memoryMetricsService;
     private MemoryRetrievalService service;
 
     @BeforeEach
@@ -35,10 +37,12 @@ class MemoryRetrievalServiceTest {
         embeddingModel = mock(EmbeddingModel.class);
         semanticMemoryRepository = mock(SemanticMemoryRepository.class);
         episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
+        memoryMetricsService = mock(MemoryMetricsService.class);
         service = new MemoryRetrievalService(
                 embeddingModel,
                 semanticMemoryRepository,
-                episodicMemoryRepository
+                episodicMemoryRepository,
+                memoryMetricsService
         );
     }
 
@@ -101,6 +105,8 @@ class MemoryRetrievalServiceTest {
         assertThat(result.episodicMemories()).containsExactly(episode);
         verify(semanticMemoryRepository).findRelevantSemanticMatches("user-1", "[0.1,0.2]", 0.25, 20);
         verify(episodicMemoryRepository).findRelevantEpisodicMatches("user-1", "[0.1,0.2]", 0.25, 10);
+        verify(semanticMemoryRepository).markAccessed(eq("user-1"), eq(List.of(10L, 11L)), any(LocalDateTime.class));
+        verify(memoryMetricsService).recordRetrieval(eq(2), eq(1), eq("query_relevant"), anyLong());
     }
 
     @Test
@@ -133,6 +139,7 @@ class MemoryRetrievalServiceTest {
         assertThat(result.episodicMemories()).containsExactly(recent);
         verify(semanticMemoryRepository).findRetrievalFallback(eq("user-1"), any(Pageable.class));
         verify(episodicMemoryRepository).findRecentByUserId(eq("user-1"), any(Pageable.class));
+        verify(semanticMemoryRepository).markAccessed(eq("user-1"), eq(List.of(30L)), any(LocalDateTime.class));
     }
 
     @Test
@@ -152,6 +159,7 @@ class MemoryRetrievalServiceTest {
         assertThat(result.semanticMemories()).isEmpty();
         assertThat(result.episodicMemories()).isEmpty();
         verifyNoMoreInteractions(embeddingModel);
+        verify(memoryMetricsService).recordRetrieval(eq(0), eq(0), eq("fallback_blank_query"), anyLong());
     }
 
     private SemanticMemory semanticMemory(Long id,

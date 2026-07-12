@@ -22,9 +22,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.csrf.CsrfToken;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -124,6 +126,16 @@ public class AuthController {
         } catch (RateLimitExceededException e) {
             return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
         }
+    }
+
+    @GetMapping("/csrf")
+    public ResponseEntity<Map<String, String>> csrf(CsrfToken csrfToken) {
+        return ResponseEntity.ok(Map.of("token", csrfToken.getToken()));
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<AuthResponse> currentUser() {
+        return ResponseEntity.ok(authService.getCurrentUser(securityUtils.getCurrentUserId()));
     }
 
     private ResponseEntity<AuthResponse> withAuthCookie(AuthResponse response) {

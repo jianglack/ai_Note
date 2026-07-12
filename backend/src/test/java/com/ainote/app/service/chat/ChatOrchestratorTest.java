@@ -3,6 +3,9 @@ package com.ainote.app.service.chat;
 import com.ainote.app.agent.guardrail.GuardrailResult;
 import com.ainote.app.agent.guardrail.InputGuardrail;
 import com.ainote.app.model.AiChatResponse;
+import com.ainote.app.model.memory.MemoryForgetResponse;
+import com.ainote.app.service.MemoryControlService;
+import com.ainote.app.service.MemoryPrivacyService;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +31,7 @@ class ChatOrchestratorTest {
     private ReadOnlyStreamingChatService readOnlyStreamingChatService;
     private ChatMetrics chatMetrics;
     private InputGuardrail inputGuardrail;
+    private MemoryControlService memoryControlService;
     private ChatOrchestrator orchestrator;
 
     @BeforeEach
@@ -37,6 +41,7 @@ class ChatOrchestratorTest {
         readOnlyStreamingChatService = Mockito.mock(ReadOnlyStreamingChatService.class);
         chatMetrics = Mockito.mock(ChatMetrics.class);
         inputGuardrail = Mockito.mock(InputGuardrail.class);
+        memoryControlService = Mockito.mock(MemoryControlService.class);
 
         CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(
                 CircuitBreakerConfig.custom()
@@ -47,7 +52,14 @@ class ChatOrchestratorTest {
         when(inputGuardrail.check(anyString())).thenReturn(GuardrailResult.ok());
 
         orchestrator = new ChatOrchestrator(
-                agentStrategy, fallbackStrategy, readOnlyStreamingChatService, registry, chatMetrics, inputGuardrail);
+                agentStrategy,
+                fallbackStrategy,
+                readOnlyStreamingChatService,
+                registry,
+                chatMetrics,
+                inputGuardrail,
+                new MemoryPrivacyService(),
+                memoryControlService);
     }
 
     @Test
@@ -89,6 +101,81 @@ class ChatOrchestratorTest {
         assertThat(result.getContent()).isEqualTo("unsafe");
         verify(agentStrategy, never()).chat(anyString(), anyList(), anyString());
         verify(fallbackStrategy, never()).chat(anyString(), anyList(), anyString());
+    }
+
+    @Test
+    void sensitiveMemoryWriteRequestIsRejectedBeforeModelCall() {
+        AiChatResponse result = orchestrator.chat(
+                "请记住我的身份证号：110105199003077614，手机号：13812345678。",
+                List.of(),
+                "u1");
+
+        assertThat(result.getChatMode()).isEqualTo("MEMORY_GOVERNED");
+        assertThat(result.getContent()).contains("不能为你保存");
+        verify(agentStrategy, never()).chat(anyString(), anyList(), anyString());
+        verify(fallbackStrategy, never()).chat(anyString(), anyList(), anyString());
+    }
+
+    @Test
+    void missingLongTermMemoryReturnsGovernedHonestResponseBeforeModelCall() {
+        when(memoryControlService.hasActiveMemories("u1")).thenReturn(false);
+
+        AiChatResponse result = orchestrator.chat(
+                "根据你记住的我的偏好，给我一个建议。",
+                List.of(),
+                "u1");
+
+        assertThat(result.getChatMode()).isEqualTo("MEMORY_GOVERNED");
+        assertThat(result.getContent()).contains("没有与你这个问题对应的可用长期记忆");
+        assertThat(result.getContent()).contains("不能假装知道");
+        verify(agentStrategy, never()).chat(anyString(), anyList(), anyString());
+        verify(fallbackStrategy, never()).chat(anyString(), anyList(), anyString());
+    }
+
+    @Test
+    void streamingMissingLongTermMemoryDoesNotEnterAnyModel() {
+        when(memoryControlService.hasActiveMemories("u1")).thenReturn(false);
+        CapturingCallback callback = new CapturingCallback();
+
+        orchestrator.chatStream(
+                "What do you remember about me and my saved preference?",
+                List.of(),
+                "u1",
+                callback);
+
+        assertThat(callback.complete.getChatMode()).isEqualTo("MEMORY_GOVERNED");
+        assertThat(callback.complete.getContent()).contains("没有与你这个问题对应的可用长期记忆");
+        verify(readOnlyStreamingChatService, never()).chatStream(anyString(), anyList(), anyString(), Mockito.any());
+        verify(agentStrategy, never()).chatStream(anyString(), anyList(), anyString(), anyString(), Mockito.any());
+    }
+
+    @Test
+    void naturalLanguageForgetAllRequestCallsMemoryControlService() {
+        when(memoryControlService.forgetAllActiveMemories(eq("u1"), anyString()))
+                .thenReturn(new MemoryForgetResponse(4));
+
+        AiChatResponse result = orchestrator.chat("这些记忆都不对，请全部删除。", List.of(), "u1");
+
+        assertThat(result.getChatMode()).isEqualTo("MEMORY_GOVERNED");
+        assertThat(result.getContent()).contains("已删除你的长期记忆 4 条");
+        verify(memoryControlService).forgetAllActiveMemories(eq("u1"), anyString());
+        verify(memoryControlService, never()).forgetMemories(eq("u1"), Mockito.any());
+        verify(agentStrategy, never()).chat(anyString(), anyList(), anyString());
+    }
+
+    @Test
+    void streamingNaturalLanguageForgetAllRequestDoesNotEnterModel() {
+        when(memoryControlService.forgetAllActiveMemories(eq("u1"), anyString()))
+                .thenReturn(new MemoryForgetResponse(4));
+        CapturingCallback callback = new CapturingCallback();
+
+        orchestrator.chatStream("这些记忆都不对，请全部删除。", List.of(), "u1", callback);
+
+        assertThat(callback.complete.getChatMode()).isEqualTo("MEMORY_GOVERNED");
+        assertThat(callback.tokens.toString()).contains("已删除你的长期记忆 4 条");
+        verify(memoryControlService).forgetAllActiveMemories(eq("u1"), anyString());
+        verify(agentStrategy, never()).chatStream(anyString(), anyList(), anyString(), anyString(), Mockito.any());
+        verify(readOnlyStreamingChatService, never()).chatStream(anyString(), anyList(), anyString(), Mockito.any());
     }
 
     @Test

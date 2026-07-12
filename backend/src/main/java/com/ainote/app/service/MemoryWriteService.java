@@ -6,6 +6,7 @@ import com.ainote.app.repository.MemoryEventRepository;
 import com.ainote.app.repository.SemanticMemoryRepository;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,6 +18,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class MemoryWriteService {
@@ -26,13 +28,33 @@ public class MemoryWriteService {
     private final SemanticMemoryRepository semanticMemoryRepository;
     private final MemoryEventRepository memoryEventRepository;
     private final EmbeddingModel embeddingModel;
+    private final MemoryPrivacyService privacyService;
+    private final MemoryMetricsService memoryMetricsService;
 
     public MemoryWriteService(SemanticMemoryRepository semanticMemoryRepository,
                               MemoryEventRepository memoryEventRepository,
                               EmbeddingModel embeddingModel) {
+        this(semanticMemoryRepository, memoryEventRepository, embeddingModel, new MemoryPrivacyService(), MemoryMetricsService.noop());
+    }
+
+    public MemoryWriteService(SemanticMemoryRepository semanticMemoryRepository,
+                              MemoryEventRepository memoryEventRepository,
+                              EmbeddingModel embeddingModel,
+                              MemoryPrivacyService privacyService) {
+        this(semanticMemoryRepository, memoryEventRepository, embeddingModel, privacyService, MemoryMetricsService.noop());
+    }
+
+    @Autowired
+    public MemoryWriteService(SemanticMemoryRepository semanticMemoryRepository,
+                              MemoryEventRepository memoryEventRepository,
+                              EmbeddingModel embeddingModel,
+                              MemoryPrivacyService privacyService,
+                              MemoryMetricsService memoryMetricsService) {
         this.semanticMemoryRepository = semanticMemoryRepository;
         this.memoryEventRepository = memoryEventRepository;
         this.embeddingModel = embeddingModel;
+        this.privacyService = privacyService == null ? new MemoryPrivacyService() : privacyService;
+        this.memoryMetricsService = memoryMetricsService == null ? MemoryMetricsService.noop() : memoryMetricsService;
     }
 
     @Transactional
@@ -49,6 +71,14 @@ public class MemoryWriteService {
         int skipped = 0;
         for (MemoryCandidateExtractor.MemoryCandidate candidate : candidates) {
             if (candidate == null || candidate.content() == null || candidate.content().isBlank()) {
+                skipped++;
+                continue;
+            }
+            MemoryPrivacyService.MemoryPrivacyScanResult privacyScan = privacyService.scan(candidate.content());
+            if (!privacyScan.safeToStore()) {
+                recordEvent(userId, null, "CAPTURE_REJECTED_PRIVACY", "system", reason, null,
+                        "{\"status\":\"rejected\",\"privacyFindings\":" + jsonObject(privacyScan.counts()) + "}",
+                        traceIdFor(userId, candidate));
                 skipped++;
                 continue;
             }
@@ -94,7 +124,9 @@ public class MemoryWriteService {
 
         log.info("memory_write_event=completed user_id={} created={} reinforced={} superseded={} skipped={} reason={}",
                 userId, created, reinforced, superseded, skipped, reason);
-        return new MemoryWriteResult(created, reinforced, superseded, skipped);
+        MemoryWriteResult result = new MemoryWriteResult(created, reinforced, superseded, skipped);
+        memoryMetricsService.recordWriteResult(result, reason);
+        return result;
     }
 
     private SemanticMemory toSemanticMemory(String userId,
@@ -134,6 +166,41 @@ public class MemoryWriteService {
         event.setAfterJson("{\"error_class\":\"" + jsonEscape(errorClass(error))
                 + "\",\"message\":\"" + jsonEscape(errorMessage(error)) + "\"}");
         memoryEventRepository.save(event);
+    }
+
+    public void recordCaptureDecision(String userId,
+                                      String status,
+                                      String reason,
+                                      MemoryCapturePolicy.CaptureDecision decision,
+                                      String userMessage) {
+        if (userId == null || userId.isBlank()) {
+            return;
+        }
+        String normalizedStatus = safe(status).isBlank() ? "unknown" : status;
+        String eventType = switch (normalizedStatus) {
+            case "denied", "rejected" -> "CAPTURE_REJECTED";
+            case "skipped" -> "CAPTURE_SKIPPED";
+            case "succeeded", "allowed" -> "CAPTURE_ALLOWED";
+            default -> "CAPTURE_DECISION";
+        };
+        MemoryPrivacyService.MemoryPrivacyScanResult privacyScan = privacyService.scan(userMessage);
+        String resolvedReason = safe(reason).isBlank()
+                && decision != null
+                ? decision.reason()
+                : reason;
+        String afterJson = "{\"status\":\"" + jsonEscape(normalizedStatus)
+                + "\",\"reason\":\"" + jsonEscape(resolvedReason)
+                + "\",\"decisionType\":\"" + jsonEscape(decision == null ? "" : decision.type().name())
+                + "\",\"allowed\":" + (decision != null && decision.allowed())
+                + ",\"matchedSignals\":" + jsonArray(decision == null ? List.of() : decision.matchedSignals())
+                + ",\"privacyFindings\":" + jsonObject(privacyScan.counts())
+                + ",\"userMessageHash\":\"sha256:" + sha256(userMessage)
+                + "\",\"userMessagePreview\":\"" + jsonEscape(truncate(privacyService.redact(userMessage), 160))
+                + "\"}";
+        recordEvent(userId, null, eventType, "system", resolvedReason, null, afterJson,
+                "memory-capture-" + sha256(safe(userId)
+                        + "\u001f" + safe(userMessage)
+                        + "\u001f" + safe(resolvedReason)).substring(0, 24));
     }
 
     private void applyGovernanceMetadata(SemanticMemory memory,
@@ -203,7 +270,7 @@ public class MemoryWriteService {
         event.setMemoryId(memoryId);
         event.setEventType(eventType);
         event.setActor(actor);
-        event.setReason(reason);
+        event.setReason(privacyService.redact(reason));
         event.setBeforeJson(beforeJson);
         event.setAfterJson(afterJson);
         event.setTraceId(traceId);
@@ -217,7 +284,7 @@ public class MemoryWriteService {
                 + "\",\"contentHash\":\"" + safe(memory.getContentHash())
                 + "\",\"sourceTraceId\":\"" + safe(memory.getSourceTraceId())
                 + "\",\"metadata\":" + jsonObjectOrEmpty(memory.getMetadataJson())
-                + ",\"content\":\"" + safe(memory.getContent()).replace("\"", "\\\"")
+                + ",\"content\":\"" + jsonEscape(privacyService.redact(memory.getContent()))
                 + "\"}";
     }
 
@@ -262,6 +329,23 @@ public class MemoryWriteService {
         return builder.append(']').toString();
     }
 
+    private String jsonObject(Map<String, Integer> values) {
+        if (values == null || values.isEmpty()) {
+            return "{}";
+        }
+        StringBuilder builder = new StringBuilder("{");
+        int index = 0;
+        for (Map.Entry<String, Integer> entry : values.entrySet()) {
+            if (index++ > 0) {
+                builder.append(',');
+            }
+            builder.append('"').append(jsonEscape(entry.getKey())).append('"')
+                    .append(':')
+                    .append(entry.getValue());
+        }
+        return builder.append('}').toString();
+    }
+
     private String jsonObjectOrEmpty(String value) {
         if (value == null || value.isBlank()) {
             return "{}";
@@ -279,6 +363,14 @@ public class MemoryWriteService {
 
     private String errorMessage(Throwable error) {
         return error == null || error.getMessage() == null ? "" : error.getMessage();
+    }
+
+    private String truncate(String value, int maxChars) {
+        String safeValue = safe(value);
+        if (safeValue.length() <= maxChars) {
+            return safeValue;
+        }
+        return safeValue.substring(0, Math.max(0, maxChars - 1)).trim() + "…";
     }
 
     public record MemoryWriteResult(int created, int reinforced, int superseded, int skipped) {

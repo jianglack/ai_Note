@@ -1,0 +1,9 @@
+[
+  {
+    "targets": ["backend:8081"],
+    "labels": {
+      "environment": "deployment",
+      "service": "ainote-backend"
+    }
+  }
+]

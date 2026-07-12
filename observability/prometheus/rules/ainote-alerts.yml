@@ -1,0 +1,173 @@
+groups:
+  - name: ainote-recording
+    interval: 30s
+    rules:
+      - record: ainote:http_requests:rate5m
+        expr: sum(rate(http_server_requests_seconds_count{application="ainote-backend"}[5m]))
+
+      - record: ainote:http_5xx:rate5m
+        expr: sum(rate(http_server_requests_seconds_count{application="ainote-backend",status=~"5.."}[5m]))
+
+      - record: ainote:http_5xx_ratio:rate5m
+        expr: ainote:http_5xx:rate5m / clamp_min(ainote:http_requests:rate5m, 0.001)
+
+      - record: ainote:http_request_duration_seconds:p95_5m
+        expr: histogram_quantile(0.95, sum by (le) (rate(http_server_requests_seconds_bucket{application="ainote-backend"}[5m])))
+
+      - record: ainote:jvm_heap_utilization:ratio
+        expr: sum(jvm_memory_used_bytes{application="ainote-backend",area="heap"}) / clamp_min(sum(jvm_memory_max_bytes{application="ainote-backend",area="heap"}), 1)
+
+      - record: ainote:agent_capacity_rejection:ratio5m
+        expr: sum(rate(chat_agent_capacity_requests_total{application="ainote-backend",result="rejected"}[5m])) / clamp_min(sum(rate(chat_agent_capacity_requests_total{application="ainote-backend"}[5m])), 0.001)
+
+      - record: ainote:memory_advisor_failure:ratio10m
+        expr: sum(rate(ainote_memory_advisor_requests_total{application="ainote-backend",status="failed"}[10m])) / clamp_min(sum(rate(ainote_memory_advisor_requests_total{application="ainote-backend"}[10m])), 0.001)
+
+  - name: ainote-service-alerts
+    interval: 30s
+    rules:
+      - alert: AiNoteBackendDown
+        expr: up{job="ainote-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: availability
+        annotations:
+          summary: AiNote backend target is unreachable
+          description: Prometheus has failed to scrape {{ $labels.instance }} for more than two minutes.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotebackenddown
+
+      - alert: AiNoteHighHttp5xxRatio
+        expr: ainote:http_5xx_ratio:rate5m > 0.05 and ainote:http_requests:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: availability
+        annotations:
+          summary: AiNote HTTP 5xx ratio exceeds 5 percent
+          description: The five-minute 5xx ratio is {{ $value | humanizePercentage }} under sustained traffic.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotehighhttp5xxratio
+
+      - alert: AiNoteHighHttpP95Latency
+        expr: ainote:http_request_duration_seconds:p95_5m > 0.5 and ainote:http_requests:rate5m > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: latency
+        annotations:
+          summary: AiNote HTTP p95 latency exceeds 500 ms
+          description: The five-minute HTTP p95 is {{ $value | humanizeDuration }}.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotehighhttpp95latency
+
+      - alert: AiNoteJvmHeapPressure
+        expr: ainote:jvm_heap_utilization:ratio > 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: saturation
+        annotations:
+          summary: AiNote JVM heap utilization exceeds 85 percent
+          description: Heap utilization is {{ $value | humanizePercentage }}.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotejvmheappressure
+
+      - alert: AiNoteDatabasePoolPending
+        expr: max(hikaricp_connections_pending{application="ainote-backend"}) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: saturation
+        annotations:
+          summary: AiNote database connection requests are pending
+          description: Hikari has pending connection requests for more than five minutes.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotedatabasepoolpending
+
+      - alert: AiNoteAgentCapacityRejected
+        expr: ainote:agent_capacity_rejection:ratio5m > 0.05 and sum(rate(chat_agent_capacity_requests_total{application="ainote-backend"}[5m])) > 0.1
+        for: 10m
+        labels:
+          severity: warning
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: capacity
+        annotations:
+          summary: AiNote Agent capacity rejection ratio exceeds 5 percent
+          description: Agent admission rejection ratio is {{ $value | humanizePercentage }}.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainoteagentcapacityrejected
+
+      - alert: AiNoteChatTotalFailure
+        expr: increase(chat_total_failure_total{application="ainote-backend"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: correctness
+        annotations:
+          summary: AiNote chat exhausted all fallback paths
+          description: At least one chat request reached total failure in the last five minutes.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotechattotalfailure
+
+      - alert: AiNoteMemoryFlushFailure
+        expr: increase(chat_memory_flush_failure_total{application="ainote-backend"}[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: data-integrity
+        annotations:
+          summary: AiNote short-term memory flush failed
+          description: A transactional chat-memory flush exhausted its retries.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotememoryflushfailure
+
+      - alert: AiNoteMemoryAdvisorFailureRatio
+        expr: ainote:memory_advisor_failure:ratio10m > 0.05 and sum(rate(ainote_memory_advisor_requests_total{application="ainote-backend"}[10m])) > 0.02
+        for: 10m
+        labels:
+          severity: warning
+          service: ainote-backend
+          owner: ainote-maintainers
+          slo: memory-quality
+        annotations:
+          summary: AiNote memory advisor failure ratio exceeds 5 percent
+          description: Advisor failure ratio is {{ $value | humanizePercentage }}.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotememoryadvisorfailureratio
+
+  - name: ainote-observability-alerts
+    interval: 30s
+    rules:
+      - alert: AiNotePrometheusRuleEvaluationFailure
+        expr: increase(prometheus_rule_evaluation_failures_total[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: ainote-observability
+          owner: ainote-maintainers
+          slo: monitoring
+        annotations:
+          summary: Prometheus failed to evaluate one or more rules
+          description: Alert evidence may be incomplete until rule evaluation is restored.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainoteprometheusruleevaluationfailure
+
+      - alert: AiNoteAlertmanagerNotificationFailure
+        expr: increase(alertmanager_notifications_failed_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: ainote-observability
+          owner: ainote-maintainers
+          slo: paging
+        annotations:
+          summary: Alertmanager failed to deliver a notification
+          description: At least one notification delivery failed in the last five minutes.
+          runbook_url: docs/operations/MONITORING_ALERTING.md#ainotealertmanagernotificationfailure

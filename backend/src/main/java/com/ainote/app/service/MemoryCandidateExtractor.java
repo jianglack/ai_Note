@@ -15,7 +15,7 @@ public class MemoryCandidateExtractor {
     private static final Pattern CHINESE_STABLE_STYLE = Pattern.compile(
             "^(?:以后|今后|之后|接下来)(?:请)?(?:默认)?(?:回答|回复)?(?:请)?(?<style>.+)$");
     private static final Pattern PROJECT_CONTEXT_LABEL = Pattern.compile(
-            "^(?:项目上下文|项目背景|project context|project background)[:：]\\s*(?<content>.+)$",
+            "^(?:(?:更正|纠正|修正)(?:一下)?[:：,，]?\\s*)?(?:项目上下文|项目背景|project context|project background)[:：]\\s*(?<content>.+)$",
             Pattern.CASE_INSENSITIVE);
 
     public List<MemoryCandidate> extract(MemoryCapturePolicy.CaptureRequest request,
@@ -71,11 +71,15 @@ public class MemoryCandidateExtractor {
             return contrastiveStyle;
         }
 
-        String content = userMessage
-                .replaceFirst("(?i)^\\s*(remember|keep in mind)[:,，]?\\s*", "")
-                .replaceFirst("^\\s*(请)?记住[:,，]?\\s*", "")
+        String correction = normalizeCorrection(userMessage);
+        if (!correction.isBlank()) {
+            return correction;
+        }
+
+        String content = stripMemoryCommand(userMessage)
                 .replaceFirst("^\\s*我希望你以后", "希望你以后")
                 .replaceFirst("^\\s*我希望", "希望")
+                .replaceFirst("^[\\s:：,，]+", "")
                 .trim();
         if (content.length() > 240) {
             content = content.substring(0, 240).trim();
@@ -126,6 +130,47 @@ public class MemoryCandidateExtractor {
         return "希望交互风格" + prefer + "，避免" + avoid;
     }
 
+    private String normalizeCorrection(String userMessage) {
+        if (!isCorrection(userMessage)) {
+            return "";
+        }
+        String content = stripMemoryCommand(userMessage)
+                .replaceFirst("^\\s*(更正一下|更正|纠正一下|纠正|修正一下|修正)[:：,，]?\\s*", "")
+                .trim();
+        int replacementIndex = content.indexOf("而是");
+        if (replacementIndex >= 0) {
+            content = content.substring(replacementIndex + "而是".length()).trim();
+        }
+        int changeToIndex = Math.max(content.lastIndexOf("改为"), content.lastIndexOf("改成"));
+        if (changeToIndex >= 0) {
+            content = content.substring(changeToIndex + 2).trim();
+        }
+        content = content
+                .replaceFirst("^\\s*我希望", "希望")
+                .replaceFirst("^\\s*希望你", "希望")
+                .replaceFirst("请以后按这个记[。.!！]?$", "")
+                .replaceFirst("以后按这个记[。.!！]?$", "")
+                .trim();
+        content = stripTrailingSentencePunctuation(content);
+        if (content.isBlank()) {
+            return "";
+        }
+        if (isStyleMemory(userMessage, content)
+                && !content.startsWith("希望")
+                && !content.startsWith("用户希望")) {
+            content = "希望" + content;
+        }
+        return content.length() > 240 ? content.substring(0, 240).trim() : content;
+    }
+
+    private String stripMemoryCommand(String userMessage) {
+        return (userMessage == null ? "" : userMessage)
+                .replaceFirst("(?i)^\\s*(remember|keep in mind)(?:\\s+that)?\\s*[:：,，-]?\\s*", "")
+                .replaceFirst("^\\s*(请)?记住(?:一下)?\\s*[:：,，-]?\\s*", "")
+                .replaceFirst("^[\\s:：,，]+", "")
+                .trim();
+    }
+
     private String cleanupStyleFragment(String value) {
         return value == null ? "" : value
                 .replaceFirst("^这么", "")
@@ -153,13 +198,36 @@ public class MemoryCandidateExtractor {
 
     private boolean isStyleMemory(String userMessage, String content) {
         String normalized = (content == null ? "" : content) + " " + (userMessage == null ? "" : userMessage);
+        String lower = normalized.toLowerCase(Locale.ROOT);
         return normalized.contains("交互风格")
+                || normalized.contains("回答")
+                || normalized.contains("回复")
                 || normalized.contains("语气")
                 || normalized.contains("口吻")
+                || normalized.contains("格式")
+                || normalized.contains("表达")
+                || normalized.contains("总结默认")
+                || normalized.contains("摘要默认")
+                || normalized.contains("项目符号")
+                || normalized.contains("示例")
+                || normalized.contains("结论")
+                || normalized.contains("行动项")
+                || normalized.contains("表格呈现")
                 || normalized.contains("严肃")
                 || normalized.contains("专业")
                 || normalized.contains("俏皮")
-                || normalized.contains("开玩笑");
+                || normalized.contains("开玩笑")
+                || normalized.contains("\u7b14\u8bb0\u6807\u9898")
+                || normalized.contains("\u77ed\u6807\u9898")
+                || Pattern.compile("(?i)\\b(answer|answers|reply|replies|response|responses|tone|format|"
+                                + "bullet|bullets|language)\\b")
+                        .matcher(lower)
+                        .find()
+                || lower.contains("conclusion first")
+                || lower.contains("action items")
+                || lower.contains("concise answers")
+                || lower.contains("brief replies")
+                || lower.contains("detailed replies");
     }
 
     private String inferCategory(String content) {
@@ -175,6 +243,7 @@ public class MemoryCandidateExtractor {
         }
         if (normalized.contains("喜欢")
                 || normalized.contains("希望")
+                || normalized.contains("偏好")
                 || normalized.contains("prefer")
                 || normalized.contains("like")) {
             return "preference";
@@ -186,7 +255,12 @@ public class MemoryCandidateExtractor {
         String normalized = text == null ? "" : text.toLowerCase(Locale.ROOT).replaceAll("\\s+", "");
         return normalized.contains("不再")
                 || normalized.contains("改为")
+                || normalized.contains("改成")
                 || normalized.contains("以后不要")
+                || normalized.contains("更正")
+                || normalized.contains("纠正")
+                || normalized.contains("修正")
+                || (normalized.contains("不是") && normalized.contains("而是"))
                 || isContrastiveCorrection(text)
                 || normalized.contains("nolonger")
                 || normalized.contains("instead")

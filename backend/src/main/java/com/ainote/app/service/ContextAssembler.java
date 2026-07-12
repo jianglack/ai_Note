@@ -11,6 +11,7 @@ import com.ainote.app.repository.SemanticMemoryRepository;
 import com.ainote.app.repository.EpisodicMemoryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,15 @@ import java.util.Set;
 public class ContextAssembler {
 
     private static final Logger log = LoggerFactory.getLogger(ContextAssembler.class);
+
+    private static final String CONTEXT_PRIORITY_POLICY = """
+            <context_policy>
+              <priority>当前用户请求 > 明确选中的笔记 > RAG 检索到的笔记事实 > 活跃长期记忆。</priority>
+              <memory_role>长期记忆只用于用户偏好、交互风格和连续项目背景，不得覆盖当前指令或笔记事实。</memory_role>
+              <conflict_rule>发生冲突时采用更高优先级来源；无法可靠判断时明确说明冲突，不要猜测。</conflict_rule>
+            </context_policy>
+
+            """;
 
     private static final Set<String> GREETING_PATTERNS = Set.of(
             "你好", "谢谢", "好的", "嗯", "确认", "取消", "是", "否",
@@ -53,6 +63,7 @@ public class ContextAssembler {
     private final RagFeedbackService ragFeedbackService;
     private final MemoryRetrievalService memoryRetrievalService;
     private final MemoryProperties memoryProperties;
+    private final MemoryMetricsService memoryMetricsService;
 
     @Value("${app.context.note-max-chars:800}")
     private int noteMaxChars;
@@ -90,6 +101,21 @@ public class ContextAssembler {
                             RagFeedbackService ragFeedbackService,
                             MemoryRetrievalService memoryRetrievalService,
                             MemoryProperties memoryProperties) {
+        this(noteRepository, folderRepository, ragService, semanticMemoryRepository, episodicMemoryRepository,
+                jiTokenService, ragFeedbackService, memoryRetrievalService, memoryProperties, MemoryMetricsService.noop());
+    }
+
+    @Autowired
+    public ContextAssembler(NoteRepository noteRepository,
+                            FolderRepository folderRepository,
+                            LangChain4jRagService ragService,
+                            SemanticMemoryRepository semanticMemoryRepository,
+                            EpisodicMemoryRepository episodicMemoryRepository,
+                            JiTokenService jiTokenService,
+                            RagFeedbackService ragFeedbackService,
+                            MemoryRetrievalService memoryRetrievalService,
+                            MemoryProperties memoryProperties,
+                            MemoryMetricsService memoryMetricsService) {
         this.noteRepository = noteRepository;
         this.folderRepository = folderRepository;
         this.ragService = ragService;
@@ -99,6 +125,7 @@ public class ContextAssembler {
         this.ragFeedbackService = ragFeedbackService;
         this.memoryRetrievalService = memoryRetrievalService;
         this.memoryProperties = memoryProperties;
+        this.memoryMetricsService = memoryMetricsService == null ? MemoryMetricsService.noop() : memoryMetricsService;
     }
 
     /**
@@ -140,7 +167,7 @@ public class ContextAssembler {
                     ? skipLongTermMemory(userId, "selected_note_focus")
                     : truncateToTokenBudget(buildSemanticMemory(userId, memoryRetrievalResult), budgetSemanticMemory);
             context.append(semantic);
-            String result = context.toString();
+            String result = withContextPolicy(context.toString());
             int estimatedTokens = estimateTokens(result);
             log.info("Context assembled (CHAT): {} chars, ~{} tokens", result.length(), estimatedTokens);
             logMemoryContext("assembled", userId,
@@ -190,7 +217,7 @@ public class ContextAssembler {
             }
         }
 
-        String result = context.toString();
+        String result = withContextPolicy(context.toString());
         log.info("Context assembled (STANDARD): {} chars, ~{} tokens (budget: {})", result.length(), usedTokens, totalBudgetTokens);
         logMemoryContext("assembled", userId,
                 "intent=" + intent,
@@ -423,6 +450,17 @@ public class ContextAssembler {
                 .trim();
     }
 
+    private String withContextPolicy(String context) {
+        if (context == null || context.isBlank()) {
+            return "";
+        }
+        return CONTEXT_PRIORITY_POLICY + context;
+    }
+
+    static String contextPriorityPolicy() {
+        return CONTEXT_PRIORITY_POLICY;
+    }
+
     private String escapeXml(String text) {
         if (text == null) return "";
         return text
@@ -460,9 +498,11 @@ public class ContextAssembler {
                 sb.append("</").append(mem.getCategory()).append(">\n");
             }
             sb.append("</user_memory>\n\n");
+            int estimatedTokens = estimateTokens(sb.toString());
+            memoryMetricsService.recordContextInjection("semantic", memories.size(), estimatedTokens);
             logMemoryContext("semantic_injected", userId,
                     "memory_count=" + memories.size(),
-                    "estimated_tokens=" + estimateTokens(sb.toString()),
+                    "estimated_tokens=" + estimatedTokens,
                     "budget_tokens=" + budgetSemanticMemory);
             return sb.toString();
         } catch (Exception e) {
@@ -503,9 +543,11 @@ public class ContextAssembler {
                 sb.append("</session>\n");
             }
             sb.append("</recent_sessions>\n\n");
+            int estimatedTokens = estimateTokens(sb.toString());
+            memoryMetricsService.recordContextInjection("episodic", episodes.size(), estimatedTokens);
             logMemoryContext("episodic_injected", userId,
                     "memory_count=" + episodes.size(),
-                    "estimated_tokens=" + estimateTokens(sb.toString()),
+                    "estimated_tokens=" + estimatedTokens,
                     "budget_tokens=" + budgetEpisodicMemory);
             return sb.toString();
         } catch (Exception e) {

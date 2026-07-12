@@ -1,5 +1,11 @@
 import { useEffect, useState, useCallback } from 'react';
-import { getAgentMetrics } from '../../api';
+import {
+  getAgentMetrics,
+  getMemoryEvents,
+  getMemoryMetrics,
+  type MemoryEventRecord,
+  type MemoryMetricsSnapshot,
+} from '../../api';
 import { ToolWorkbenchShell } from '../workbench';
 import './agent-metrics.css';
 
@@ -43,16 +49,70 @@ const EMPTY_METRICS: MetricsData = {
   lastSampled: '',
 };
 
+const EMPTY_MEMORY_METRICS: MemoryMetricsSnapshot = {
+  status: 'normal',
+  sampledAt: '',
+  captureDecisionCount: 0,
+  captureAllowedCount: 0,
+  captureRejectedCount: 0,
+  captureSkippedCount: 0,
+  captureFailedCount: 0,
+  captureRejectionRate: 0,
+  captureCandidateCount: 0,
+  captureWrittenMemoryCount: 0,
+  memoryWriteCount: 0,
+  memoryCreatedCount: 0,
+  memoryReinforcedCount: 0,
+  memorySupersededCount: 0,
+  memoryWriteSkippedCount: 0,
+  memoryWriteRate: 0,
+  advisorRequestCount: 0,
+  advisorFailureCount: 0,
+  advisorUnavailableCount: 0,
+  advisorSkippedCount: 0,
+  advisorFailureRate: 0,
+  userDeletionRequestCount: 0,
+  userDeletedMemoryCount: 0,
+  userDeletionRate: 0,
+  retrievalRequestCount: 0,
+  retrievalHitCount: 0,
+  retrievalMissCount: 0,
+  retrievalHitRate: 0,
+  contextInjectionCount: 0,
+  semanticInjectedMemoryCount: 0,
+  episodicInjectedMemoryCount: 0,
+  injectedMemoryCount: 0,
+  averageInjectedMemories: 0,
+  feedbackCount: 0,
+  wrongWriteFeedbackCount: 0,
+  wrongWriteFeedbackRate: 0,
+  retentionPurgedMemoryCount: 0,
+  captureP95LatencyMs: 0,
+  retrievalP95LatencyMs: 0,
+};
+
 export default function AgentMetricsDashboard({ onClose }: { onClose: () => void }) {
   const [metrics, setMetrics] = useState<MetricsData>(EMPTY_METRICS);
+  const [memoryMetrics, setMemoryMetrics] = useState<MemoryMetricsSnapshot>(EMPTY_MEMORY_METRICS);
+  const [memoryEvents, setMemoryEvents] = useState<MemoryEventRecord[]>([]);
   const [loading, setLoading] = useState(false);
 
   const fetchMetrics = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await getAgentMetrics();
-      if (data && data.lastSampled) {
-        setMetrics(data as MetricsData);
+      const [agentResult, memoryResult, memoryEventResult] = await Promise.allSettled([
+        getAgentMetrics(),
+        getMemoryMetrics(),
+        getMemoryEvents({ limit: 30 }),
+      ]);
+      if (agentResult.status === 'fulfilled' && agentResult.value?.lastSampled) {
+        setMetrics(agentResult.value as MetricsData);
+      }
+      if (memoryResult.status === 'fulfilled' && memoryResult.value?.sampledAt) {
+        setMemoryMetrics(memoryResult.value);
+      }
+      if (memoryEventResult.status === 'fulfilled' && memoryEventResult.value?.items) {
+        setMemoryEvents(memoryEventResult.value.items);
       }
     } catch {
       // Use default/previous metrics on error
@@ -98,6 +158,8 @@ export default function AgentMetricsDashboard({ onClose }: { onClose: () => void
             sub={`${metrics.compensationTotal} 次执行 · ${metrics.compensationVerified} 已验证`}
             accent="rust" status={metrics.compensationRate >= 80 ? '正常' : '注意'} />
         </div>
+
+        <MemoryMetricsPanel metrics={memoryMetrics} events={memoryEvents} />
 
         {/* Tools table */}
         <ToolsTable tools={metrics.tools} />
@@ -196,6 +258,112 @@ function Sparkline({ accent }: { accent: string }) {
   );
 }
 
+function MemoryMetricsPanel({ metrics, events }: { metrics: MemoryMetricsSnapshot; events: MemoryEventRecord[] }) {
+  return (
+    <section className="amd-memory-panel">
+      <div className="amd-table-header">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" style={{ color: 'var(--color-text-secondary, #6b5848)' }}>
+          <path d="M4 19V5" /><path d="M4 19h16" /><path d="m8 15 3-3 3 2 4-6" />
+        </svg>
+        <span className="amd-table-title">记忆生产观测 · Memory</span>
+        <span className={`amd-memory-status ${metrics.status === 'normal' ? 'ok' : 'warn'}`}>
+          {metrics.status === 'normal' ? '正常' : '注意'}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span className="amd-mono" style={{ fontSize: 10.5 }}>
+          GET /api/admin/memory-metrics · {formatSampledAt(metrics.sampledAt)}
+        </span>
+      </div>
+
+      <div className="amd-memory-body">
+        <div className="amd-cards-row">
+          <IndexCard label="记忆写入率" value={metrics.memoryWriteRate.toFixed(1)} unit="%"
+            sub={`${metrics.memoryWriteCount} 写入 · ${metrics.captureDecisionCount} 次 capture`}
+            accent="sage" status={metrics.memoryWriteRate > 0 ? '活跃' : '待采样'} />
+          <IndexCard label="拒绝率" value={metrics.captureRejectionRate.toFixed(1)} unit="%"
+            sub={`${metrics.captureRejectedCount} 拒绝 · ${metrics.captureSkippedCount} 跳过 · ${metrics.captureFailedCount} 失败`}
+            accent="gold" status={metrics.captureRejectionRate <= 80 ? '正常' : '注意'} />
+          <IndexCard label="召回命中率" value={metrics.retrievalHitRate.toFixed(1)} unit="%"
+            sub={`${metrics.retrievalHitCount} 命中 · ${metrics.retrievalMissCount} 未命中`}
+            accent="bluegray" status={metrics.retrievalHitRate > 0 ? '有命中' : '待采样'} />
+          <IndexCard label="Advisor 失败率" value={metrics.advisorFailureRate.toFixed(1)} unit="%"
+            sub={`${metrics.advisorFailureCount} 失败 · ${metrics.advisorUnavailableCount} 不可用 · ${metrics.advisorSkippedCount} 跳过`}
+            accent="rust" status={metrics.advisorFailureRate <= 5 ? '正常' : '注意'} />
+        </div>
+
+        <div className="amd-detail-grid">
+          <DetailsSection title="写入与拒绝 · Capture" items={[
+            { label: '允许', value: String(metrics.captureAllowedCount), color: 'var(--color-sage, #6b7a5a)' },
+            { label: '候选', value: String(metrics.captureCandidateCount) },
+            { label: '写入', value: String(metrics.captureWrittenMemoryCount), color: 'var(--color-sage, #6b7a5a)' },
+            { label: '跳过写入', value: String(metrics.memoryWriteSkippedCount), color: '#8c7333' },
+          ]} />
+          <DetailsSection title="召回与注入 · Retrieval" items={[
+            { label: '请求', value: String(metrics.retrievalRequestCount) },
+            { label: '注入事件', value: String(metrics.contextInjectionCount) },
+            { label: '注入记忆', value: String(metrics.injectedMemoryCount), color: 'var(--color-sage, #6b7a5a)' },
+            { label: '平均注入', value: metrics.averageInjectedMemories.toFixed(1) },
+          ]} />
+        </div>
+
+        <div className="amd-detail-grid">
+          <DetailsSection title="反馈与删除 · Feedback" items={[
+            { label: '反馈', value: String(metrics.feedbackCount) },
+            { label: '错记反馈', value: String(metrics.wrongWriteFeedbackCount), color: metrics.wrongWriteFeedbackCount > 0 ? 'var(--color-accent, #b8452e)' : 'var(--color-sage, #6b7a5a)' },
+            { label: '错记率', value: metrics.wrongWriteFeedbackRate.toFixed(1), unit: '%' },
+            { label: '用户删除', value: String(metrics.userDeletionRequestCount), color: '#8c7333' },
+          ]} />
+          <DetailsSection title="延迟与保留 · Latency" items={[
+            { label: 'Capture p95', value: metrics.captureP95LatencyMs.toFixed(1), unit: 'ms' },
+            { label: 'Retrieval p95', value: metrics.retrievalP95LatencyMs.toFixed(1), unit: 'ms' },
+            { label: '删除记忆数', value: String(metrics.userDeletedMemoryCount) },
+            { label: '保留期清理', value: String(metrics.retentionPurgedMemoryCount) },
+          ]} />
+        </div>
+
+        <MemoryEventEvidence events={events} />
+      </div>
+    </section>
+  );
+}
+
+function MemoryEventEvidence({ events }: { events: MemoryEventRecord[] }) {
+  return (
+    <div className="amd-memory-events">
+      <div className="amd-events-header">
+        <span className="amd-events-title">最近变化原因 · Evidence</span>
+        <span className="amd-mono">GET /api/memories/events · {events.length} 条</span>
+      </div>
+      {events.length === 0 ? (
+        <div className="amd-events-empty">暂无记忆审计事件</div>
+      ) : (
+        <div className="amd-events-list">
+          {events.slice(0, 12).map(event => {
+            const detail = describeMemoryEvent(event);
+            return (
+              <div key={event.id} className={`amd-event-row ${detail.severity}`}>
+                <div className="amd-event-main">
+                  <span className="amd-event-type">{event.eventType}</span>
+                  <span className="amd-event-result">{detail.result}</span>
+                  <span className="amd-mono">{formatSampledAt(event.createdAt || '')}</span>
+                  {event.memoryId != null && <span className="amd-event-memory">memory #{event.memoryId}</span>}
+                </div>
+                <div className="amd-event-summary">{detail.summary}</div>
+                <div className="amd-event-meta">
+                  <span>reason: {detail.reason || 'n/a'}</span>
+                  {detail.decisionType && <span>decision: {detail.decisionType}</span>}
+                  {detail.signals.length > 0 && <span>signals: {detail.signals.join(', ')}</span>}
+                  {event.traceId && <span>trace: {event.traceId}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ToolsTable({ tools }: { tools: ToolMetric[] }) {
   return (
     <div className="amd-table">
@@ -261,6 +429,90 @@ function ToolsTable({ tools }: { tools: ToolMetric[] }) {
       })}
     </div>
   );
+}
+
+function formatSampledAt(value: string) {
+  if (!value) return '暂无数据';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString('zh-CN', { hour12: false });
+}
+
+function describeMemoryEvent(event: MemoryEventRecord): {
+  result: string;
+  summary: string;
+  reason: string;
+  decisionType: string;
+  signals: string[];
+  severity: 'normal' | 'warn' | 'danger';
+} {
+  const after = parseJsonRecord(event.afterJson);
+  const metadata = parseNestedJsonRecord(after.metadata);
+  const reason = stringValue(event.reason) || stringValue(after.reason) || stringValue(metadata.policy_reason);
+  const decisionType = stringValue(after.decisionType) || stringValue(metadata.decision_type);
+  const signals = arrayOfStrings(after.matchedSignals).length > 0
+    ? arrayOfStrings(after.matchedSignals)
+    : arrayOfStrings(metadata.policy_signals);
+  const content = stringValue(after.content)
+    || stringValue(after.userMessagePreview)
+    || stringValue(metadata.content)
+    || '';
+  const status = stringValue(after.status) || event.eventType.toLowerCase();
+  const privacyFindings = parseFindingSummary(after.privacyFindings);
+  const summaryParts = [
+    content ? `内容：${content}` : '',
+    privacyFindings ? `隐私：${privacyFindings}` : '',
+  ].filter(Boolean);
+  const summary = summaryParts.length > 0 ? summaryParts.join(' · ') : '无内容摘要';
+  const severity = event.eventType.includes('REJECTED') || event.eventType.includes('FAILED')
+    ? 'danger'
+    : event.eventType.includes('DELETED') || event.eventType.includes('SUPERSEDED') || event.eventType.includes('SKIPPED')
+      ? 'warn'
+      : 'normal';
+
+  return {
+    result: status,
+    summary,
+    reason,
+    decisionType,
+    signals,
+    severity,
+  };
+}
+
+function parseJsonRecord(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== 'string') return {};
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+      ? parsed as Record<string, unknown>
+      : {};
+  } catch {
+    return {};
+  }
+}
+
+function parseNestedJsonRecord(value: unknown): Record<string, unknown> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, unknown>;
+  }
+  return parseJsonRecord(value);
+}
+
+function stringValue(value: unknown): string {
+  return typeof value === 'string' ? value : '';
+}
+
+function arrayOfStrings(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter(item => typeof item === 'string') : [];
+}
+
+function parseFindingSummary(value: unknown): string {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+  return Object.entries(value as Record<string, unknown>)
+    .filter(([, count]) => typeof count === 'number' && count > 0)
+    .map(([kind, count]) => `${kind}×${count}`)
+    .join(', ');
 }
 
 function RatePill({ rate }: { rate: number }) {

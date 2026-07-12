@@ -12,7 +12,7 @@ vi.mock('../src/api', () => ({
   getFolders: apiMocks.getFolders,
 }));
 
-import { API_BASE_URL, clearAuthStorage, getAuthToken } from '../src/services/apiBase';
+import { API_BASE_URL, clearAuthStorage } from '../src/services/apiBase';
 import { loadNotesAndFolders } from '../src/services/noteData';
 import { resolveNoteId } from '../src/utils/notes';
 import { useMeasuredHeight } from '../src/hooks/useMeasuredHeight';
@@ -28,11 +28,9 @@ describe('services and small utilities behavior', () => {
     localStorage.setItem('auth-storage', 'persisted');
 
     expect(API_BASE_URL).toBeTruthy();
-    expect(getAuthToken()).toBe('jwt-token');
-
     clearAuthStorage();
 
-    expect(getAuthToken()).toBeNull();
+    expect(localStorage.getItem('token')).toBeNull();
     expect(localStorage.getItem('auth-storage')).toBeNull();
   });
 

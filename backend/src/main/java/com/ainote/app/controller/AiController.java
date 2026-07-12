@@ -210,8 +210,7 @@ public class AiController {
         String userId = securityUtils.getCurrentUserId();
         String userMsg = body.getUserMessage();
         String aiReply = body.getAiReply();
-        if (userMsg != null) aiService.saveChatMessage(userId, "user", userMsg);
-        if (aiReply != null) aiService.saveChatMessage(userId, "assistant", aiReply);
+        aiService.saveChatTurn(userId, userMsg, aiReply);
         return ResponseEntity.ok().build();
     }
 

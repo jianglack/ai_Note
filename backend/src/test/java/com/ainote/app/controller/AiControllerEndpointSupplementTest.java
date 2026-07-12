@@ -252,8 +252,7 @@ class AiControllerEndpointSupplementTest {
                         .content(json(Map.of("userMessage", "hello", "aiReply", "hi"))))
                 .andExpect(status().isOk());
 
-        verify(aiService).saveChatMessage("user-1", "user", "hello");
-        verify(aiService).saveChatMessage("user-1", "assistant", "hi");
+        verify(aiService).saveChatTurn("user-1", "hello", "hi");
     }
 
     @Test

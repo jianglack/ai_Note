@@ -1,0 +1,4 @@
+[[IgnoredVulns]]
+id = "GHSA-5jmj-h7xm-6q6v"
+ignoreUntil = 2026-08-11
+reason = "Owner: AiNote maintainers. Scanner metadata still flags jackson-databind 2.21.5, but the GitHub Reviewed advisory defines >=2.19.0,<2.21.5 as affected and identifies 2.21.5 as fixed. Remove when OSV metadata is corrected."

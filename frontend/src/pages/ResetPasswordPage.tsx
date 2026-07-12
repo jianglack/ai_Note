@@ -28,8 +28,8 @@ export default function ResetPasswordPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      setError('密码长度至少为 6 位');
+    if ([...newPassword].length < 15) {
+      setError('密码长度至少为 15 个字符');
       return;
     }
 
@@ -139,6 +139,8 @@ export default function ResetPasswordPage() {
               </label>
               <input
                 type="password"
+                minLength={15}
+                maxLength={100}
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 style={{
@@ -148,7 +150,7 @@ export default function ResetPasswordPage() {
                   borderRadius: '4px',
                   fontSize: '14px'
                 }}
-                placeholder="请输入新密码（至少6位）"
+                placeholder="请输入新密码（至少 15 个字符）"
               />
             </div>
 
@@ -158,6 +160,8 @@ export default function ResetPasswordPage() {
               </label>
               <input
                 type="password"
+                minLength={15}
+                maxLength={100}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 style={{

@@ -1,0 +1,37 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    project: ainote
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  - job_name: alertmanager
+    static_configs:
+      - targets:
+          - alertmanager:9093
+
+  - job_name: ainote-backend
+    metrics_path: /actuator/prometheus
+    http_headers:
+      X-AiNote-Monitoring-Token:
+        files:
+          - /run/secrets/prometheus_scrape_token
+    file_sd_configs:
+      - files:
+          - /etc/prometheus/targets/ainote.json
+        refresh_interval: 30s

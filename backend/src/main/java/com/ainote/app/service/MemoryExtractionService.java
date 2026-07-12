@@ -19,9 +19,11 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -64,6 +67,7 @@ public class MemoryExtractionService {
     private final PromptLoader promptLoader;
     private final MemoryProperties memoryProperties;
     private final MemoryCapturePolicy memoryCapturePolicy;
+    private final MemoryPrivacyService privacyService;
 
     public MemoryExtractionService(
             ChatModel chatModel,
@@ -75,6 +79,22 @@ public class MemoryExtractionService {
             ObjectMapper objectMapper,
             MemoryProperties memoryProperties,
             MemoryCapturePolicy memoryCapturePolicy) {
+        this(chatModel, embeddingModel, semanticMemoryRepository, episodicMemoryRepository, userMemoryRepository,
+                promptLoader, objectMapper, memoryProperties, memoryCapturePolicy, new MemoryPrivacyService());
+    }
+
+    @Autowired
+    public MemoryExtractionService(
+            ChatModel chatModel,
+            EmbeddingModel embeddingModel,
+            SemanticMemoryRepository semanticMemoryRepository,
+            EpisodicMemoryRepository episodicMemoryRepository,
+            UserMemoryRepository userMemoryRepository,
+            PromptLoader promptLoader,
+            ObjectMapper objectMapper,
+            MemoryProperties memoryProperties,
+            MemoryCapturePolicy memoryCapturePolicy,
+            MemoryPrivacyService privacyService) {
         this.chatModel = chatModel;
         this.embeddingModel = embeddingModel;
         this.semanticMemoryRepository = semanticMemoryRepository;
@@ -84,6 +104,7 @@ public class MemoryExtractionService {
         this.promptLoader = promptLoader;
         this.memoryProperties = memoryProperties;
         this.memoryCapturePolicy = memoryCapturePolicy;
+        this.privacyService = privacyService == null ? new MemoryPrivacyService() : privacyService;
         log.info("MemoryExtractionService initialized (fuzzy dedup + decay + capacity management)");
     }
 
@@ -183,6 +204,12 @@ public class MemoryExtractionService {
     private int[] saveOrUpdateMemory(String userId, String category, String content, double confidence) {
         try {
             // Step 1: 计算 embedding
+            MemoryPrivacyService.MemoryPrivacyScanResult privacyScan = privacyService.scan(content);
+            if (!privacyScan.safeToStore()) {
+                logMemoryWrite(userId, "privacy_rejected", category);
+                return new int[]{0, 0, 0};
+            }
+
             float[] contentEmbedding = computeEmbedding(content);
 
             if (contentEmbedding != null) {
@@ -437,7 +464,11 @@ public class MemoryExtractionService {
 
     public void generateEpisodicSummary(String userId) {
         try {
-            List<UserMemory> memories = userMemoryRepository.findAllByUserIdOrderByCreatedAtAsc(userId);
+            List<UserMemory> memories = new ArrayList<>(userMemoryRepository
+                    .findModelWindowByUserIdOrderBySequenceDesc(
+                            userId,
+                            PageRequest.of(0, memoryProperties.getChatHistory().getModelWindowMaxMessages())));
+            Collections.reverse(memories);
 
             if (memories.isEmpty() || memories.size() < 2) {
                 log.debug("Not enough messages for episodic summary, user: {}", userId);
@@ -505,6 +536,34 @@ public class MemoryExtractionService {
         } catch (Exception e) {
             log.warn("Episodic summary from trimmed text failed for user: {}: {}", userId, e.getMessage());
         }
+    }
+
+    public void generateEpisodicSummaryFromTextSync(
+            String userId,
+            String conversationText,
+            int userMessageCount,
+            String sourceMessageRange) {
+        if (sourceMessageRange != null
+                && episodicMemoryRepository.existsByUserIdAndSourceMessageRange(userId, sourceMessageRange)) {
+            return;
+        }
+
+        String boundedText = conversationText;
+        int maxCharacters = memoryProperties.getChatHistory().getCompactionMaxSourceCharacters();
+        if (boundedText.length() > maxCharacters) {
+            boundedText = boundedText.substring(0, maxCharacters) + "\n...(conversation truncated)";
+        }
+        EpisodicMemory episodic = generateEpisodicFromText(userId, boundedText);
+        if (episodic == null) {
+            throw new IllegalStateException("episodic summary model returned no valid summary");
+        }
+        episodic.setMessageCount(userMessageCount);
+        episodic.setSourceMessageRange(sourceMessageRange);
+        episodicMemoryRepository.save(episodic);
+        log.info("Episodic summary saved for user={}, turns={}, sourceRange={}",
+                userId, userMessageCount, sourceMessageRange);
+
+        extractSemanticFromConversationText(userId, boundedText);
     }
 
     /**

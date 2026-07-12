@@ -16,6 +16,7 @@ public record MemoryResponse(
         String sourceMessageIds,
         String sourceToolCallId,
         String evidenceExcerpt,
+        String metadataJson,
         LocalDateTime lastAccessedAt,
         Integer accessCount,
         Long supersedesId,

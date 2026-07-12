@@ -27,13 +27,12 @@ describe('auth page behavior', () => {
     localStorage.clear();
     vi.clearAllMocks();
     vi.useRealTimers();
-    useAuthStore.setState({ user: null, token: null, isAuthenticated: false });
+    useAuthStore.setState({ user: null, isAuthenticated: false, initialized: false });
   });
 
   it('registers once on double submit and navigates home', async () => {
     vi.mocked(api.post).mockResolvedValueOnce({
       data: {
-        token: 'jwt-token',
         userId: 'user-1',
         username: 'alice',
         email: 'alice@example.com',
@@ -67,7 +66,7 @@ describe('auth page behavior', () => {
         password: 'correct-password',
       });
     });
-    expect(localStorage.getItem('token')).toBe('jwt-token');
+    expect(localStorage.getItem('token')).toBeNull();
     expect(await screen.findByText('home')).toBeInTheDocument();
   });
 
@@ -105,8 +104,8 @@ describe('auth page behavior', () => {
     const inputs = container.querySelectorAll('input');
     fireEvent.change(inputs[0], { target: { value: 'alice' } });
     fireEvent.change(inputs[1], { target: { value: 'alice@example.com' } });
-    fireEvent.change(inputs[2], { target: { value: 'new-password' } });
-    fireEvent.change(inputs[3], { target: { value: 'new-password' } });
+    fireEvent.change(inputs[2], { target: { value: 'new-secure-password' } });
+    fireEvent.change(inputs[3], { target: { value: 'new-secure-password' } });
 
     await act(async () => {
       fireEvent.click(container.querySelector('button[type="submit"]')!);
@@ -117,7 +116,7 @@ describe('auth page behavior', () => {
     expect(api.post).toHaveBeenCalledWith('/api/auth/reset-password', {
       username: 'alice',
       email: 'alice@example.com',
-      newPassword: 'new-password',
+      newPassword: 'new-secure-password',
     });
     act(() => {
       vi.advanceTimersByTime(2000);

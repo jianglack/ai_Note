@@ -1,0 +1,46 @@
+package com.ainote.app.model.memory;
+
+import java.time.LocalDateTime;
+
+public record MemoryMetricsSnapshotResponse(
+        String status,
+        LocalDateTime sampledAt,
+        long captureDecisionCount,
+        long captureAllowedCount,
+        long captureRejectedCount,
+        long captureSkippedCount,
+        long captureFailedCount,
+        double captureRejectionRate,
+        long captureCandidateCount,
+        long captureWrittenMemoryCount,
+        long memoryWriteCount,
+        long memoryCreatedCount,
+        long memoryReinforcedCount,
+        long memorySupersededCount,
+        long memoryWriteSkippedCount,
+        double memoryWriteRate,
+        long advisorRequestCount,
+        long advisorFailureCount,
+        long advisorUnavailableCount,
+        long advisorSkippedCount,
+        double advisorFailureRate,
+        long userDeletionRequestCount,
+        long userDeletedMemoryCount,
+        double userDeletionRate,
+        long retrievalRequestCount,
+        long retrievalHitCount,
+        long retrievalMissCount,
+        double retrievalHitRate,
+        long contextInjectionCount,
+        long semanticInjectedMemoryCount,
+        long episodicInjectedMemoryCount,
+        long injectedMemoryCount,
+        double averageInjectedMemories,
+        long feedbackCount,
+        long wrongWriteFeedbackCount,
+        double wrongWriteFeedbackRate,
+        long retentionPurgedMemoryCount,
+        double captureP95LatencyMs,
+        double retrievalP95LatencyMs
+) {
+}

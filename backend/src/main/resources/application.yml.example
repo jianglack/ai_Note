@@ -12,7 +12,7 @@
 #   DEEPSEEK_EMBEDDING_BASE_URL   - Defaults to DEEPSEEK_BASE_URL
 #   COHERE_API_KEY                - Cohere reranking, disabled if absent
 #   MEMORY_CAPTURE_ADVISOR_ENABLED        - Defaults to false
-#   MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE - Defaults to 0.82
+#   MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE - Defaults to 0.80
 #   MEMORY_ADVISOR_FORMAL_EVAL_ENABLED              - Defaults to false; set true only for live advisor evaluation
 #   MEMORY_ADVISOR_FORMAL_EVAL_MAX_CASES            - Defaults to 4000
 #   MEMORY_ADVISOR_FORMAL_EVAL_MIN_CASES            - Defaults to 4000
@@ -31,7 +31,23 @@
 #   MEMORY_ADVISOR_FORMAL_EVAL_MAX_ATTEMPTS         - Defaults to 3
 #   MEMORY_ADVISOR_FORMAL_EVAL_RETRY_INITIAL_BACKOFF_MILLIS - Defaults to 1000
 #   MEMORY_ADVISOR_FORMAL_EVAL_RETRY_MAX_BACKOFF_MILLIS - Defaults to 15000
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MIN_CASES       - Defaults to 4000
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MIN_AVAILABILITY - Defaults to 0.995
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MIN_CAPTURE_ACCURACY - Defaults to 0.995
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MAX_FALSE_POSITIVE - Defaults to 0.0
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MAX_FALSE_NEGATIVE - Defaults to 0.02
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MIN_TYPE_ACCURACY - Defaults to 0.98
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MAX_SENSITIVE_FALSE_ALLOW - Defaults to 0.0
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MAX_P95_MS      - Defaults to 1500; set per provider SLO for paid evals
+#   MEMORY_ADVISOR_FORMAL_EVAL_GATE_MAX_BASELINE_REGRESSION - Defaults to 0.005
 #   MEMORY_ADVISOR_RELEASE_GATE_MAX_REPORT_AGE_HOURS - Defaults to 168
+#   MEMORY_PRIVACY_REDACT_EXPORTS                  - Defaults to true
+#   MEMORY_PRIVACY_EXPORT_MAX_ITEMS                - Defaults to 1000
+#   MEMORY_PRIVACY_DELETED_MEMORY_RETENTION_DAYS   - Defaults to 30
+#   MEMORY_PRIVACY_AT_REST_ENCRYPTION_REQUIRED     - Defaults to true
+#   MEMORY_PRIVACY_AT_REST_ENCRYPTION_CONFIRMED    - Defaults to false; set true only when DB/disk/KMS encryption is enabled
+#   MEMORY_PRIVACY_AT_REST_ENCRYPTION_KEY_REF      - Optional KMS/key identifier for audit posture
+#   PROMETHEUS_SCRAPE_TOKEN                        - Dedicated high-entropy token required by /actuator/prometheus
 
 app:
   deepseek:
@@ -44,8 +60,42 @@ app:
   cohere:
     api-key: ${COHERE_API_KEY:}
 
+  observability:
+    prometheus-scrape-token: ${PROMETHEUS_SCRAPE_TOKEN:}
+
   memory:
+    chat-history:
+      write-mode: ${MEMORY_CHAT_HISTORY_WRITE_MODE:append}
+      model-window-max-messages: ${MEMORY_CHAT_HISTORY_MODEL_WINDOW_MAX_MESSAGES:256}
+      flush-max-attempts: ${MEMORY_CHAT_HISTORY_FLUSH_MAX_ATTEMPTS:3}
+      flush-retry-delay-ms: ${MEMORY_CHAT_HISTORY_FLUSH_RETRY_DELAY_MS:25}
+      compaction-enabled: ${MEMORY_CHAT_HISTORY_COMPACTION_ENABLED:true}
+      compaction-min-user-turns: ${MEMORY_CHAT_HISTORY_COMPACTION_MIN_USER_TURNS:3}
+      compaction-worker-batch-size: ${MEMORY_CHAT_HISTORY_COMPACTION_WORKER_BATCH_SIZE:4}
+      compaction-max-attempts: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_ATTEMPTS:5}
+      compaction-lease-seconds: ${MEMORY_CHAT_HISTORY_COMPACTION_LEASE_SECONDS:300}
+      compaction-max-source-messages: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_SOURCE_MESSAGES:64}
+      compaction-max-source-characters: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_SOURCE_CHARACTERS:12000}
+      compaction-poll-ms: ${MEMORY_CHAT_HISTORY_COMPACTION_POLL_MS:5000}
     capture:
       advisor:
         enabled: ${MEMORY_CAPTURE_ADVISOR_ENABLED:false}
-        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.82}
+        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.80}
+    privacy:
+      redact-exports: ${MEMORY_PRIVACY_REDACT_EXPORTS:true}
+      export-max-items: ${MEMORY_PRIVACY_EXPORT_MAX_ITEMS:1000}
+      deleted-memory-retention-days: ${MEMORY_PRIVACY_DELETED_MEMORY_RETENTION_DAYS:30}
+      at-rest-encryption-required: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_REQUIRED:true}
+      at-rest-encryption-confirmed: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_CONFIRMED:false}
+      at-rest-encryption-key-ref: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_KEY_REF:}
+# Task 7 live paired answer-quality evaluation is opt-in and is normally run from Maven.
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_ENABLED=false
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_MAX_CASES=120
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_MIN_CASES=120
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_MAX_COST_YUAN=20
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_MAX_INPUT_TOKENS=1000000
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_REPORT_DIR=target/memory-answer-quality-eval
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_RESUME=true
+# MEMORY_ANSWER_QUALITY_FORMAL_EVAL_RETRY_UNAVAILABLE=true
+# MEMORY_ANSWER_QUALITY_RESCORE_ENABLED=false
+# MEMORY_ANSWER_QUALITY_RESCORE_SOURCE_REPORT=target/memory-answer-quality-eval/memory-answer-quality-formal-eval-120-v3.json

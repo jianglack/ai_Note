@@ -13,6 +13,8 @@ import org.mockito.ArgumentCaptor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -22,13 +24,15 @@ class LlmMemorySignalAdvisorTest {
 
     private MemoryProperties memoryProperties;
     private ChatModel chatModel;
+    private MemoryMetricsService memoryMetricsService;
     private LlmMemorySignalAdvisor advisor;
 
     @BeforeEach
     void setUp() {
         memoryProperties = new MemoryProperties();
         chatModel = mock(ChatModel.class);
-        advisor = new LlmMemorySignalAdvisor(memoryProperties, chatModel, new ObjectMapper());
+        memoryMetricsService = mock(MemoryMetricsService.class);
+        advisor = new LlmMemorySignalAdvisor(memoryProperties, chatModel, new ObjectMapper(), memoryMetricsService);
     }
 
     @Test
@@ -38,6 +42,7 @@ class LlmMemorySignalAdvisorTest {
         assertThat(result.available()).isFalse();
         assertThat(result.signals()).contains("advisor_disabled");
         verify(chatModel, never()).chat(any(ChatRequest.class));
+        verify(memoryMetricsService).recordAdvisorSkipped("advisor_disabled");
     }
 
     @Test
@@ -75,6 +80,107 @@ class LlmMemorySignalAdvisorTest {
     }
 
     @Test
+    void policyHardDenySensitiveContentDoesNotCallModel() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(
+                request("remember: my api key is fake-api-key-SIM1408"));
+
+        assertThat(result.available()).isTrue();
+        assertThat(result.shouldCapture()).isFalse();
+        assertThat(result.memoryType()).isEqualTo("none");
+        assertThat(result.signals()).contains("sensitive_content", "advisor_policy_precheck");
+        verify(chatModel, never()).chat(any(ChatRequest.class));
+    }
+
+    @Test
+    void policyHardDenyOneOffWritingTaskDoesNotCallModel() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(
+                request("Write me a speech cheering me up. Use a friendly and casual tone."));
+
+        assertThat(result.available()).isTrue();
+        assertThat(result.shouldCapture()).isFalse();
+        assertThat(result.memoryType()).isEqualTo("none");
+        assertThat(result.signals()).contains("task_only_content", "advisor_policy_precheck");
+        verify(chatModel, never()).chat(any(ChatRequest.class));
+    }
+
+    @Test
+    void policyBaselineRejectsModelCaptureWhenRulesDoNotAllowMemory() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"fact","confidence":0.90,
+                 "signals":["advisor_fact_signal"],"reason":"stable personal name"}
+                """));
+
+        MemoryAdvisorRawResult raw = advisor.adviseRaw(
+                request("hi ai,my name is taye what is your name?"));
+
+        assertThat(raw.available()).isTrue();
+        assertThat(raw.parsed()).isTrue();
+        assertThat(raw.rawShouldCapture()).isTrue();
+        assertThat(raw.finalResult().shouldCapture()).isFalse();
+        assertThat(raw.finalResult().memoryType()).isEqualTo("none");
+        assertThat(raw.finalResult().signals()).contains("advisor_policy_baseline_reject");
+    }
+
+    @Test
+    void policyBaselineAllowsModelMissedRulePreference() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":false,"memory_type":"none","confidence":0.0,
+                 "signals":[],"reason":"one-off instruction"}
+                """));
+
+        MemoryAdvisorRawResult raw = advisor.adviseRaw(
+                request("I like keyboard shortcuts for navigation."));
+
+        assertThat(raw.available()).isTrue();
+        assertThat(raw.parsed()).isTrue();
+        assertThat(raw.rawShouldCapture()).isFalse();
+        assertThat(raw.finalResult().shouldCapture()).isTrue();
+        assertThat(raw.finalResult().memoryType()).isEqualTo("preference");
+        assertThat(raw.finalResult().signals()).contains("preference_signal", "advisor_policy_baseline_allow");
+        assertThat(raw.finalResult().reason()).contains("policy_baseline_allow:implicit_preference");
+    }
+
+    @Test
+    void policyBaselineNormalizesAllowedCaptureType() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"preference","confidence":0.90,
+                 "signals":["advisor_preference_signal"],"reason":"durable note title preference"}
+                """));
+
+        MemoryAdvisorRawResult raw = advisor.adviseRaw(
+                request("\u6211\u5e0c\u671b\u7b14\u8bb0\u6807\u9898\u5c3d\u91cf\u77ed\u3002"));
+
+        assertThat(raw.rawShouldCapture()).isTrue();
+        assertThat(raw.rawMemoryType()).isEqualTo("preference");
+        assertThat(raw.finalResult().shouldCapture()).isTrue();
+        assertThat(raw.finalResult().memoryType()).isEqualTo("style");
+        assertThat(raw.finalResult().signals()).contains("advisor_policy_baseline_type_normalize");
+    }
+
+    @Test
+    void defaultThresholdAllowsStablePreferenceAtPointEightConfidence() {
+        memoryProperties.getCapture().getAdvisor().setEnabled(true);
+        when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
+                {"should_capture":true,"memory_type":"preference","confidence":0.80,
+                 "signals":["advisor_preference_signal"],"reason":"stable product preference"}
+                """));
+
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(
+                request("I like keyboard shortcuts for navigation."));
+
+        assertThat(result.shouldCapture()).isTrue();
+        assertThat(result.memoryType()).isEqualTo("preference");
+        assertThat(result.signals()).doesNotContain("advisor_low_confidence");
+    }
+
+    @Test
     void lowConfidenceAdviceIsNotCapturable() {
         memoryProperties.getCapture().getAdvisor().setEnabled(true);
         when(chatModel.chat(any(ChatRequest.class))).thenReturn(chatResponse("""
@@ -98,7 +204,7 @@ class LlmMemorySignalAdvisorTest {
                  "signals":["advisor_preference_signal"],"reason":"weak but parseable"}
                 """));
 
-        MemoryAdvisorRawResult raw = advisor.adviseRaw(request("I prefer concise answers."));
+        MemoryAdvisorRawResult raw = advisor.adviseRaw(request("Let's continue with the next item."));
 
         assertThat(raw.available()).isTrue();
         assertThat(raw.parsed()).isTrue();
@@ -118,7 +224,7 @@ class LlmMemorySignalAdvisorTest {
                  "signals":["advisor_preference_signal"],"reason":"weak but parseable"}
                 """));
 
-        MemorySignalAdvisor.AdvisorResult result = advisor.advise(request("I prefer concise answers."));
+        MemorySignalAdvisor.AdvisorResult result = advisor.advise(request("Let's continue with the next item."));
 
         assertThat(result.shouldCapture()).isFalse();
         assertThat(result.signals()).contains("advisor_low_confidence");
@@ -134,6 +240,7 @@ class LlmMemorySignalAdvisorTest {
         assertThat(result.available()).isFalse();
         assertThat(result.shouldCapture()).isFalse();
         assertThat(result.signals()).contains("advisor_failed");
+        verify(memoryMetricsService).recordAdvisorResult(eq(false), eq(false), any(), anyLong());
     }
 
     @Test

@@ -103,8 +103,8 @@ describe('coverage depth behavior', () => {
     localStorage.clear();
     useAuthStore.setState({
       user: { userId: 'user-1', username: 'alice', email: 'alice@example.com' },
-      token: 'token',
       isAuthenticated: true,
+      initialized: true,
     });
     useNoteStore.setState({
       notes: [

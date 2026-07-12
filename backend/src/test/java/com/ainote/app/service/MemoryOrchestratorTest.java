@@ -11,6 +11,7 @@ import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -23,6 +24,7 @@ class MemoryOrchestratorTest {
     private MemoryCapturePolicy policy;
     private MemoryCandidateExtractor extractor;
     private MemoryWriteService writeService;
+    private MemoryMetricsService memoryMetricsService;
     private MemoryOrchestrator orchestrator;
 
     @BeforeEach
@@ -32,7 +34,8 @@ class MemoryOrchestratorTest {
         policy = new MemoryCapturePolicy();
         extractor = mock(MemoryCandidateExtractor.class);
         writeService = mock(MemoryWriteService.class);
-        orchestrator = new MemoryOrchestrator(memoryProperties, policy, extractor, writeService);
+        memoryMetricsService = mock(MemoryMetricsService.class);
+        orchestrator = new MemoryOrchestrator(memoryProperties, policy, extractor, writeService, memoryMetricsService);
     }
 
     @Test
@@ -41,6 +44,13 @@ class MemoryOrchestratorTest {
 
         verify(extractor, never()).extract(any(), any());
         verify(writeService, never()).writeCandidates(eq("user-1"), any(), any());
+        verify(writeService).recordCaptureDecision(
+                eq("user-1"),
+                eq("denied"),
+                eq("operation_or_confirmation"),
+                any(MemoryCapturePolicy.CaptureDecision.class),
+                eq("删除全部笔记"));
+        verify(memoryMetricsService).recordCapture(eq("denied"), any(), eq(0), eq(0), anyLong());
     }
 
     @Test
@@ -60,6 +70,7 @@ class MemoryOrchestratorTest {
         orchestrator.captureAfterTurn("user-1", "记住，我希望你用中文回答", "好的");
 
         verify(writeService).writeCandidates("user-1", List.of(candidate), "explicit_memory");
+        verify(memoryMetricsService).recordCapture(eq("succeeded"), eq("explicit_memory"), eq(1), eq(1), anyLong());
     }
 
     @Test
@@ -84,6 +95,7 @@ class MemoryOrchestratorTest {
                     eq("capture_exception"),
                     any(IllegalStateException.class),
                     any());
+            verify(memoryMetricsService).recordCapture(eq("failed"), eq("capture_exception"), eq(0), eq(0), anyLong());
         } finally {
             logger.detachAppender(appender);
         }

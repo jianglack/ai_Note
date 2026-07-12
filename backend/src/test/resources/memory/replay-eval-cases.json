@@ -170,7 +170,7 @@
     "assistantOutput": "Noted.",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -196,7 +196,7 @@
     "assistantOutput": "Noted.",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -222,7 +222,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -235,7 +235,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -248,7 +248,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -261,7 +261,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -313,7 +313,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -326,7 +326,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -339,7 +339,7 @@
     "assistantOutput": "已记录。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_EXPLICIT",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "explicit_memory",
     "expectedSignals": [
@@ -456,7 +456,7 @@
     "assistantOutput": "明白。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": false,
     "expectedPolicyReason": "implicit_preference",
     "expectedSignals": [
@@ -833,7 +833,7 @@
     "assistantOutput": "已更新偏好。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": true,
     "expectedPolicyReason": "correction_preference",
     "expectedSignals": [
@@ -2132,7 +2132,7 @@
     "assistantOutput": "已按新的偏好更新。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": true,
     "expectedPolicyReason": "correction_preference",
     "expectedSignals": [
@@ -2184,7 +2184,7 @@
     "assistantOutput": "已按新的偏好更新。",
     "expectedCaptureAllowed": true,
     "expectedDecisionType": "ALLOW_IMPLICIT_LOW_CONFIDENCE",
-    "expectedMemoryType": "preference",
+    "expectedMemoryType": "style",
     "expectedCorrection": true,
     "expectedPolicyReason": "correction_preference",
     "expectedSignals": [

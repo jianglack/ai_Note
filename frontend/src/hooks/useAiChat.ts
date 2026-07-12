@@ -21,7 +21,6 @@ import {
 import type { AiChatResponse, ChatHistoryMessage } from '../api';
 import { useWorkflowExecution } from './useWorkflowExecution';
 import { isSuggestionDismissed } from './useCardActions';
-import { getAuthToken } from '../services/apiBase';
 import type { CardPayload } from '../components/chat/cards/types';
 import type { AiMessage } from '../stores/aiStore';
 
@@ -61,7 +60,6 @@ export function useAiChat() {
 
   // 加载 AI 对话历史并显示欢迎问候语 + 自动加载智能建议卡片
   const loadChatHistory = useCallback(async () => {
-    if (!getAuthToken()) return;
     try {
       const historyPage = await getChatHistory({ limit: CHAT_HISTORY_PAGE_SIZE });
       const loadedMessages = toAiMessages(historyPage.items);

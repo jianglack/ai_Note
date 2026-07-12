@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -42,7 +43,11 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
            SELECT m FROM SemanticMemory m
            WHERE m.userId = :userId
              AND (COALESCE(:type, '') = '' OR m.memoryType = :type OR m.category = :type)
-             AND (COALESCE(:status, '') = '' OR m.status = :status)
+              AND (
+                   COALESCE(:status, '') = ''
+                   OR (:status = 'active' AND (m.status IS NULL OR m.status = 'active'))
+                   OR m.status = :status
+              )
              AND (COALESCE(:query, '') = '' OR LOWER(m.content) LIKE LOWER(CONCAT('%', :query, '%')))
            ORDER BY m.updatedAt DESC, m.createdAt DESC
            """)
@@ -59,6 +64,10 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.id IN :ids " +
            "AND (m.status IS NULL OR m.status = 'active')")
     List<SemanticMemory> findActiveByUserIdAndIdIn(String userId, List<Long> ids);
+
+    List<SemanticMemory> findByStatusInAndUpdatedAtBefore(List<String> statuses,
+                                                          LocalDateTime updatedBefore,
+                                                          Pageable pageable);
 
     @Query(value = """
         SELECT id AS id,
@@ -106,6 +115,18 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Query("SELECT m FROM SemanticMemory m WHERE m.userId = :userId AND m.content = :content " +
            "AND (m.status IS NULL OR m.status = 'active')")
     List<SemanticMemory> findByUserIdAndContent(String userId, String content);
+
+    @Modifying
+    @Transactional
+    @Query("""
+           UPDATE SemanticMemory m
+           SET m.lastAccessedAt = :accessedAt,
+               m.accessCount = COALESCE(m.accessCount, 0) + 1
+           WHERE m.userId = :userId
+             AND m.id IN :ids
+             AND (m.status IS NULL OR m.status = 'active')
+           """)
+    int markAccessed(String userId, List<Long> ids, LocalDateTime accessedAt);
 
     /**
      * 向量相似度搜索：找到与给定 embedding 最相似的记忆
@@ -156,6 +177,11 @@ public interface SemanticMemoryRepository extends JpaRepository<SemanticMemory, 
     @Transactional
     @Query("DELETE FROM SemanticMemory m WHERE m.id IN :ids")
     void deleteByIds(List<Long> ids);
+
+    @Modifying
+    @Transactional
+    @Query("DELETE FROM SemanticMemory m WHERE m.userId = :userId AND m.id IN :ids")
+    int deleteByUserIdAndIdIn(String userId, List<Long> ids);
 
     /**
      * 获取用户所有有 embedding 的记忆（用于批量衰减分数更新）

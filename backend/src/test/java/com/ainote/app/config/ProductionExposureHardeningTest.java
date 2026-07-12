@@ -16,6 +16,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 
 class ProductionExposureHardeningTest {
@@ -34,23 +35,38 @@ class ProductionExposureHardeningTest {
                 new MockHttpServletRequest("OPTIONS", "/api/notes"));
 
         assertThat(cors).isNotNull();
-        assertThat(cors.getAllowedOriginPatterns())
+        assertThat(cors.getAllowedOrigins())
                 .containsExactly("https://app.example.com", "http://localhost:5173");
         assertThat(cors.getAllowCredentials()).isTrue();
-        assertThat(cors.getAllowedOriginPatterns()).doesNotContain("*");
+        assertThat(cors.getAllowedOrigins()).doesNotContain("*");
         assertThat(cors.getAllowedHeaders())
-                .containsExactlyInAnyOrder("Authorization", "Content-Type", "Accept", "X-Trace-Id", "Last-Event-ID");
+                .containsExactlyInAnyOrder(
+                        "Authorization", "Content-Type", "Accept", "X-Trace-Id", "Last-Event-ID", "X-XSRF-TOKEN");
     }
 
     @Test
-    void prodProfileDisablesSwaggerAndOnlyExposesHealthActuator() throws Exception {
+    void corsConfigurationRejectsWildcardsAndNonOriginUrls() {
+        assertThatThrownBy(() -> securityConfig("https://*.example.com").corsConfigurationSource())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("wildcards");
+        assertThatThrownBy(() -> securityConfig("https://app.example.com/path").corsConfigurationSource())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("exact HTTP(S) origins");
+    }
+
+    @Test
+    void prodProfileDisablesSwaggerAndExposesOnlyHealthAndProtectedPrometheus() throws Exception {
         List<PropertySource<?>> sources = new YamlPropertySourceLoader()
                 .load("prod", new ClassPathResource("application-prod.yml"));
 
         assertThat(property(sources, "springdoc.api-docs.enabled")).isEqualTo(false);
         assertThat(property(sources, "springdoc.swagger-ui.enabled")).isEqualTo(false);
-        assertThat(property(sources, "management.endpoints.web.exposure.include")).isEqualTo("health");
+        assertThat(property(sources, "management.endpoints.web.exposure.include")).isEqualTo("health,prometheus");
         assertThat(property(sources, "management.endpoint.health.show-details")).isEqualTo("never");
+        assertThat(property(sources, "management.endpoint.health.probes.enabled")).isEqualTo(true);
+        assertThat(property(sources, "management.metrics.distribution.percentiles-histogram.http.server.requests"))
+                .isEqualTo(true);
+        assertThat(property(sources, "logging.structured.format.console")).isEqualTo("ecs");
     }
 
     @Test
@@ -65,5 +81,13 @@ class ProductionExposureHardeningTest {
                 .filter(value -> value != null)
                 .findFirst()
                 .orElse(null);
+    }
+
+    private SecurityConfig securityConfig(String origins) {
+        return new SecurityConfig(
+                mock(CustomUserDetailsService.class),
+                mock(JwtTokenProvider.class),
+                mock(TokenService.class),
+                origins);
     }
 }

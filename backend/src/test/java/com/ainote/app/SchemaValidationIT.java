@@ -38,7 +38,15 @@ class SchemaValidationIT {
     @DisplayName("loads context and validates all entities against Flyway schema")
     void validatesAllEntitiesAgainstMigratedSchema() {
         assertThat(entityManagerFactory.getMetamodel().getEntities())
-                .hasSize(32);
+                .hasSizeGreaterThanOrEqualTo(36)
+                .extracting(entityType -> entityType.getJavaType().getSimpleName())
+                .contains(
+                        "UserMemory",
+                        "ChatMemoryHead",
+                        "ChatMemoryCompactionJob",
+                        "EpisodicMemory",
+                        "MemoryReviewCase",
+                        "AdminAccessAudit");
     }
 
 }

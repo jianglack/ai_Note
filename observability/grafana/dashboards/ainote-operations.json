@@ -1,0 +1,139 @@
+{
+  "annotations": {"list": []},
+  "description": "AiNote service health, SLO, saturation, memory, and paging evidence. Alert thresholds are owned by Prometheus rules.",
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "green", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "min(up{job=\"ainote-backend\",instance=~\"$instance\"})", "legendFormat": "target", "range": true, "refId": "A"}],
+      "title": "Backend Target Up",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"decimals": 3, "min": 0, "max": 1, "unit": "percentunit", "thresholds": {"mode": "absolute", "steps": [{"color": "red", "value": null}, {"color": "orange", "value": 0.95}, {"color": "green", "value": 0.999}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 4, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "1 - ainote:http_5xx_ratio:rate5m", "legendFormat": "availability", "range": true, "refId": "A"}],
+      "title": "HTTP Success Ratio (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "reqps", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 8, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "ainote:http_requests:rate5m", "legendFormat": "requests", "range": true, "refId": "A"}],
+      "title": "Request Rate",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "s", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 0.5}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 12, "y": 0},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "ainote:http_request_duration_seconds:p95_5m", "legendFormat": "p95", "range": true, "refId": "A"}],
+      "title": "HTTP p95 (5m)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "short", "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 16, "y": 0},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "sum(ALERTS{alertstate=\"firing\",service=~\"ainote-.*\"})", "legendFormat": "alerts", "range": true, "refId": "A"}],
+      "title": "Active Alerts",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"unit": "percentunit", "min": 0, "max": 1, "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "orange", "value": 0.7}, {"color": "red", "value": 0.85}]}}, "overrides": []},
+      "gridPos": {"h": 4, "w": 4, "x": 20, "y": 0},
+      "id": 6,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "orientation": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto", "wideLayout": true},
+      "targets": [{"editorMode": "code", "expr": "ainote:jvm_heap_utilization:ratio", "legendFormat": "heap", "range": true, "refId": "A"}],
+      "title": "JVM Heap",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "showPoints": "never", "spanNulls": false}, "unit": "percentunit"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4},
+      "id": 7,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"editorMode": "code", "expr": "ainote:http_5xx_ratio:rate5m", "legendFormat": "5xx ratio", "range": true, "refId": "A"},
+        {"editorMode": "code", "expr": "ainote:agent_capacity_rejection:ratio5m", "legendFormat": "agent rejected", "range": true, "refId": "B"},
+        {"editorMode": "code", "expr": "ainote:memory_advisor_failure:ratio10m", "legendFormat": "advisor failed", "range": true, "refId": "C"}
+      ],
+      "title": "Failure And Rejection Ratios",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"drawStyle": "line", "fillOpacity": 10, "lineInterpolation": "linear", "lineWidth": 1, "pointSize": 5, "showPoints": "never", "spanNulls": false}, "unit": "short"}, "overrides": []},
+      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 4},
+      "id": 8,
+      "options": {"legend": {"calcs": ["lastNotNull", "max"], "displayMode": "table", "placement": "bottom", "showLegend": true}, "tooltip": {"mode": "multi", "sort": "desc"}},
+      "targets": [
+        {"editorMode": "code", "expr": "max(hikaricp_connections_pending{application=\"ainote-backend\"})", "legendFormat": "Hikari pending", "range": true, "refId": "A"},
+        {"editorMode": "code", "expr": "sum(rate(chat_total_failure_total{application=\"ainote-backend\"}[5m]))", "legendFormat": "chat total failure/s", "range": true, "refId": "B"},
+        {"editorMode": "code", "expr": "sum(rate(chat_memory_flush_failure_total{application=\"ainote-backend\"}[5m]))", "legendFormat": "memory flush failure/s", "range": true, "refId": "C"}
+      ],
+      "title": "Saturation And Integrity Signals",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+      "fieldConfig": {"defaults": {"custom": {"align": "auto", "cellOptions": {"type": "auto"}, "inspect": false}, "mappings": [], "thresholds": {"mode": "absolute", "steps": [{"color": "green", "value": null}, {"color": "red", "value": 1}]}}, "overrides": []},
+      "gridPos": {"h": 7, "w": 24, "x": 0, "y": 12},
+      "id": 9,
+      "options": {"cellHeight": "sm", "footer": {"countRows": false, "fields": "", "reducer": ["sum"], "show": false}, "showHeader": true},
+      "targets": [{"editorMode": "code", "expr": "ALERTS{alertstate=\"firing\",service=~\"ainote-.*\"}", "format": "table", "instant": true, "range": false, "refId": "A"}],
+      "title": "Firing Alert Evidence",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 41,
+  "tags": ["ainote", "operations", "slo"],
+  "templating": {
+    "list": [
+      {
+        "current": {"text": "All", "value": "$__all"},
+        "datasource": {"type": "prometheus", "uid": "ainote-prometheus"},
+        "definition": "label_values(up{job=\"ainote-backend\"}, instance)",
+        "includeAll": true,
+        "label": "Backend instance",
+        "multi": true,
+        "name": "instance",
+        "options": [],
+        "query": {"query": "label_values(up{job=\"ainote-backend\"}, instance)", "refId": "PrometheusVariableQueryEditor-VariableQuery"},
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {"from": "now-6h", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "AiNote Operations",
+  "uid": "ainote-operations",
+  "version": 1,
+  "weekStart": ""
+}

@@ -35,10 +35,6 @@ vi.mock('../src/api', () => ({
   ...apiMocks,
 }));
 
-vi.mock('../src/services/apiBase', () => ({
-  getAuthToken: () => 'jwt-token',
-}));
-
 import type { Note } from '../src/api';
 import { useActions } from '../src/hooks/useActions';
 import { useAiChat } from '../src/hooks/useAiChat';

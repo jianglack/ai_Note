@@ -122,11 +122,12 @@ export default function LoginPage() {
         navigate('/');
       } else if (mode === 'register') {
         if (!username || !email || !password) { setError('请填写所有字段'); setLoading(false); return; }
+        if ([...password].length < 15) { setError('密码长度至少为 15 个字符'); setLoading(false); return; }
         await register(username, email, password);
         navigate('/');
       } else {
         if (password !== confirmPassword) { setError('两次输入的密码不一致'); setLoading(false); return; }
-        if (password.length < 6) { setError('密码长度至少为 6 位'); setLoading(false); return; }
+        if ([...password].length < 15) { setError('密码长度至少为 15 个字符'); setLoading(false); return; }
         await api.post('/api/auth/reset-password', { username, email, newPassword: password });
         setSuccess('密码重置成功！');
         setTimeout(() => setMode('login'), 1500);
@@ -212,7 +213,7 @@ export default function LoginPage() {
                 {mode === 'register' && (
                   <InkField label="邮箱" placeholder="your@email.com" type="email" value={email} onChange={setEmail} />
                 )}
-                <InkField label="密码" type="password" placeholder="至少 6 位" value={password} onChange={setPassword} />
+                <InkField label="密码" type="password" placeholder={mode === 'register' ? '至少 15 个字符' : '请输入密码'} value={password} onChange={setPassword} />
                 {mode === 'register' && (
                   <InkField label="确认密码" type="password" placeholder="再输一次" value={confirmPassword} onChange={setConfirmPassword} />
                 )}
@@ -249,7 +250,7 @@ export default function LoginPage() {
                 </p>
                 <InkField label="用户名" placeholder="请输入用户名" value={username} onChange={setUsername} />
                 <InkField label="邮箱" placeholder="your@email.com" type="email" value={email} onChange={setEmail} />
-                <InkField label="新密码" type="password" placeholder="至少 6 位" value={password} onChange={setPassword} />
+                <InkField label="新密码" type="password" placeholder="至少 15 个字符" value={password} onChange={setPassword} />
                 <InkField label="确认密码" type="password" placeholder="再输一次" value={confirmPassword} onChange={setConfirmPassword} />
                 <a href="#" className="auth-back-link" onClick={e => { e.preventDefault(); setMode('login'); setError(''); }}>
                   ← 返回登录

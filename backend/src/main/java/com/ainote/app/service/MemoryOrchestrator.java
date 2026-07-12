@@ -3,6 +3,7 @@ package com.ainote.app.service;
 import com.ainote.app.config.MemoryProperties;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
@@ -22,15 +23,26 @@ public class MemoryOrchestrator {
     private final MemoryCapturePolicy capturePolicy;
     private final MemoryCandidateExtractor candidateExtractor;
     private final MemoryWriteService writeService;
+    private final MemoryMetricsService memoryMetricsService;
 
     public MemoryOrchestrator(MemoryProperties memoryProperties,
                               MemoryCapturePolicy capturePolicy,
                               MemoryCandidateExtractor candidateExtractor,
                               MemoryWriteService writeService) {
+        this(memoryProperties, capturePolicy, candidateExtractor, writeService, MemoryMetricsService.noop());
+    }
+
+    @Autowired
+    public MemoryOrchestrator(MemoryProperties memoryProperties,
+                              MemoryCapturePolicy capturePolicy,
+                              MemoryCandidateExtractor candidateExtractor,
+                              MemoryWriteService writeService,
+                              MemoryMetricsService memoryMetricsService) {
         this.memoryProperties = memoryProperties;
         this.capturePolicy = capturePolicy;
         this.candidateExtractor = candidateExtractor;
         this.writeService = writeService;
+        this.memoryMetricsService = memoryMetricsService == null ? MemoryMetricsService.noop() : memoryMetricsService;
     }
 
     @Async("securityExecutor")
@@ -50,12 +62,14 @@ public class MemoryOrchestrator {
                     new MemoryCapturePolicy.CaptureRequest(userId, userMessage, aiResponse);
             MemoryCapturePolicy.CaptureDecision decision = capturePolicy.evaluate(request);
             if (!decision.allowed()) {
+                recordCaptureDecision(userId, "denied", decision.reason(), decision, userMessage);
                 logCapture("denied", userId, decision.reason(), 0, 0, startedAt);
                 return;
             }
 
             List<MemoryCandidateExtractor.MemoryCandidate> candidates = candidateExtractor.extract(request, decision);
             if (candidates.isEmpty()) {
+                recordCaptureDecision(userId, "skipped", "no_candidates", decision, userMessage);
                 logCapture("skipped", userId, "no_candidates", 0, 0, startedAt);
                 return;
             }
@@ -65,6 +79,7 @@ public class MemoryOrchestrator {
             int writes = result.created() + result.reinforced() + result.superseded();
             logCapture("succeeded", userId, decision.reason(), candidates.size(), writes, startedAt);
         } catch (Exception e) {
+            memoryMetricsService.recordCapture("failed", "capture_exception", 0, 0, elapsedMs(startedAt));
             log.warn("memory_capture_event=failed user_id={} error={} message={}",
                     userId, e.getClass().getSimpleName(), e.getMessage(), e);
             try {
@@ -80,6 +95,22 @@ public class MemoryOrchestrator {
         }
     }
 
+    private void recordCaptureDecision(String userId,
+                                       String status,
+                                       String reason,
+                                       MemoryCapturePolicy.CaptureDecision decision,
+                                       String userMessage) {
+        if (!memoryProperties.getAudit().isEnabled()) {
+            return;
+        }
+        try {
+            writeService.recordCaptureDecision(userId, status, reason, decision, userMessage);
+        } catch (Exception ledgerError) {
+            log.warn("memory_capture_event=decision_ledger_write_failed user_id={} status={} reason={} error={}",
+                    userId, status, reason, ledgerError.getClass().getSimpleName(), ledgerError);
+        }
+    }
+
     private void logCapture(String status,
                             String userId,
                             String reason,
@@ -87,9 +118,11 @@ public class MemoryOrchestrator {
                             int writeCount,
                             long startedAt) {
         if (!memoryProperties.getAudit().isEnabled()) {
+            memoryMetricsService.recordCapture(status, reason, candidateCount, writeCount, elapsedMs(startedAt));
             return;
         }
-        long durationMs = (System.nanoTime() - startedAt) / 1_000_000L;
+        long durationMs = elapsedMs(startedAt);
+        memoryMetricsService.recordCapture(status, reason, candidateCount, writeCount, durationMs);
         log.info("memory_capture_event={} user_id={} reason={} capture_mode={} candidate_count={} write_count={} duration_ms={}",
                 status,
                 userId,
@@ -98,6 +131,10 @@ public class MemoryOrchestrator {
                 candidateCount,
                 writeCount,
                 durationMs);
+    }
+
+    private long elapsedMs(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 
     private String shortHash(String userId, String userMessage, String aiResponse) {

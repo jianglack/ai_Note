@@ -1,10 +1,12 @@
 package com.ainote.app.memory;
 
 import com.ainote.app.entity.UserMemory;
+import com.ainote.app.entity.ChatMemoryHead;
+import com.ainote.app.entity.ChatMemoryCompactionJob;
 import com.ainote.app.config.MemoryProperties;
-import com.ainote.app.repository.EpisodicMemoryRepository;
+import com.ainote.app.repository.ChatMemoryHeadRepository;
+import com.ainote.app.repository.ChatMemoryCompactionJobRepository;
 import com.ainote.app.repository.UserMemoryRepository;
-import com.ainote.app.service.MemoryExtractionService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.UserMessage;
@@ -15,12 +17,14 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.contains;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
@@ -31,20 +35,29 @@ import static org.mockito.Mockito.mock;
 @DisplayName("ReliableChatMemoryStore deferred flush tests")
 class ReliableChatMemoryStoreFlushTest {
     private UserMemoryRepository memoryRepository;
-    private EpisodicMemoryRepository episodicMemoryRepository;
-    private MemoryExtractionService memoryExtractionService;
+    private ChatMemoryHeadRepository headRepository;
+    private ChatMemoryCompactionJobRepository compactionJobRepository;
+    private ShortTermMemoryMetrics metrics;
     private MemoryProperties memoryProperties;
     private ReliableChatMemoryStore store;
 
     @BeforeEach
     void setUp() {
         memoryRepository = mock(UserMemoryRepository.class);
-        episodicMemoryRepository = mock(EpisodicMemoryRepository.class);
-        memoryExtractionService = mock(MemoryExtractionService.class);
+        headRepository = mock(ChatMemoryHeadRepository.class);
+        compactionJobRepository = mock(ChatMemoryCompactionJobRepository.class);
+        metrics = mock(ShortTermMemoryMetrics.class);
         memoryProperties = new MemoryProperties();
+        memoryProperties.getChatHistory().setFlushRetryDelayMs(0);
+        ChatMemoryHead head = new ChatMemoryHead();
+        head.setUserId("user-1");
+        head.setNextSequenceNumber(0);
+        when(headRepository.findByUserIdForUpdate("user-1")).thenReturn(Optional.of(head));
+        when(memoryRepository.findByUserIdAndSequenceRange(anyString(), anyInt(), anyInt()))
+                .thenReturn(List.of());
         store = new ReliableChatMemoryStore(
-                memoryRepository, episodicMemoryRepository, memoryProperties,
-                new ObjectMapper(), memoryExtractionService);
+                memoryRepository, headRepository, compactionJobRepository, memoryProperties,
+                new ObjectMapper(), metrics);
     }
 
     @AfterEach
@@ -64,9 +77,9 @@ class ReliableChatMemoryStoreFlushTest {
 
         verify(memoryRepository, never()).deleteByUserId(anyString());
         verify(memoryRepository, never()).saveAll(anyList());
-        verify(memoryRepository, never()).findAllByUserIdOrderByCreatedAtAsc(anyString());
+        verify(memoryRepository, never()).findModelWindowByUserIdOrderBySequenceDesc(anyString(), any());
 
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
                 .thenReturn(new ArrayList<>());
         store.flushDeferredWrites();
 
@@ -96,12 +109,28 @@ class ReliableChatMemoryStoreFlushTest {
 
         assertThat(messages).hasSize(1);
         assertThat(((UserMessage) messages.get(0)).singleText()).isEqualTo("msg1");
-        verify(memoryRepository, never()).findAllByUserIdOrderByCreatedAtAsc("user-1");
+        verify(memoryRepository, never()).findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any());
+    }
+
+    @Test
+    void getMessagesUsesBoundedModelWindowQueryAndNeverFullHistoryQuery() {
+        memoryProperties.getChatHistory().setModelWindowMaxMessages(12);
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
+                .thenReturn(List.of(userMemory("latest", 11)));
+
+        List<ChatMessage> messages = store.getMessages("user-1");
+
+        assertThat(messages).hasSize(1);
+        ArgumentCaptor<org.springframework.data.domain.Pageable> pageable =
+                ArgumentCaptor.forClass(org.springframework.data.domain.Pageable.class);
+        verify(memoryRepository).findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), pageable.capture());
+        assertThat(pageable.getValue().getPageSize()).isEqualTo(12);
+        verify(memoryRepository, never()).findAllByUserIdOrderByCreatedAtAsc(anyString());
     }
 
     @Test
     void immediateModeAppendsDirectly() {
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
                 .thenReturn(new ArrayList<>());
 
         store.updateMessages("user-1", List.of(UserMessage.from("msg1")));
@@ -113,10 +142,8 @@ class ReliableChatMemoryStoreFlushTest {
     @SuppressWarnings("unchecked")
     @Test
     void appendModeOnlySavesNewSuffix() {
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
-                .thenReturn(List.of(
-                        userMemory("msg1", 0),
-                        userMemory("msg2", 1)));
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
+                .thenReturn(List.of(userMemory("msg2", 1), userMemory("msg1", 0)));
 
         store.updateMessages("user-1", List.of(
                 UserMessage.from("msg1"),
@@ -136,26 +163,28 @@ class ReliableChatMemoryStoreFlushTest {
 
     @SuppressWarnings("unchecked")
     @Test
-    void trimmedWindowKeepsStoredHistoryAndSummarizesTrimmedPrefix() {
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
-                .thenReturn(List.of(
-                        userMemory("old1", 0),
-                        userMemory("old2", 1),
-                        userMemory("msg2", 2)));
+    void trimmedWindowKeepsStoredHistoryAndEnqueuesOneCompactionRange() {
+        memoryProperties.getChatHistory().setCompactionMinUserTurns(2);
+        UserMemory old1 = userMemory("old1", 0);
+        UserMemory old2 = userMemory("old2", 1);
+        UserMemory msg2 = userMemory("msg2", 2);
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
+                .thenReturn(List.of(msg2, old2, old1));
+        when(memoryRepository.findByUserIdAndSequenceRange("user-1", 0, 1))
+                .thenReturn(List.of(old1, old2));
 
         store.updateMessages("user-1", List.of(
                 UserMessage.from("msg2"),
                 UserMessage.from("msg3")));
 
         verify(memoryRepository, never()).deleteByUserId("user-1");
-        verify(memoryExtractionService).generateEpisodicSummaryFromText(
-                eq("user-1"),
-                contains("old1"),
-                eq(2));
+        assertThat(old1.getTrimmedAt()).isNotNull();
+        assertThat(old2.getTrimmedAt()).isNotNull();
+        verify(compactionJobRepository).save(any(ChatMemoryCompactionJob.class));
 
         ArgumentCaptor<List<UserMemory>> captor = ArgumentCaptor.forClass(List.class);
-        verify(memoryRepository).saveAll(captor.capture());
-        List<UserMemory> savedBatch = captor.getValue();
+        verify(memoryRepository, times(2)).saveAll(captor.capture());
+        List<UserMemory> savedBatch = captor.getAllValues().get(1);
 
         assertThat(savedBatch).hasSize(1);
         assertThat(savedBatch.get(0).getContent()).isEqualTo("msg3");
@@ -163,9 +192,29 @@ class ReliableChatMemoryStoreFlushTest {
     }
 
     @Test
+    void compactionRangeStopsAtConfiguredCharacterBudget() {
+        memoryProperties.getChatHistory().setCompactionMaxSourceCharacters(1000);
+        UserMemory old1 = userMemory("x".repeat(900), 0);
+        UserMemory old2 = userMemory("y".repeat(900), 1);
+        UserMemory current = userMemory("current", 2);
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
+                .thenReturn(List.of(current, old2, old1));
+        when(memoryRepository.findByUserIdAndSequenceRange("user-1", 0, 1))
+                .thenReturn(List.of(old1, old2));
+
+        store.updateMessages("user-1", List.of(
+                UserMessage.from("current"), UserMessage.from("new")));
+
+        ArgumentCaptor<ChatMemoryCompactionJob> job = ArgumentCaptor.forClass(ChatMemoryCompactionJob.class);
+        verify(compactionJobRepository).save(job.capture());
+        assertThat(job.getValue().getFromSequence()).isZero();
+        assertThat(job.getValue().getToSequence()).isZero();
+    }
+
+    @Test
     void legacyRewriteModeKeepsRollbackPath() {
         memoryProperties.getChatHistory().setWriteMode(MemoryProperties.ChatHistoryWriteMode.LEGACY_REWRITE);
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
                 .thenReturn(new ArrayList<>());
 
         store.updateMessages("user-1", List.of(UserMessage.from("msg1")));
@@ -180,13 +229,16 @@ class ReliableChatMemoryStoreFlushTest {
 
         store.updateMessages("user-1", List.of(UserMessage.from("msg1")));
 
-        when(memoryRepository.findAllByUserIdOrderByCreatedAtAsc("user-1"))
+        when(memoryRepository.findModelWindowByUserIdOrderBySequenceDesc(eq("user-1"), any()))
                 .thenReturn(new ArrayList<>());
         doThrow(new RuntimeException("DB down")).when(memoryRepository).saveAll(anyList());
 
         assertThatThrownBy(() -> store.flushDeferredWrites())
                 .isInstanceOf(RuntimeException.class)
                 .hasMessageContaining("DB down");
+        verify(memoryRepository, times(3)).saveAll(anyList());
+        verify(metrics, times(2)).recordFlushRetry();
+        verify(metrics).recordFlushFailure();
     }
 
     private UserMemory userMemory(String content, int sequenceNumber) {

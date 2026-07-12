@@ -63,7 +63,7 @@ public class AuthControllerIntegrationTest {
         registerRequest = new RegisterRequest();
         registerRequest.setUsername("testuser");
         registerRequest.setEmail("test@example.com");
-        registerRequest.setPassword("password123");
+        registerRequest.setPassword("correct horse battery staple");
 
         loginRequest = new LoginRequest();
         loginRequest.setUsername("testuser");
@@ -72,7 +72,7 @@ public class AuthControllerIntegrationTest {
         resetPasswordRequest = new ResetPasswordRequest();
         resetPasswordRequest.setUsername("testuser");
         resetPasswordRequest.setEmail("test@example.com");
-        resetPasswordRequest.setNewPassword("newpassword123");
+        resetPasswordRequest.setNewPassword("new password long enough");
 
         authResponse = new AuthResponse();
         authResponse.setToken("test-token");
@@ -89,7 +89,7 @@ public class AuthControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(registerRequest)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("test-token"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.token").doesNotExist())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"))
                 .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("AINOTE_AUTH=test-token")))
                 .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))
@@ -132,7 +132,7 @@ public class AuthControllerIntegrationTest {
                 .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(MockMvcResultMatchers.status().isOk())
                 .andExpect(MockMvcResultMatchers.content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(MockMvcResultMatchers.jsonPath("$.token").value("test-token"))
+                .andExpect(MockMvcResultMatchers.jsonPath("$.token").doesNotExist())
                 .andExpect(MockMvcResultMatchers.jsonPath("$.username").value("testuser"))
                 .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("AINOTE_AUTH=test-token")))
                 .andExpect(MockMvcResultMatchers.header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")))

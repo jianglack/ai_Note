@@ -1,0 +1,148 @@
+rule_files:
+  - /etc/prometheus/rules/ainote-alerts.yml
+
+evaluation_interval: 1m
+
+tests:
+  - name: backend-down-fires-after-hold-period
+    interval: 1m
+    input_series:
+      - series: 'up{job="ainote-backend",instance="backend:8081"}'
+        values: '0x5'
+    alert_rule_test:
+      - eval_time: 1m
+        alertname: AiNoteBackendDown
+        exp_alerts: []
+      - eval_time: 3m
+        alertname: AiNoteBackendDown
+        exp_alerts:
+          - exp_labels:
+              alertname: AiNoteBackendDown
+              instance: backend:8081
+              job: ainote-backend
+              owner: ainote-maintainers
+              service: ainote-backend
+              severity: critical
+              slo: availability
+            exp_annotations:
+              summary: AiNote backend target is unreachable
+              description: Prometheus has failed to scrape backend:8081 for more than two minutes.
+              runbook_url: docs/operations/MONITORING_ALERTING.md#ainotebackenddown
+
+  - name: healthy-backend-does-not-page
+    interval: 1m
+    input_series:
+      - series: 'up{job="ainote-backend",instance="backend:8081"}'
+        values: '1x5'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AiNoteBackendDown
+        exp_alerts: []
+
+  - name: database-pending-fires-after-five-minutes
+    interval: 1m
+    input_series:
+      - series: 'hikaricp_connections_pending{application="ainote-backend",pool="HikariPool-1"}'
+        values: '1x8'
+    alert_rule_test:
+      - eval_time: 4m
+        alertname: AiNoteDatabasePoolPending
+        exp_alerts: []
+      - eval_time: 6m
+        alertname: AiNoteDatabasePoolPending
+        exp_alerts:
+          - exp_labels:
+              alertname: AiNoteDatabasePoolPending
+              owner: ainote-maintainers
+              service: ainote-backend
+              severity: warning
+              slo: saturation
+            exp_annotations:
+              summary: AiNote database connection requests are pending
+              description: Hikari has pending connection requests for more than five minutes.
+              runbook_url: docs/operations/MONITORING_ALERTING.md#ainotedatabasepoolpending
+
+  - name: low-volume-http-errors-do-not-page
+    interval: 1m
+    input_series:
+      - series: 'ainote:http_5xx_ratio:rate5m'
+        values: '0.20x15'
+      - series: 'ainote:http_requests:rate5m'
+        values: '0.01x15'
+    alert_rule_test:
+      - eval_time: 12m
+        alertname: AiNoteHighHttp5xxRatio
+        exp_alerts: []
+
+  - name: sustained-http-errors-page-after-hold-period
+    interval: 1m
+    input_series:
+      - series: 'ainote:http_5xx_ratio:rate5m'
+        values: '0.20x15'
+      - series: 'ainote:http_requests:rate5m'
+        values: '0.20x15'
+    alert_rule_test:
+      - eval_time: 9m
+        alertname: AiNoteHighHttp5xxRatio
+        exp_alerts: []
+      - eval_time: 11m
+        alertname: AiNoteHighHttp5xxRatio
+        exp_alerts:
+          - exp_labels:
+              alertname: AiNoteHighHttp5xxRatio
+              owner: ainote-maintainers
+              service: ainote-backend
+              severity: critical
+              slo: availability
+            exp_annotations:
+              summary: AiNote HTTP 5xx ratio exceeds 5 percent
+              description: The five-minute 5xx ratio is 20% under sustained traffic.
+              runbook_url: docs/operations/MONITORING_ALERTING.md#ainotehighhttp5xxratio
+
+  - name: memory-flush-failure-pages
+    interval: 1m
+    input_series:
+      - series: 'chat_memory_flush_failure_total{application="ainote-backend"}'
+        values: '0 0 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AiNoteMemoryFlushFailure
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AiNoteMemoryFlushFailure
+        exp_alerts:
+          - exp_labels:
+              alertname: AiNoteMemoryFlushFailure
+              application: ainote-backend
+              owner: ainote-maintainers
+              service: ainote-backend
+              severity: critical
+              slo: data-integrity
+            exp_annotations:
+              summary: AiNote short-term memory flush failed
+              description: A transactional chat-memory flush exhausted its retries.
+              runbook_url: docs/operations/MONITORING_ALERTING.md#ainotememoryflushfailure
+
+  - name: notification-failure-pages
+    interval: 1m
+    input_series:
+      - series: 'alertmanager_notifications_failed_total{integration="webhook"}'
+        values: '0 0 1 1 1 1 1 1'
+    alert_rule_test:
+      - eval_time: 3m
+        alertname: AiNoteAlertmanagerNotificationFailure
+        exp_alerts: []
+      - eval_time: 5m
+        alertname: AiNoteAlertmanagerNotificationFailure
+        exp_alerts:
+          - exp_labels:
+              alertname: AiNoteAlertmanagerNotificationFailure
+              integration: webhook
+              owner: ainote-maintainers
+              service: ainote-observability
+              severity: critical
+              slo: paging
+            exp_annotations:
+              summary: Alertmanager failed to deliver a notification
+              description: At least one notification delivery failed in the last five minutes.
+              runbook_url: docs/operations/MONITORING_ALERTING.md#ainotealertmanagernotificationfailure

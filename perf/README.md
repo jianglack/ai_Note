@@ -1,5 +1,38 @@
 # AI Note Performance Gates
 
+## SLA, Capacity, And Stateful Soak
+
+`perf/ainote-sla.js` and `scripts/run-sla-capacity.ps1` provide the isolated stateful production-like qualification gate. The runner starts disposable PostgreSQL and Redis containers, launches the backend with the Spring `prod` profile on a dedicated port, creates isolated users, and executes this mix:
+
+- 30% atomic chat-turn append;
+- 30% bounded chat-history read;
+- 20% long-term memory list;
+- 20% paginated note list.
+
+It runs warm-up, baseline, capacity discovery, an accepted-capacity confirmation, and a release soak. While k6 is active it samples health, uptime, heap, live threads, CPU, Hikari, and Tomcat metrics. Every successful append is reconciled to exactly two PostgreSQL rows with continuous unique sequence numbers.
+
+Full local release qualification:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run-sla-capacity.ps1
+```
+
+Short pipeline smoke without the soak:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\run-sla-capacity.ps1 `
+  -UserCount 4 `
+  -WarmupDuration 5s `
+  -BaselineDuration 10s `
+  -CapacityRates 5,10 `
+  -CapacityStageDuration 10s `
+  -AcceptedCapacityDuration 10s `
+  -ExpectedPeakRps 5 `
+  -SkipSoak
+```
+
+The machine-readable report is written under `backend/target/sla-capacity/<run-id>/sla-capacity-report.json`, with a copy at `backend/target/sla-capacity/latest.json`. The report always labels this topology `managed-local` and sets `productionProven=false`; it is a production-like release baseline, not a contractual production SLA.
+
 ## Profiles
 
 `PERF_PROFILE=local` is the manual combined local profile. It verifies notes pagination, scheduler API paths, and direct local TEI embedding in one k6 run.

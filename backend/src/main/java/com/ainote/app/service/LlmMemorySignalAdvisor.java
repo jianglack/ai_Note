@@ -10,6 +10,7 @@ import dev.langchain4j.model.chat.request.ChatRequest;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -38,13 +39,29 @@ public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
     private final MemoryProperties memoryProperties;
     private final ChatModel chatModel;
     private final ObjectMapper objectMapper;
+    private final MemorySignalClassifier policyPrecheckClassifier;
+    private final MemoryCapturePolicy policyBaseline;
+    private final MemoryCandidateExtractor policyBaselineCandidateExtractor;
+    private final MemoryMetricsService memoryMetricsService;
 
     public LlmMemorySignalAdvisor(MemoryProperties memoryProperties,
                                   ChatModel chatModel,
                                   ObjectMapper objectMapper) {
+        this(memoryProperties, chatModel, objectMapper, MemoryMetricsService.noop());
+    }
+
+    @Autowired
+    public LlmMemorySignalAdvisor(MemoryProperties memoryProperties,
+                                  ChatModel chatModel,
+                                  ObjectMapper objectMapper,
+                                  MemoryMetricsService memoryMetricsService) {
         this.memoryProperties = memoryProperties;
         this.chatModel = chatModel;
         this.objectMapper = objectMapper;
+        this.policyPrecheckClassifier = new MemorySignalClassifier(MemorySignalAdvisor.disabled());
+        this.policyBaseline = new MemoryCapturePolicy(new MemorySignalClassifier(MemorySignalAdvisor.disabled()));
+        this.policyBaselineCandidateExtractor = new MemoryCandidateExtractor();
+        this.memoryMetricsService = memoryMetricsService == null ? MemoryMetricsService.noop() : memoryMetricsService;
     }
 
     @Override
@@ -54,9 +71,17 @@ public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
 
     @Override
     public MemoryAdvisorRawResult adviseRaw(MemoryCapturePolicy.CaptureRequest request) {
+        long startedAt = System.nanoTime();
         if (!memoryProperties.getCapture().getAdvisor().isEnabled()) {
+            memoryMetricsService.recordAdvisorSkipped("advisor_disabled");
             AdvisorResult disabled = AdvisorResult.unavailable(List.of("advisor_disabled"), "advisor disabled");
             return MemoryAdvisorRawResult.fromFinal(disabled);
+        }
+        MemoryAdvisorRawResult policyPrecheck = policyPrecheck(request);
+        if (policyPrecheck != null) {
+            memoryMetricsService.recordAdvisorResult(policyPrecheck.available(), policyPrecheck.parsed(),
+                    "policy_precheck", elapsedMs(startedAt));
+            return policyPrecheck;
         }
         try {
             ChatResponse response = chatModel.chat(ChatRequest.builder()
@@ -64,14 +89,181 @@ public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
                             SystemMessage.from(systemPrompt()),
                             UserMessage.from(userPrompt(request))))
                     .build());
-            return parseRaw(response.aiMessage().text());
+            MemoryAdvisorRawResult result = applyPolicyBaseline(parseRaw(response.aiMessage().text()), request);
+            memoryMetricsService.recordAdvisorResult(result.available(), result.parsed(),
+                    result.failureReason(), elapsedMs(startedAt));
+            return result;
         } catch (Exception e) {
             log.warn("memory_advisor_event=failed error={} message={}",
                     e.getClass().getSimpleName(), e.getMessage());
             AdvisorResult unavailable = AdvisorResult.unavailable(List.of("advisor_failed"), e.getClass().getSimpleName());
+            memoryMetricsService.recordAdvisorResult(false, false, e.getClass().getSimpleName(), elapsedMs(startedAt));
             return new MemoryAdvisorRawResult(false, false, false, "none", 0.0,
                     unavailable.signals(), "", e.getClass().getSimpleName(), unavailable);
         }
+    }
+
+    private MemoryAdvisorRawResult policyPrecheck(MemoryCapturePolicy.CaptureRequest request) {
+        MemorySignalClassifier.SignalClassification signals = policyPrecheckClassifier.classify(request);
+        String reason = policyPrecheckReason(signals);
+        if (reason.isBlank()) {
+            return null;
+        }
+        List<String> precheckSignals = new ArrayList<>(signals.matchedSignals());
+        precheckSignals.add("advisor_policy_precheck");
+        AdvisorResult result = AdvisorResult.noCapture(
+                "none",
+                1.0,
+                List.copyOf(precheckSignals),
+                "policy_precheck:" + reason);
+        return MemoryAdvisorRawResult.fromFinal(result);
+    }
+
+    private String policyPrecheckReason(MemorySignalClassifier.SignalClassification signals) {
+        if (signals == null) {
+            return "";
+        }
+        if (!signals.validUser() || signals.blankMessage()) {
+            return "blank_or_missing_user";
+        }
+        if (signals.sensitive()) {
+            return "sensitive_content";
+        }
+        if (signals.forgetRequest()) {
+            return "forget_request";
+        }
+        if (signals.referenceOnly()) {
+            return "reference_context_not_profile";
+        }
+        if (signals.transientOperation()) {
+            return "operation_or_confirmation";
+        }
+        if (signals.oneOffScope()) {
+            return "one_off_instruction";
+        }
+        if (signals.taskOnlyContent()) {
+            return "task_only_content";
+        }
+        if (signals.roleOverridePrompt()) {
+            return "role_override_prompt";
+        }
+        if (signals.assistantFeedback()) {
+            return "assistant_feedback";
+        }
+        return "";
+    }
+
+    private MemoryAdvisorRawResult applyPolicyBaseline(MemoryAdvisorRawResult rawResult,
+                                                       MemoryCapturePolicy.CaptureRequest request) {
+        if (rawResult == null || rawResult.finalResult() == null || !rawResult.available() || !rawResult.parsed()) {
+            return rawResult;
+        }
+        MemoryCapturePolicy.CaptureDecision baselineDecision = policyBaseline.evaluate(request);
+        if (rawResult.finalResult().shouldCapture()) {
+            if (baselineDecision.allowed()) {
+                return applyPolicyBaselineTypeNormalization(rawResult, request, baselineDecision);
+            }
+            return applyPolicyBaselineReject(rawResult, baselineDecision);
+        }
+        if (!baselineDecision.allowed()) {
+            return rawResult;
+        }
+        return applyPolicyBaselineAllow(rawResult, request, baselineDecision);
+    }
+
+    private MemoryAdvisorRawResult applyPolicyBaselineTypeNormalization(
+            MemoryAdvisorRawResult rawResult,
+            MemoryCapturePolicy.CaptureRequest request,
+            MemoryCapturePolicy.CaptureDecision baselineDecision) {
+        String baselineType = baselineMemoryType(request, baselineDecision);
+        if (baselineType.equals(rawResult.finalResult().memoryType())) {
+            return rawResult;
+        }
+        List<String> normalizedSignals = new ArrayList<>(rawResult.finalResult().signals());
+        normalizedSignals.addAll(baselineDecision.matchedSignals());
+        normalizedSignals.add("advisor_policy_baseline_type_normalize");
+        AdvisorResult normalizedResult = AdvisorResult.capture(
+                baselineType,
+                rawResult.finalResult().confidence(),
+                List.copyOf(normalizedSignals),
+                rawResult.finalResult().reason());
+        return new MemoryAdvisorRawResult(
+                rawResult.available(),
+                rawResult.parsed(),
+                rawResult.rawShouldCapture(),
+                rawResult.rawMemoryType(),
+                rawResult.rawConfidence(),
+                rawResult.rawSignals(),
+                rawResult.rawReason(),
+                rawResult.failureReason(),
+                normalizedResult);
+    }
+
+    private MemoryAdvisorRawResult applyPolicyBaselineReject(
+            MemoryAdvisorRawResult rawResult,
+            MemoryCapturePolicy.CaptureDecision baselineDecision) {
+        List<String> gatedSignals = new ArrayList<>(rawResult.finalResult().signals());
+        gatedSignals.addAll(baselineDecision.matchedSignals());
+        gatedSignals.add("advisor_policy_baseline_reject");
+        AdvisorResult gatedResult = AdvisorResult.noCapture(
+                "none",
+                rawResult.rawConfidence(),
+                List.copyOf(gatedSignals),
+                "policy_baseline_reject:" + baselineDecision.reason());
+        return new MemoryAdvisorRawResult(
+                rawResult.available(),
+                rawResult.parsed(),
+                rawResult.rawShouldCapture(),
+                rawResult.rawMemoryType(),
+                rawResult.rawConfidence(),
+                rawResult.rawSignals(),
+                rawResult.rawReason(),
+                rawResult.failureReason(),
+                gatedResult);
+    }
+
+    private MemoryAdvisorRawResult applyPolicyBaselineAllow(
+            MemoryAdvisorRawResult rawResult,
+            MemoryCapturePolicy.CaptureRequest request,
+            MemoryCapturePolicy.CaptureDecision baselineDecision) {
+        List<String> baselineSignals = new ArrayList<>(rawResult.finalResult().signals());
+        baselineSignals.addAll(baselineDecision.matchedSignals());
+        baselineSignals.add("advisor_policy_baseline_allow");
+        AdvisorResult baselineResult = AdvisorResult.capture(
+                baselineMemoryType(request, baselineDecision),
+                Math.max(rawResult.finalResult().confidence(), baselineDecision.baseConfidence()),
+                List.copyOf(baselineSignals),
+                "policy_baseline_allow:" + baselineDecision.reason());
+        return new MemoryAdvisorRawResult(
+                rawResult.available(),
+                rawResult.parsed(),
+                rawResult.rawShouldCapture(),
+                rawResult.rawMemoryType(),
+                rawResult.rawConfidence(),
+                rawResult.rawSignals(),
+                rawResult.rawReason(),
+                rawResult.failureReason(),
+                baselineResult);
+    }
+
+    private String baselineMemoryType(MemoryCapturePolicy.CaptureRequest request,
+                                      MemoryCapturePolicy.CaptureDecision baselineDecision) {
+        List<MemoryCandidateExtractor.MemoryCandidate> candidates =
+                policyBaselineCandidateExtractor.extract(request, baselineDecision);
+        if (!candidates.isEmpty()) {
+            return candidates.get(0).memoryType();
+        }
+        String reason = baselineDecision.reason();
+        if ("project_context".equals(reason)) {
+            return "project_context";
+        }
+        if (reason != null && reason.contains("style")) {
+            return "style";
+        }
+        if (reason != null && reason.contains("preference")) {
+            return "preference";
+        }
+        return "fact";
     }
 
     private MemoryAdvisorRawResult parseRaw(String responseText) throws Exception {
@@ -157,6 +349,9 @@ public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
                 - Never capture selected note or selected-note summaries as user profile memory.
                 - Never capture one-off instructions such as "this time" or "for this reply".
                 - Never capture delete, confirm, cancel, or tool operation requests.
+                - Never capture secrets, credentials, API keys, access tokens, session tokens, passwords, or product keys.
+                - Never capture external or general-world facts as user memory, even when the user says to remember them.
+                - Never capture facts embedded in writing, editing, rewriting, proofreading, translation, role-play, game, or prompt-generation tasks unless they are explicitly labeled as user/project memory.
                 - Do not capture incidental uses of remember in writing tasks, grammar checks, stories, lyrics, examples, or questions about how to remember something.
                 - Capture fact only for stable user/workspace/project facts that the user asks the system to remember, such as "remember that my timezone is UTC+8".
                 - Use style for durable instructions about how the assistant should answer, such as tone, format, detail level, language, humor, or summary shape.
@@ -182,5 +377,9 @@ public class LlmMemorySignalAdvisor implements MemoryAdvisorRawSignalAdvisor {
 
     private String safe(String value) {
         return value == null ? "" : value;
+    }
+
+    private long elapsedMs(long startedAt) {
+        return (System.nanoTime() - startedAt) / 1_000_000L;
     }
 }

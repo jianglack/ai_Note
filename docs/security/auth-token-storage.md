@@ -1,12 +1,14 @@
 # Auth Token Storage
 
-The frontend still stores the bearer JWT in `localStorage` because the backend contract currently returns tokens in JSON and authenticates `Authorization: Bearer ...` headers.
+Browser authentication uses an HttpOnly cookie. Login and registration responses do not serialize the JWT, and the frontend never persists it in `localStorage` or another JavaScript-readable store.
 
-Moving to an httpOnly cookie should be done as a backend + frontend contract change, not as a frontend-only swap. The migration needs:
+The enforced contract is:
 
-- `Set-Cookie` login/register responses with `HttpOnly`, `Secure`, `SameSite`, and a clear domain/path policy.
-- CSRF protection for cookie-authenticated state-changing requests.
-- Logout and token revocation behavior that clears the cookie and server-side token state together.
-- Frontend request changes from bearer headers to credentialed requests.
+- Login and registration set the authentication cookie with `HttpOnly`, `SameSite`, a fixed path, and `Secure` by default in production.
+- Cookie-authenticated unsafe requests require the `XSRF-TOKEN` cookie and matching `X-XSRF-TOKEN` header.
+- `GET /api/auth/csrf` bootstraps the CSRF token and `GET /api/auth/me` restores the browser session.
+- Logout revokes the server-side token and expires the authentication cookie.
+- Legacy `token` and `auth-storage` values are deleted during frontend authentication bootstrap.
+- Non-browser API clients may still use an explicit `Authorization: Bearer` header; those requests are not subject to browser CSRF because browsers do not attach the header automatically.
 
-Until that contract exists, the localStorage token remains centralized in `frontend/src/services/apiBase.ts` so the later migration has one primary read path.
+The local HTTP development profile may disable the cookie `Secure` flag. This exception must not be used for an Internet-facing deployment.

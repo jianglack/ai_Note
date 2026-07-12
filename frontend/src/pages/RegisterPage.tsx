@@ -38,6 +38,10 @@ export default function RegisterPage() {
     if (submittingRef.current) return;
 
     setError('');
+    if ([...password].length < 15) {
+      setError('密码长度至少为 15 个字符');
+      return;
+    }
     submittingRef.current = true;
     setLoading(true);
     try {
@@ -116,7 +120,9 @@ export default function RegisterPage() {
               <input
                 className="auth-input"
                 type="password"
-                placeholder="请输入密码"
+                minLength={15}
+                maxLength={100}
+                placeholder="至少 15 个字符"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required

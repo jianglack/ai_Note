@@ -14,10 +14,6 @@ vi.mock('../src/services/api', () => ({
   default: apiMock,
 }));
 
-vi.mock('../src/services/apiBase', () => ({
-  getAuthToken: () => 'jwt-token',
-}));
-
 describe('aiChatStream behavior', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -54,9 +50,9 @@ describe('aiChatStream behavior', () => {
     expect(fetch).toHaveBeenCalledWith('http://backend.test/api/ai/chat/stream', expect.objectContaining({
       method: 'POST',
       headers: expect.objectContaining({
-        Authorization: 'Bearer jwt-token',
         Accept: 'text/event-stream',
       }),
+      credentials: 'include',
     }));
     expect(onToken).toHaveBeenCalledWith('Hello');
     expect(onProgress).toHaveBeenCalledWith('search', 'Looking');

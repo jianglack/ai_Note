@@ -49,6 +49,18 @@ class MemoryAdvisorReleaseGateServiceTest {
         assertThat(decision.blockReasons()).contains("report_stale");
     }
 
+    @Test
+    void guardedAdvisorCanPassWhenRawThresholdIsDiagnosticOnly() {
+        MemoryAdvisorReleaseGateService service = service(168);
+        MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage releasePackage =
+                packageWithCalibration(calibrationRawThresholdNotDeployable());
+
+        MemoryAdvisorReleaseGateService.ReleaseGateDecision decision = service.evaluate(releasePackage);
+
+        assertThat(decision.status()).isEqualTo(MemoryAdvisorReleaseGateService.ReleaseGateStatus.PASS);
+        assertThat(decision.blockReasons()).doesNotContain("no_deployable_threshold");
+    }
+
     private static MemoryAdvisorReleaseGateService service(long maxReportAgeHours) {
         return new MemoryAdvisorReleaseGateService(new MemoryAdvisorPromptRegistry(), maxReportAgeHours);
     }
@@ -70,6 +82,21 @@ class MemoryAdvisorReleaseGateServiceTest {
     private static MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage packageWithPrompt(
             String promptVersion,
             String completedAt) {
+        return packageWithPromptAndCalibration(promptVersion, completedAt, calibrationPassing());
+    }
+
+    private static MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage packageWithCalibration(
+            MemoryAdvisorCalibrationService.CalibrationReport calibrationReport) {
+        return packageWithPromptAndCalibration(
+                LlmMemorySignalAdvisor.PROMPT_VERSION,
+                Instant.now().toString(),
+                calibrationReport);
+    }
+
+    private static MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage packageWithPromptAndCalibration(
+            String promptVersion,
+            String completedAt,
+            MemoryAdvisorCalibrationService.CalibrationReport calibrationReport) {
         MemoryAdvisorPromptRegistry registry = new MemoryAdvisorPromptRegistry();
         return new MemoryAdvisorReleaseGateService.MemoryAdvisorReleaseReadinessPackage(
                 "release-run",
@@ -81,7 +108,7 @@ class MemoryAdvisorReleaseGateServiceTest {
                 "target/batch.json",
                 registry.find(promptVersion).orElse(null),
                 readinessPassing(promptVersion),
-                calibrationPassing(),
+                calibrationReport,
                 abPassing(),
                 failureMetricsPassing());
     }
@@ -129,6 +156,23 @@ class MemoryAdvisorReleaseGateServiceTest {
                 "passing calibration",
                 List.of(new MemoryAdvisorCalibrationService.ThresholdCandidate(
                         0.50, 1.0, 0.0, 0.0, 1.0, 0.0, true)));
+    }
+
+    private static MemoryAdvisorCalibrationService.CalibrationReport calibrationRawThresholdNotDeployable() {
+        return new MemoryAdvisorCalibrationService.CalibrationReport(
+                4000,
+                4000,
+                2000,
+                2000,
+                0,
+                0,
+                0,
+                0.80,
+                0.80,
+                false,
+                "raw llm threshold is diagnostic; final guarded advisor passed release metrics",
+                List.of(new MemoryAdvisorCalibrationService.ThresholdCandidate(
+                        0.80, 0.988, 0.0, 0.026, 0.973, 0.0, false)));
     }
 
     private static MemoryAdvisorAbComparisonService.AbComparisonReport abPassing() {

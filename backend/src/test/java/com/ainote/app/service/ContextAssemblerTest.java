@@ -23,7 +23,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -39,6 +41,7 @@ class ContextAssemblerTest {
     private RagFeedbackService ragFeedbackService;
     private MemoryRetrievalService memoryRetrievalService;
     private MemoryProperties memoryProperties;
+    private MemoryMetricsService memoryMetricsService;
     private ContextAssembler contextAssembler;
 
     @BeforeEach
@@ -52,6 +55,7 @@ class ContextAssemblerTest {
         ragFeedbackService = mock(RagFeedbackService.class);
         memoryRetrievalService = mock(MemoryRetrievalService.class);
         memoryProperties = new MemoryProperties();
+        memoryMetricsService = mock(MemoryMetricsService.class);
         contextAssembler = new ContextAssembler(
                 noteRepository,
                 folderRepository,
@@ -61,7 +65,8 @@ class ContextAssemblerTest {
                 jiTokenService,
                 ragFeedbackService,
                 memoryRetrievalService,
-                memoryProperties
+                memoryProperties,
+                memoryMetricsService
         );
 
         ReflectionTestUtils.setField(contextAssembler, "noteMaxChars", 800);
@@ -111,6 +116,8 @@ class ContextAssemblerTest {
         String context = contextAssembler.assemble("删除笔记", List.of("selected-note"), "user-1");
 
         assertThat(context).contains("<selected_notes default_operation_target=\"true\">");
+        assertThat(context).contains("<context_policy>");
+        assertThat(context).contains("当前用户请求 > 明确选中的笔记");
         assertThat(context).contains("selected-note");
         assertThat(context).contains("测试-上下文工程与记忆系统记录");
         assertThat(context).contains("<rag_context role=\"reference_only\" operation_target=\"false\">");
@@ -250,6 +257,8 @@ class ContextAssemblerTest {
             String context = contextAssembler.assemble("write an implementation plan", List.of(), "user-1");
 
             assertThat(context).contains("<user_memory>");
+            assertThat(context).startsWith("<context_policy>");
+            assertThat(context).contains("长期记忆只用于用户偏好、交互风格和连续项目背景");
             assertThat(context).contains("likes detailed plans");
             assertThat(context).contains("<recent_sessions>");
             assertThat(context).contains("Discussed memory system optimization.");
@@ -274,6 +283,8 @@ class ContextAssemblerTest {
                             .contains("intent=STANDARD")
                             .contains("retrieval_mode=legacy")
                             .contains("estimated_tokens="));
+            verify(memoryMetricsService).recordContextInjection(eq("semantic"), eq(2), anyInt());
+            verify(memoryMetricsService).recordContextInjection(eq("episodic"), eq(1), anyInt());
         } finally {
             logger.detachAppender(appender);
         }
@@ -318,5 +329,7 @@ class ContextAssemblerTest {
         verify(memoryRetrievalService).retrieveForQuery("user-1", "summarize this note", 10, 3);
         verify(semanticMemoryRepository, never()).findTopByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
         verify(episodicMemoryRepository, never()).findRecentByUserId(org.mockito.ArgumentMatchers.eq("user-1"), any());
+        verify(memoryMetricsService).recordContextInjection(eq("semantic"), eq(1), anyInt());
+        verify(memoryMetricsService).recordContextInjection(eq("episodic"), eq(1), anyInt());
     }
 }

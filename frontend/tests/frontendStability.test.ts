@@ -18,8 +18,10 @@ describe('frontend stability guards', () => {
     assert.doesNotMatch(apiService, /status === 401\s*\|\|\s*error\.response\?\.status === 403/);
     assert.doesNotMatch(tiptap, /localhost:8081/);
     assert.match(tiptap, /API_BASE_URL/);
-    assert.match(useAiChat, /getAuthToken/);
+    assert.doesNotMatch(useAiChat, /getAuthToken/);
     assert.doesNotMatch(useAiChat, /localStorage\.getItem\('token'\)/);
+    assert.match(apiService, /withCredentials:\s*true/);
+    assert.match(apiService, /withXSRFToken:\s*true/);
   });
 
   it('cleans up eval and workflow polling intervals on unmount', () => {

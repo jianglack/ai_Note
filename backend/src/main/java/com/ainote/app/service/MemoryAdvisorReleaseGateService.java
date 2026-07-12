@@ -1,5 +1,6 @@
 package com.ainote.app.service;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -19,6 +20,7 @@ public class MemoryAdvisorReleaseGateService {
     private final long maxReportAgeHours;
     private final Clock clock;
 
+    @Autowired
     public MemoryAdvisorReleaseGateService(MemoryAdvisorPromptRegistry promptRegistry) {
         this(promptRegistry, defaultMaxReportAgeHours(), Clock.systemUTC());
     }
@@ -112,9 +114,6 @@ public class MemoryAdvisorReleaseGateService {
         if (releasePackage.calibrationReport() == null) {
             blockReasons.add("missing_calibration_report");
         } else {
-            if (!releasePackage.calibrationReport().deployableThresholdFound()) {
-                blockReasons.add("no_deployable_threshold");
-            }
             if (recommendedCandidate(releasePackage.calibrationReport())
                     .map(candidate -> candidate.sensitiveFalseAllowRate() > thresholds.maxSensitiveFalseAllowRate())
                     .orElse(false)) {

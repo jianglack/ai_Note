@@ -145,13 +145,31 @@ app:
       mode: ${MEMORY_CAPTURE_MODE:policy}
       advisor:
         enabled: ${MEMORY_CAPTURE_ADVISOR_ENABLED:false}
-        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.82}
+        min-confidence: ${MEMORY_CAPTURE_ADVISOR_MIN_CONFIDENCE:0.80}
     retrieval:
       mode: ${MEMORY_RETRIEVAL_MODE:query_relevant}
     audit:
       enabled: ${MEMORY_AUDIT_ENABLED:true}
     chat-history:
       write-mode: ${MEMORY_CHAT_HISTORY_WRITE_MODE:append}
+      model-window-max-messages: ${MEMORY_CHAT_HISTORY_MODEL_WINDOW_MAX_MESSAGES:256}
+      flush-max-attempts: ${MEMORY_CHAT_HISTORY_FLUSH_MAX_ATTEMPTS:3}
+      flush-retry-delay-ms: ${MEMORY_CHAT_HISTORY_FLUSH_RETRY_DELAY_MS:25}
+      compaction-enabled: ${MEMORY_CHAT_HISTORY_COMPACTION_ENABLED:true}
+      compaction-min-user-turns: ${MEMORY_CHAT_HISTORY_COMPACTION_MIN_USER_TURNS:3}
+      compaction-worker-batch-size: ${MEMORY_CHAT_HISTORY_COMPACTION_WORKER_BATCH_SIZE:4}
+      compaction-max-attempts: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_ATTEMPTS:5}
+      compaction-lease-seconds: ${MEMORY_CHAT_HISTORY_COMPACTION_LEASE_SECONDS:300}
+      compaction-max-source-messages: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_SOURCE_MESSAGES:64}
+      compaction-max-source-characters: ${MEMORY_CHAT_HISTORY_COMPACTION_MAX_SOURCE_CHARACTERS:12000}
+      compaction-poll-ms: ${MEMORY_CHAT_HISTORY_COMPACTION_POLL_MS:5000}
+    privacy:
+      redact-exports: ${MEMORY_PRIVACY_REDACT_EXPORTS:true}
+      export-max-items: ${MEMORY_PRIVACY_EXPORT_MAX_ITEMS:1000}
+      deleted-memory-retention-days: ${MEMORY_PRIVACY_DELETED_MEMORY_RETENTION_DAYS:30}
+      at-rest-encryption-required: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_REQUIRED:true}
+      at-rest-encryption-confirmed: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_CONFIRMED:false}
+      at-rest-encryption-key-ref: ${MEMORY_PRIVACY_AT_REST_ENCRYPTION_KEY_REF:}
     max-per-user: 50                 # 每用户最大语义记忆条数
     similarity-threshold: 0.85       # 语义去重阈值（cosine similarity）
     decay-half-life-days: 30         # 衰减半衰期（天）
@@ -193,6 +211,7 @@ app:
   # 可观测性配置
   observability:
     enabled: ${OBSERVABILITY_ENABLED:true}  # 是否启用 Agent 调用追踪
+    prometheus-scrape-token: ${PROMETHEUS_SCRAPE_TOKEN:}
   # LangFuse 配置（可选，用于远程追踪）
   langfuse:
     enabled: ${LANGFUSE_ENABLED:false}
