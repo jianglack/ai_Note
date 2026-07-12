@@ -55,7 +55,7 @@
 3. `/api/auth/**` was publicly permitted and CORS validation was too permissive. Exact route and origin validation replaced both patterns.
 4. Six-character passwords were accepted. Registration and reset now require 15 Unicode code points.
 5. Frontend audit initially reported high-severity vulnerable dependencies. Direct and transitive dependencies were upgraded until official npm audit reached zero.
-6. Backend SCA initially timed out during vulnerability database synchronization. The local gate now uses checksum-verified OSV scanning and CI uses cached Dependency-Check with fail-on-error behavior.
+6. Backend SCA initially timed out during vulnerability database synchronization. The local gate uses checksum-verified OSV scanning. On 2026-07-12 CI was aligned to the same OSV 2.4.0 policy after cached Dependency-Check runs remained stuck or failed during NVD synchronization; scanner unavailability still fails closed.
 7. Initial OSV scanning found 25 affected Maven packages and 82 vulnerability records. Dependency upgrades reduced this to one reviewed Jackson 2.21.5 false-positive boundary record and zero gated findings.
 8. Runtime containers lacked explicit non-root users and frontend security headers. Both images and Nginx were hardened and verified at runtime.
 9. The first standalone frontend smoke container could not resolve its expected Compose upstream hostname `backend`. Runtime verification now supplies the deployment DNS contract explicitly; the runbook records this requirement.

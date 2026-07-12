@@ -6,9 +6,10 @@
 
 - `gitleaks`: scans committed content for secrets.
 - `backend`: runs Java 17 `mvn -B verify`.
-- `frontend`: runs Node 20 `npm ci`, TypeScript build checks, production build, lint/security tests, and Vitest coverage gates.
+- `frontend`: runs Node 24 `npm ci`, TypeScript build checks, production build, lint/security tests, and Vitest coverage gates.
+- `dependency security and SBOM`: generates backend and frontend CycloneDX SBOMs, runs official-registry npm audit, verifies the OSV Scanner 2.4.0 checksum, applies the time-bounded exception policy, and uploads evidence even when the gate fails.
 
-This workflow is the merge gate for normal development.
+This workflow is the merge gate for normal development. Scanner unavailability, checksum mismatch, an unaccepted vulnerability, or a missing evidence artifact fails the gate.
 
 ## Current CD
 

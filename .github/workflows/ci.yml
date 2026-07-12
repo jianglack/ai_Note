@@ -65,8 +65,7 @@ jobs:
   dependency-security:
     name: dependency security and SBOM
     runs-on: ubuntu-latest
-    env:
-      NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
       - uses: actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0
@@ -79,21 +78,6 @@ jobs:
           node-version: "24"
           cache: npm
           cache-dependency-path: frontend/package-lock.json
-      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.cache/dependency-check
-          key: ${{ runner.os }}-dependency-check-v12-${{ hashFiles('backend/pom.xml') }}
-          restore-keys: |
-            ${{ runner.os }}-dependency-check-v12-
-      - name: Backend OWASP Dependency-Check gate
-        working-directory: backend
-        run: >-
-          mvn -B org.owasp:dependency-check-maven:12.2.2:check
-          -DdataDirectory=$HOME/.cache/dependency-check
-          -DfailBuildOnCVSS=7
-          -DfailOnError=true
-          -Dformats=JSON,HTML
-          -DnvdApiKeyEnvironmentVariable=NVD_API_KEY
       - name: Generate backend CycloneDX SBOM
         working-directory: backend
         run: mvn -B org.cyclonedx:cyclonedx-maven-plugin:2.9.2:makeAggregateBom -DskipTests
@@ -103,15 +87,64 @@ jobs:
           npm ci
           mkdir -p target
           npm sbom --sbom-format cyclonedx > target/bom.json
+      - name: Frontend npm audit gate
+        working-directory: frontend
+        run: >-
+          npm audit --omit=dev --audit-level=high
+          --registry=https://registry.npmjs.org --json > target/npm-audit.json
+      - name: Install checksum-verified OSV Scanner
+        env:
+          OSV_SCANNER_VERSION: "2.4.0"
+        run: |
+          set -euo pipefail
+          tool_dir="backend/target/security-tools/osv-scanner-v${OSV_SCANNER_VERSION}"
+          mkdir -p "$tool_dir"
+          base_url="https://github.com/google/osv-scanner/releases/download/v${OSV_SCANNER_VERSION}"
+          curl --fail --silent --show-error --location \
+            "$base_url/osv-scanner_linux_amd64" \
+            --output "$tool_dir/osv-scanner_linux_amd64"
+          curl --fail --silent --show-error --location \
+            "$base_url/osv-scanner_SHA256SUMS" \
+            --output "$tool_dir/SHA256SUMS"
+          cd "$tool_dir"
+          grep 'osv-scanner_linux_amd64$' SHA256SUMS | sha256sum --check --strict
+          chmod +x osv-scanner_linux_amd64
+          ./osv-scanner_linux_amd64 --version | grep "${OSV_SCANNER_VERSION}"
+      - name: OSV vulnerability gate
+        run: |
+          set -euo pipefail
+          scanner="backend/target/security-tools/osv-scanner-v2.4.0/osv-scanner_linux_amd64"
+          report_dir="backend/target/security-compliance"
+          mkdir -p "$report_dir"
+          set +e
+          "$scanner" scan source \
+            -L backend/target/bom.json \
+            -L frontend/target/bom.json \
+            --format json \
+            --output-file "$report_dir/osv-sbom-report-raw.json"
+          raw_status=$?
+          set -e
+          if [ "$raw_status" -gt 1 ]; then
+            echo "OSV raw scan was unavailable (exit $raw_status)" >&2
+            exit "$raw_status"
+          fi
+          "$scanner" scan source \
+            -L backend/target/bom.json \
+            -L frontend/target/bom.json \
+            --config security/osv-scanner.toml \
+            --format json \
+            --output-file "$report_dir/osv-sbom-report-gated.json"
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: always()
         with:
           name: security-reports-and-sboms
           if-no-files-found: error
           retention-days: 14
           path: |
-            backend/target/dependency-check-report.*
             backend/target/bom.*
+            backend/target/security-compliance/osv-sbom-report-*.json
             frontend/target/bom.json
+            frontend/target/npm-audit.json
 
   dependency-review:
     name: dependency review

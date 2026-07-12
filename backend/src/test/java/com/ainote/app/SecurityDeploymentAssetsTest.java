@@ -56,6 +56,7 @@ class SecurityDeploymentAssetsTest {
     void supplyChainRunnerFailsUnavailableAndScopesTheReviewedException() throws IOException {
         String runner = Files.readString(ROOT.resolve("scripts/run-security-sca.ps1"));
         String config = Files.readString(ROOT.resolve("security/osv-scanner.toml"));
+        String workflow = Files.readString(ROOT.resolve(".github/workflows/ci.yml"));
 
         assertThat(runner).contains("OSV Scanner is unavailable");
         assertThat(runner).contains("OSV Scanner checksum verification failed");
@@ -66,6 +67,16 @@ class SecurityDeploymentAssetsTest {
         assertThat(config).contains("GHSA-5jmj-h7xm-6q6v");
         assertThat(config).contains("ignoreUntil = 2026-08-11");
         assertThat(config).contains("Owner: AiNote maintainers");
+        assertThat(workflow)
+                .contains("OSV_SCANNER_VERSION: \"2.4.0\"")
+                .contains("sha256sum --check --strict")
+                .contains("OSV raw scan was unavailable")
+                .contains("--config security/osv-scanner.toml")
+                .contains("npm audit --omit=dev --audit-level=high")
+                .contains("--registry=https://registry.npmjs.org")
+                .contains("if: always()")
+                .doesNotContain("dependency-check-maven")
+                .doesNotContain("NVD_API_KEY");
     }
 
     @Test
