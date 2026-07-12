@@ -69,6 +69,23 @@ class SecurityDeploymentAssetsTest {
     }
 
     @Test
+    void releaseWorkflowPinsActionsAndUsesTheSupportedNodeRuntime() throws IOException {
+        String workflow = Files.readString(ROOT.resolve(".github/workflows/release.yml"));
+
+        assertThat(workflow)
+                .contains("actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0")
+                .contains("actions/setup-java@0f481fcb613427c0f801b606911222b5b6f3083a # v5.5.0")
+                .contains("actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0")
+                .contains("actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1")
+                .contains("node-version: \"24\"")
+                .doesNotContain("actions/checkout@v")
+                .doesNotContain("actions/setup-java@v")
+                .doesNotContain("actions/setup-node@v")
+                .doesNotContain("actions/upload-artifact@v")
+                .doesNotContain("node-version: \"20\"");
+    }
+
+    @Test
     void complianceEvidenceIsVersionedAndDoesNotOverclaimProduction() throws IOException {
         String matrix = Files.readString(ROOT.resolve("docs/security/security-compliance-matrix.md"));
         String runbook = Files.readString(ROOT.resolve("docs/operations/SECURITY_VERIFICATION.md"));
