@@ -73,7 +73,7 @@ export default function EditorPane() {
   const [tagInputOpen, setTagInputOpen] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const tagInputRef = useRef<HTMLInputElement>(null);
-  const fadeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const fadeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pageStageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,13 +121,19 @@ export default function EditorPane() {
   // 浮动指示器淡出（输入3秒后）
   const resetFadeTimer = useCallback(() => {
     setIndicatorFaded(false);
-    clearTimeout(fadeTimerRef.current);
+    if (fadeTimerRef.current) {
+      clearTimeout(fadeTimerRef.current);
+    }
     fadeTimerRef.current = setTimeout(() => setIndicatorFaded(true), 3000);
   }, []);
 
   useEffect(() => {
     resetFadeTimer();
-    return () => clearTimeout(fadeTimerRef.current);
+    return () => {
+      if (fadeTimerRef.current) {
+        clearTimeout(fadeTimerRef.current);
+      }
+    };
   }, [currentPage, resetFadeTimer]);
 
   // 触控板水平滑动翻页

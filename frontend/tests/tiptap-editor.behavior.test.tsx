@@ -18,7 +18,7 @@ vi.mock('@tiptap/starter-kit', () => ({ default: configurableExtension() }));
 vi.mock('@tiptap/extension-placeholder', () => ({ default: configurableExtension() }));
 vi.mock('@tiptap/extension-link', () => ({ default: configurableExtension() }));
 vi.mock('@tiptap/extension-image', () => ({ default: configurableExtension() }));
-vi.mock('@tiptap/extension-table', () => ({ default: configurableExtension() }));
+vi.mock('@tiptap/extension-table', () => ({ default: configurableExtension(), Table: configurableExtension() }));
 vi.mock('@tiptap/extension-table-row', () => ({ default: {} }));
 vi.mock('@tiptap/extension-table-cell', () => ({ default: {} }));
 vi.mock('@tiptap/extension-table-header', () => ({ default: {} }));
@@ -30,7 +30,7 @@ vi.mock('@tiptap/extension-superscript', () => ({ default: {} }));
 vi.mock('@tiptap/extension-subscript', () => ({ default: {} }));
 vi.mock('@tiptap/extension-code-block-lowlight', () => ({ default: configurableExtension() }));
 vi.mock('@tiptap/extension-mathematics', () => ({ default: configurableExtension() }));
-vi.mock('@tiptap/extension-text-style', () => ({ default: {} }));
+vi.mock('@tiptap/extension-text-style', () => ({ default: {}, TextStyle: {} }));
 vi.mock('@tiptap/extension-color', () => ({ default: {} }));
 vi.mock('lowlight', () => ({ createLowlight: vi.fn(() => ({})), common: {} }));
 vi.mock('marked', () => ({
@@ -130,6 +130,10 @@ vi.mock('@tiptap/react', async () => {
     BubbleMenu: ({ children }: any) => <div>{children}</div>,
   };
 });
+
+vi.mock('@tiptap/react/menus', () => ({
+  BubbleMenu: ({ children }: any) => <div>{children}</div>,
+}));
 
 import TiptapEditor from '../src/components/TiptapEditor';
 

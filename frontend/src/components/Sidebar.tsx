@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect, useCallback, useRef, type CSSProperties, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react';
-import { FixedSizeList } from 'react-window';
+import { FixedSizeList } from './VirtualList';
 import {
   GlobeAltIcon,
   ClockIcon,

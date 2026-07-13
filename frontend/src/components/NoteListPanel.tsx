@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
-import { FixedSizeList, type ListChildComponentProps } from 'react-window';
+import { FixedSizeList, type LegacyListChildComponentProps } from './VirtualList';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { useUiStore } from '../stores/uiStore';
 import { useNoteStore } from '../stores/noteStore';
@@ -162,7 +162,7 @@ export default function NoteListPanel({
     }
   };
 
-  const renderNoteRow = ({ index, style, data }: ListChildComponentProps<NoteListItemData>) => {
+  const renderNoteRow = ({ index, style, data }: LegacyListChildComponentProps<NoteListItemData>) => {
     const note = data.notes[index];
     const active = note.id === selectedNoteId;
     const isSelected = ui.multiSelectedNoteIds.has(note.id);

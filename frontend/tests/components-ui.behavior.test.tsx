@@ -77,6 +77,24 @@ vi.mock('react-window', async () => {
     });
   }
 
+  function renderListRows(props: any) {
+    const RowComponent = props.rowComponent;
+    return Array.from({ length: props.rowCount }).map((_, index) => {
+      const rowHeight = typeof props.rowHeight === 'function'
+        ? props.rowHeight(index, props.rowProps)
+        : props.rowHeight;
+      return (
+        <RowComponent
+          key={index}
+          ariaAttributes={{ 'aria-posinset': index + 1, 'aria-setsize': props.rowCount, role: 'listitem' }}
+          index={index}
+          style={{ height: rowHeight } as CSSProperties}
+          {...props.rowProps}
+        />
+      );
+    });
+  }
+
   const VariableSizeList = React.forwardRef((props: any, ref) => {
     React.useImperativeHandle(ref, () => ({ resetAfterIndex: vi.fn() }));
     return <div className={props.className}>{renderRows(props)}</div>;
@@ -86,7 +104,12 @@ vi.mock('react-window', async () => {
     <div className={props.className}>{renderRows(props)}</div>
   );
 
-  return { VariableSizeList, FixedSizeList };
+  const List = (props: any) => {
+    React.useImperativeHandle(props.listRef, () => ({ scrollToRow: vi.fn() }));
+    return <div className={props.className}>{renderListRows(props)}</div>;
+  };
+
+  return { VariableSizeList, FixedSizeList, List };
 });
 
 vi.mock('react-force-graph-2d', async () => {

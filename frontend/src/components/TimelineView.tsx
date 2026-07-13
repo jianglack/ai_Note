@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { VariableSizeList, type ListChildComponentProps } from 'react-window';
+import { VariableSizeList, type LegacyListChildComponentProps, type LegacyListHandle } from './VirtualList';
 import './TimelineView.css';
 import { updateScheduleStatus, type Note, type Schedule } from '../api';
 import { useMeasuredHeight } from '../hooks/useMeasuredHeight';
@@ -89,7 +89,7 @@ export default function TimelineView({
   onClose
 }: TimelineViewProps) {
   const bodyRef = useRef<HTMLDivElement>(null);
-  const listRef = useRef<VariableSizeList<TimelineRow[]>>(null);
+  const listRef = useRef<LegacyListHandle | null>(null);
   const bodyHeight = useMeasuredHeight(bodyRef, 640);
   const [selectedItem, setSelectedItem] = useState<TimelineItem | null>(null);
   const [statusUpdating, setStatusUpdating] = useState(false);
@@ -184,7 +184,7 @@ export default function TimelineView({
     }
   }, [onScheduleStatusChange, selectedItem, statusUpdating]);
 
-  const renderTimelineRow = ({ index, style, data }: ListChildComponentProps<TimelineRow[]>) => {
+  const renderTimelineRow = ({ index, style, data }: LegacyListChildComponentProps<TimelineRow[]>) => {
     const row = data[index];
     const rowStyle: CSSProperties = { ...style, boxSizing: 'border-box' };
 

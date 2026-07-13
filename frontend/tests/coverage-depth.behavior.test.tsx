@@ -36,6 +36,24 @@ vi.mock('../src/services/dialogService', () => ({
 
 vi.mock('react-window', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  function renderListRows(props: any) {
+    const RowComponent = props.rowComponent;
+    return Array.from({ length: props.rowCount }).map((_, index) => {
+      const rowHeight = typeof props.rowHeight === 'function'
+        ? props.rowHeight(index, props.rowProps)
+        : props.rowHeight;
+      return (
+        <RowComponent
+          key={index}
+          ariaAttributes={{ 'aria-posinset': index + 1, 'aria-setsize': props.rowCount, role: 'listitem' }}
+          index={index}
+          style={{ height: rowHeight } as CSSProperties}
+          {...props.rowProps}
+        />
+      );
+    });
+  }
+
   const FixedSizeList = (props: any) => (
     <div className={props.className}>
       {Array.from({ length: props.itemCount }).map((_, index) => props.children({
@@ -44,7 +62,12 @@ vi.mock('react-window', async () => {
       }))}
     </div>
   );
-  return { FixedSizeList };
+  const List = (props: any) => {
+    React.useImperativeHandle(props.listRef, () => ({ scrollToRow: vi.fn() }));
+    return <div className={props.className}>{renderListRows(props)}</div>;
+  };
+
+  return { FixedSizeList, List };
 });
 
 import Sidebar from '../src/components/Sidebar';

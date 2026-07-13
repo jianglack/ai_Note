@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from 'react';
-import { FixedSizeList } from 'react-window';
+import { FixedSizeList } from '../VirtualList';
 import { getCanvases, createCanvas, updateCanvas, deleteCanvas, generateCanvasAI } from '../../api';
 import { useNoteStore } from '../../stores/noteStore';
 import { askConfirm, askPrompt, showAlert } from '../../services/dialogService';
