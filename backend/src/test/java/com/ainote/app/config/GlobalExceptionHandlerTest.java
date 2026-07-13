@@ -2,6 +2,8 @@ package com.ainote.app.config;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.core.MethodParameter;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpInputMessage;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -16,6 +18,7 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.ConstraintViolationException;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -80,7 +83,7 @@ class GlobalExceptionHandlerTest {
         ResponseEntity<Map<String, String>> entityNotFound =
                 handler.handleNotFound(new EntityNotFoundException("missing"));
         ResponseEntity<Map<String, String>> staticResourceNotFound =
-                handler.handleNotFound(new NoResourceFoundException(HttpMethod.GET, "/v3/api-docs"));
+                handler.handleNotFound(new NoResourceFoundException(HttpMethod.GET, "/v3/api-docs", ""));
 
         assertThat(noSuchElement.getStatusCode().value()).isEqualTo(404);
         assertThat(entityNotFound.getStatusCode().value()).isEqualTo(404);
@@ -91,9 +94,20 @@ class GlobalExceptionHandlerTest {
     void requestShapeExceptions_return400() throws Exception {
         MethodParameter param = new MethodParameter(
                 GlobalExceptionHandlerTest.class.getDeclaredMethod("dummyMethod", String.class), 0);
+        HttpInputMessage inputMessage = new HttpInputMessage() {
+            @Override
+            public InputStream getBody() {
+                return InputStream.nullInputStream();
+            }
+
+            @Override
+            public HttpHeaders getHeaders() {
+                return new HttpHeaders();
+            }
+        };
 
         List<Exception> exceptions = List.of(
-                new HttpMessageNotReadableException("bad json"),
+                new HttpMessageNotReadableException("bad json", inputMessage),
                 new MethodArgumentTypeMismatchException("abc", Integer.class, "id", param, new NumberFormatException()),
                 new MissingServletRequestParameterException("q", "String"),
                 new ConstraintViolationException(Set.of())
