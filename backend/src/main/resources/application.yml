@@ -236,12 +236,6 @@ resilience4j:
     instances:
       agent-model:
         base-config: llm-default
-      agent-chat:
-        base-config: llm-default
-        failure-rate-threshold: 50
-        wait-duration-in-open-state: 30s
-        slow-call-duration-threshold: 60s
-        slow-call-rate-threshold: 80
       chat-model:
         base-config: llm-default
   circuitbreaker:
@@ -257,6 +251,12 @@ resilience4j:
     instances:
       agent-model:
         base-config: llm-default
+      agent-chat:
+        base-config: llm-default
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        slow-call-duration-threshold: 60s
+        slow-call-rate-threshold: 80
       chat-model:
         base-config: llm-default
       embedding-model:

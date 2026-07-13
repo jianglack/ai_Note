@@ -18,6 +18,7 @@
     <jackson-bom.version>3.1.4</jackson-bom.version>
     <langchain4j.version>1.17.2</langchain4j.version>
     <langchain4j-community.version>1.17.2-beta27</langchain4j-community.version>
+    <resilience4j.version>2.4.0</resilience4j.version>
     <testcontainers.version>1.21.3</testcontainers.version>
   </properties>
 
@@ -146,11 +147,26 @@
       <artifactId>caffeine</artifactId>
     </dependency>
 
-    <!-- Resilience4j 熔断器 -->
+    <!-- Resilience4j core modules; the Boot 3 starter rejects Spring Boot 4. -->
     <dependency>
       <groupId>io.github.resilience4j</groupId>
-      <artifactId>resilience4j-spring-boot3</artifactId>
-      <version>2.4.0</version>
+      <artifactId>resilience4j-circuitbreaker</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-retry</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-framework-common</artifactId>
+      <version>${resilience4j.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.github.resilience4j</groupId>
+      <artifactId>resilience4j-micrometer</artifactId>
+      <version>${resilience4j.version}</version>
     </dependency>
 
     <!-- OpenTelemetry -->
