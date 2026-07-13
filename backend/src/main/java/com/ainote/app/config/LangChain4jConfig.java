@@ -20,6 +20,7 @@ import io.github.resilience4j.retry.Retry;
 import io.github.resilience4j.retry.RetryRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -172,7 +173,8 @@ public class LangChain4jConfig {
     }
 
     @Bean
-    public ContentAggregator contentAggregator(ScoringModel scoringModel) {
+    public ContentAggregator contentAggregator(ObjectProvider<ScoringModel> scoringModelProvider) {
+        ScoringModel scoringModel = scoringModelProvider.getIfAvailable();
         if (scoringModel == null) {
             log.info("Using default content aggregation (no reranking)");
             return null;

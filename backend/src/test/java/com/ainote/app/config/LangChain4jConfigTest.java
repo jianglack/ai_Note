@@ -1,6 +1,8 @@
 package com.ainote.app.config;
 
+import dev.langchain4j.model.scoring.ScoringModel;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.support.StaticListableBeanFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -44,6 +46,15 @@ class LangChain4jConfigTest {
 
         assertThatThrownBy(config::deepSeekEmbeddingModel)
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void contentAggregatorIsOptionalWhenScoringModelIsMissing() {
+        LangChain4jConfig config = new LangChain4jConfig();
+        var beanFactory = new StaticListableBeanFactory();
+
+        assertThat(config.contentAggregator(beanFactory.getBeanProvider(ScoringModel.class)))
+                .isNull();
     }
 
     @Test
